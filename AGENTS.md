@@ -1,6 +1,12 @@
 ## Repository state
 
-This repository contains **planning documents only**. There is no source code, no `package.json`, and no build, lint, or test commands yet. The single commit is the docs baseline.
+The workspace and the application scaffolding exist. `apps/web` builds and runs
+with **no MongoDB configured**: every page and Route Handler from ENG-003 is
+present and returns a shaped placeholder. No game rules, persistence,
+capabilities, or realtime fan-out are implemented.
+
+Every fake response is built in one file, `apps/web/src/server/stub-data.ts`.
+Making a route real means deleting its builder there, not hunting for it.
 
 `docs/` is the implementation authority. Read the relevant spec before you write code. Do not invent behavior that a document already defines.
 
@@ -64,9 +70,26 @@ Every normative statement carries a bounded ID: `PRD-FUN`, `PRD-NFR`, `RULE`, `V
 
 Cite the IDs you implement, and update [traceability](docs/traceability.md) in the same change. New scope gets a new ID; never widen an existing one silently. A requirement is `Verified` only when implementation, evidence, and approvals are all linked — code alone is not enough.
 
+## Commands
+
+Runnable now:
+
+| Command | Purpose |
+|---|---|
+| `pnpm install` | Resolve the workspace |
+| `pnpm dev` | Development server on port 3000 |
+| `pnpm build` | Production build; must succeed with no `MONGODB_URI` |
+| `pnpm typecheck` | Type-check all four packages |
+| `pnpm lint` | ESLint, including the dependency-direction rules |
+
+The boundary rules in `eslint.config.mjs` are enforcement, not documentation.
+Browser code importing `@/server/*`, `mongodb`, or the engine fails lint; the
+engine importing a Node API, `Date`, or `Math.random` fails lint. `src/server/**`
+also imports `server-only`, which turns the same mistake into a build failure.
+
 ## Planned test commands
 
-Not yet runnable. When the workspace exists, the intended toolchain is:
+Not yet runnable. The intended toolchain is:
 
 - Vitest for engine, table, scenario, and property tests (`fast-check`). No browser, clock, network, or DB in engine tests.
 - Protocol/integration tests against an ephemeral replica-set MongoDB.

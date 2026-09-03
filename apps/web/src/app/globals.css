@@ -1,0 +1,188 @@
+/*
+ * Design tokens. See DS-010 and DS-020 in docs/design/design-system.md.
+ *
+ * Colors are semantic roles, not brand hex values. No component may use a raw
+ * brand or district value. Dark mode is a dim asphalt-and-string-light
+ * treatment, not an inverted light mode.
+ *
+ * Every color role has a required companion cue (border, icon, pattern, text).
+ * Color is never the sole carrier of meaning. See UX-006 and DS-041.
+ */
+@import "tailwindcss";
+
+@theme {
+  /*
+   * TODO(DS-010): self-host Atkinson Hyperlegible (UI) and Fraunces (display)
+   * and preload the above-the-fold UI face. Both need a license and provenance
+   * record before the files land, so only the fallback stacks are wired now.
+   */
+  --font-ui: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+  --font-sans: var(--font-ui);
+  --font-serif: var(--font-display);
+
+  /* 4 px spacing base. */
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-5: 1.5rem;
+  --spacing-6: 2rem;
+  --spacing-8: 3rem;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1.125rem;
+  --radius-pill: 999px;
+
+  /* Light theme: a street at dusk, before the lights come on. */
+  --color-canvas: oklch(97.5% 0.008 85);
+  --color-surface: oklch(99% 0.004 85);
+  --color-surface-raised: oklch(100% 0 0);
+  --color-ink: oklch(23% 0.02 60);
+  --color-muted-ink: oklch(48% 0.02 60);
+  --color-line: oklch(88% 0.012 70);
+
+  --color-brand: oklch(58% 0.16 45);
+  --color-brand-ink: oklch(98% 0.01 45);
+
+  --color-success: oklch(52% 0.13 155);
+  --color-warning: oklch(64% 0.15 75);
+  --color-danger: oklch(53% 0.19 27);
+  --color-info: oklch(55% 0.11 240);
+
+  --color-focus: oklch(52% 0.18 250);
+  --color-selection: oklch(92% 0.05 250);
+  --color-disabled: oklch(72% 0.01 70);
+
+  /* Player roles. Always paired with a token shape and a pattern. DS-020. */
+  --color-player-1: oklch(58% 0.16 25);
+  --color-player-2: oklch(58% 0.14 145);
+  --color-player-3: oklch(56% 0.15 255);
+  --color-player-4: oklch(64% 0.15 85);
+  --color-player-5: oklch(55% 0.16 315);
+  --color-player-6: oklch(56% 0.11 195);
+
+  /* Original space categories. Always paired with an icon and a label. */
+  --color-asset-district-north: oklch(60% 0.12 30);
+  --color-asset-district-east: oklch(60% 0.12 150);
+  --color-asset-district-west: oklch(60% 0.12 265);
+  --color-asset-transit: oklch(58% 0.10 90);
+  --color-asset-utility: oklch(58% 0.09 210);
+}
+
+/*
+ * Dark theme. Reduce glare, keep borders legible, preserve player-pattern
+ * distinction. Not an inversion. DS-020.
+ */
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-canvas: oklch(19% 0.012 65);
+    --color-surface: oklch(23% 0.014 65);
+    --color-surface-raised: oklch(27% 0.016 65);
+    --color-ink: oklch(94% 0.008 80);
+    --color-muted-ink: oklch(72% 0.012 75);
+    --color-line: oklch(36% 0.014 68);
+
+    --color-brand: oklch(72% 0.14 60);
+    --color-brand-ink: oklch(20% 0.02 60);
+
+    --color-success: oklch(70% 0.13 155);
+    --color-warning: oklch(78% 0.14 78);
+    --color-danger: oklch(68% 0.17 27);
+    --color-info: oklch(72% 0.10 240);
+
+    --color-focus: oklch(75% 0.14 250);
+    --color-selection: oklch(32% 0.05 250);
+    --color-disabled: oklch(42% 0.01 70);
+
+    --color-player-1: oklch(72% 0.15 25);
+    --color-player-2: oklch(72% 0.13 145);
+    --color-player-3: oklch(72% 0.14 255);
+    --color-player-4: oklch(78% 0.14 85);
+    --color-player-5: oklch(70% 0.15 315);
+    --color-player-6: oklch(72% 0.10 195);
+
+    --color-asset-district-north: oklch(72% 0.12 30);
+    --color-asset-district-east: oklch(72% 0.12 150);
+    --color-asset-district-west: oklch(72% 0.12 265);
+    --color-asset-transit: oklch(72% 0.10 90);
+    --color-asset-utility: oklch(72% 0.09 210);
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
+    /* Never suppress browser zoom. DS-060. */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-ui);
+    /* Minimum body is 16 px, line-height 1.5. DS-010. */
+    font-size: 1rem;
+    line-height: 1.5;
+    min-height: 100dvh;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    line-height: 1.2;
+  }
+
+  /* Tabular numerals for balances and bids. DS-010. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Visible 3:1 focus ring, never obscured by sticky UI. DS-060. */
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  /* Respect reduced motion: show the final state immediately. DS-050. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Screen-reader-only text that becomes visible on focus. */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  .focus\:not-sr-only:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+  }
+}

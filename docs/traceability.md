@@ -67,6 +67,42 @@ Brand and naming requirements are intentionally not assigned here while `docs/br
 | OPS-001–010 | Coolify topology, deploy/rollback, observability, retention, incidents, restore, capacity, and maintenance | Runbook drill records, dashboards, image/migration records, OPS-009 restore report |
 | MILE-001–011 | Dependency-ordered delivery gates and bounded `gnhf` execution | Each milestone records demo, tests, exclusions, owner, approval, and follow-up IDs |
 
+## Scaffold status
+
+The workspace and the application skeleton now exist. Every page and Route
+Handler from [ENG-003](engineering/architecture.md#eng-003-application-modules-routes-and-data-paths)
+is present, returns a shaped placeholder, and builds with no database
+configured.
+
+**No row above changes status.** A scaffold is not evidence. Every row stays
+`Planned` until its implementation, tests, and approvals are linked, per the
+release completion rule below.
+
+| Requirement | Scaffolded artefact | Still required |
+|---|---|---|
+| ENG-002 | Workspace, three internal packages, `server-only`/`client-only` guards, ESLint dependency-direction rules | The CI boundary fixture |
+| ENG-003 | All ten Route Handlers, all pages | Real behaviour behind each |
+| ENG-004 | Security headers in `next.config.ts`, `.env.example` | Coolify deployment evidence, graceful shutdown |
+| ENG-015 | `apps/web/src/server/commands/handle-command.ts` with the ordered steps | The transaction itself |
+| ENG-016 | `apps/web/src/server/db/collections.ts` index definitions as data | The maintenance command that applies them |
+| ENG-017 | `POST /api/internal/cleanup` with secret gating | The expiry transition and deletion batches |
+| ENG-020-023 | `packages/game-engine` contract surface, PRNG and invariant seams | Every rule |
+| PROTO-001-002 | `packages/contracts` envelopes, error codes, `.strict()` schemas | Wire-level tests |
+| PROTO-003-004 | SSE route with keep-alives, subscriber registry, `/sync` route, client stream validator | Seat authentication, change stream, per-seat projections |
+| SEC-002 | Capability generation, hashing, constant-time compare, `__Host-` cookie names | Issuance, storage, verification, rotation |
+| SEC-003 | CSP and security headers, origin guard, payload bound | CSRF tokens, rate limits |
+| CONTENT-001-009 | Bundle types, the Effect DSL, structural validation | The authored bundle; the placeholder blocks release |
+| UX-030-033 | Responsive game shell, board view, board list, player strip, action bar | Live state and decisions |
+| DS-010, DS-020 | Semantic tokens for light and dark, UI primitives | Self-hosted fonts with provenance |
+
+Two deliberate omissions, each with its reason recorded in code:
+
+- **No service worker.** [PRD-FUN-017](product/prd.md#experience-and-instrumentation)
+  forbids claiming offline play before it works. See `apps/web/public/PWA-TODO.md`.
+- **No font files.** [DS-010](design/design-system.md#ds-010--typography-and-tokens)
+  requires self-hosted faces with a licence and provenance record. Only the
+  fallback stacks are wired.
+
 ## Release completion rule
 
 No requirement is `Verified` merely because code exists. It becomes `Verified` only when its implementation link, required automated/manual evidence, applicable migration/operations evidence, and release-gate approvals are recorded. MILE-010 cannot complete while any MVP row is `Planned`, `Blocked`, or `Failed`.

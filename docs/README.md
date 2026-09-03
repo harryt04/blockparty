@@ -41,6 +41,16 @@ When documents disagree, use this order and correct the lower-level document:
 | Delivery | [Operations](delivery/operations.md) | Coolify deployment, observability, backup, recovery, and incidents |
 | Historical | [Original prompt](mvp-prd-prompt.md) | Superseded input; never implementation authority; exclude from public package unless counsel approves |
 
+## Implementation state
+
+The workspace exists: one deployable `apps/web` Next.js application and the
+three internal packages. Pages and Route Handlers are scaffolded and return
+placeholders. `AGENTS.md` carries the runnable commands and the enforced
+dependency-direction rules; the root `README.md` covers running and deploying.
+
+The [traceability](traceability.md) register records what is scaffolded and
+what each requirement still needs. A scaffold is never evidence.
+
 ## Settled MVP decisions
 
 - 2–6 total seats occupied by guests and/or the single non-selectable bot difficulty.
