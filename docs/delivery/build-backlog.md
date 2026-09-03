@@ -254,12 +254,13 @@ print the seed on failure.
       Proves: decision tables and generated legal sequences preserve cash, level, and inventory invariants; TEST-002 pure-engine table/property layer.
       Implemented atomic `BuyImprovement`/`SellImprovement` transitions with complete-district and even-building guards, content-defined resale rounding, finite inventory deltas, and event-only replay; `packages/game-engine/test/improvements.test.ts` covers decision tables, generated legal sequences, mutation-sensitive guards, rounding, atomic rejection, and replay.
 
-- [ ] **A8 — Scarce improvement auction**
+- [x] **A8 — Scarce improvement auction**
       Blocked by: A7
       Requirements: RULE-006, RULE-008, CONTENT-005
       Read: docs/product/rules.md, docs/product/game-content.md
       Acceptance: scarce-unit contention enters a deterministic no-timer auction whose cost/inventory follow content before resuming construction.
       Proves: contention scenarios cover order, passes, price, inventory, pause, and continuation; TEST-002 pure-engine scenario layer.
+      Implemented the serialized improvement-demand phase, deterministic bidding/pass rounds, content-priced atomic awards, inventory exhaustion, VAR-008 bypass, and event-only replay; `packages/game-engine/test/scarce-improvements.test.ts` covers contention, no-sale, continuation, and fixed-seed scenarios.
 
 - [ ] **A9 — Mortgage, redeem, and transfer charge**
       Blocked by: A7

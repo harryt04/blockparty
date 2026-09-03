@@ -130,6 +130,7 @@ export const Phase = z.enum([
   "ResolveMove",
   "AwaitPurchase",
   "AwaitAuction",
+  "ImprovementAuction",
   "AwaitDebt",
   "AwaitChoice",
   "TurnEnd",

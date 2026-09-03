@@ -108,6 +108,27 @@ export interface PendingAuction {
   readonly passedSeatIds: readonly SeatId[];
 }
 
+/** One currently declared, one-level demand for a scarce improvement. */
+export interface ScarceImprovementDemand {
+  readonly seatId: SeatId;
+  readonly deedId: string;
+  readonly fromLevel: number;
+  readonly toLevel: number;
+  readonly inventoryKind: string;
+  readonly inventoryDelta: number;
+  /** The content-defined normal improvement price used as the auction base cost. */
+  readonly baseCost: Money;
+}
+
+/** A no-timer improvement auction over the currently declared demands. */
+export interface PendingImprovementAuction {
+  readonly demands: readonly ScarceImprovementDemand[];
+  readonly highBid: Money;
+  readonly highBidderSeatId?: SeatId;
+  readonly prioritySeatId: SeatId;
+  readonly passedSeatIds: readonly SeatId[];
+}
+
 export interface GameState {
   readonly stateSchemaVersion: string;
   readonly contentVersion: string;
@@ -135,6 +156,10 @@ export interface GameState {
   readonly obligation?: PendingObligation;
   /** Serialized handoff to the ordered auction reducer in A6. */
   readonly pendingAuction?: PendingAuction;
+  /** Declared demands retained until finite inventory is no longer contested. */
+  readonly scarceImprovementDemands?: readonly ScarceImprovementDemand[];
+  /** Serialized handoff to the scarce-improvement auction reducer. */
+  readonly pendingImprovementAuction?: PendingImprovementAuction;
   /** Server-only. Never projected. */
   readonly prng: PrngState;
 }
@@ -229,6 +254,29 @@ function payloadInventory(
   return Object.fromEntries(entries) as Readonly<Record<string, number>>;
 }
 
+function payloadString(event: EngineEvent, key: string): string | undefined {
+  const value = event.payload[key];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function payloadDemands(event: EngineEvent, key = "demands"): readonly ScarceImprovementDemand[] {
+  const value = event.payload[key];
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is ScarceImprovementDemand => {
+    if (typeof entry !== "object" || entry === null) return false;
+    const demand = entry as Record<string, unknown>;
+    return (
+      typeof demand.seatId === "string" &&
+      typeof demand.deedId === "string" &&
+      Number.isSafeInteger(demand.fromLevel) &&
+      Number.isSafeInteger(demand.toLevel) &&
+      typeof demand.inventoryKind === "string" &&
+      Number.isSafeInteger(demand.inventoryDelta) &&
+      Number.isSafeInteger(demand.baseCost)
+    );
+  });
+}
+
 function freezeState(state: GameState): GameState {
   const seats = state.seats.map((seat) =>
     Object.freeze({
@@ -275,6 +323,20 @@ function freezeState(state: GameState): GameState {
           ...state.pendingAuction,
           passedSeatIds: Object.freeze([...state.pendingAuction.passedSeatIds]),
         });
+  const scarceImprovementDemands =
+    state.scarceImprovementDemands === undefined
+      ? undefined
+      : Object.freeze(state.scarceImprovementDemands.map((demand) => Object.freeze({ ...demand })));
+  const pendingImprovementAuction =
+    state.pendingImprovementAuction === undefined
+      ? undefined
+      : Object.freeze({
+          ...state.pendingImprovementAuction,
+          demands: Object.freeze(
+            state.pendingImprovementAuction.demands.map((demand) => Object.freeze({ ...demand })),
+          ),
+          passedSeatIds: Object.freeze([...state.pendingImprovementAuction.passedSeatIds]),
+        });
   return Object.freeze({
     ...state,
     seats: Object.freeze(seats),
@@ -285,6 +347,8 @@ function freezeState(state: GameState): GameState {
     pendingChoice,
     obligation,
     pendingAuction,
+    ...(scarceImprovementDemands === undefined ? {} : { scarceImprovementDemands }),
+    ...(pendingImprovementAuction === undefined ? {} : { pendingImprovementAuction }),
   });
 }
 
@@ -350,6 +414,10 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         pendingChoice: undefined,
         pendingAcquisitionDeedId: undefined,
         pendingAuction: undefined,
+        ...(state.scarceImprovementDemands === undefined ? {} : { scarceImprovementDemands: [] }),
+        ...(state.pendingImprovementAuction === undefined
+          ? {}
+          : { pendingImprovementAuction: undefined }),
       });
     }
     case "TurnStarted":
@@ -362,6 +430,10 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         pendingChoice: undefined,
         pendingAcquisitionDeedId: undefined,
         pendingAuction: undefined,
+        ...(state.scarceImprovementDemands === undefined ? {} : { scarceImprovementDemands: [] }),
+        ...(state.pendingImprovementAuction === undefined
+          ? {}
+          : { pendingImprovementAuction: undefined }),
       });
     case "DiceRolled": {
       // Dice values are event data. Replay changes no PRNG state and never
@@ -474,7 +546,22 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
     case "AuctionOpened": {
       const deedId = payloadSeatId(event, "deedId");
       const prioritySeatId = payloadSeatId(event, "prioritySeatId");
-      if (deedId === undefined || prioritySeatId === undefined) return state;
+      if (prioritySeatId === undefined) return state;
+      if (payloadString(event, "auctionKind") === "improvement") {
+        return freezeState({
+          ...state,
+          phase: "ImprovementAuction",
+          prioritySeatId,
+          pendingImprovementAuction: {
+            demands: payloadDemands(event),
+            highBid: payloadNumber(event, "highBid") ?? 0,
+            highBidderSeatId: payloadSeatId(event, "highBidderSeatId"),
+            prioritySeatId,
+            passedSeatIds: payloadStringArray(event, "passedSeatIds") ?? [],
+          },
+        });
+      }
+      if (deedId === undefined) return state;
       return freezeState({
         ...state,
         phase: "AwaitAuction",
@@ -490,6 +577,22 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
       });
     }
     case "AuctionBidPlaced": {
+      if (state.phase === "ImprovementAuction" && state.pendingImprovementAuction !== undefined) {
+        const bidderSeatId = payloadSeatId(event, "bidderSeatId");
+        const amount = payloadNumber(event, "amount");
+        if (bidderSeatId === undefined || amount === undefined) return state;
+        const nextPrioritySeatId = payloadSeatId(event, "nextPrioritySeatId");
+        return freezeState({
+          ...state,
+          prioritySeatId: nextPrioritySeatId ?? state.pendingImprovementAuction.prioritySeatId,
+          pendingImprovementAuction: {
+            ...state.pendingImprovementAuction,
+            highBid: amount,
+            highBidderSeatId: bidderSeatId,
+            prioritySeatId: nextPrioritySeatId ?? state.pendingImprovementAuction.prioritySeatId,
+          },
+        });
+      }
       const deedId = payloadSeatId(event, "deedId");
       const bidderSeatId = payloadSeatId(event, "bidderSeatId");
       const amount = payloadNumber(event, "amount");
@@ -516,6 +619,22 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
       });
     }
     case "AuctionPassed": {
+      if (state.phase === "ImprovementAuction" && state.pendingImprovementAuction !== undefined) {
+        const passerSeatId = payloadSeatId(event, "passerSeatId");
+        if (passerSeatId === undefined) return state;
+        const nextPrioritySeatId = payloadSeatId(event, "nextPrioritySeatId");
+        return freezeState({
+          ...state,
+          prioritySeatId: nextPrioritySeatId ?? state.pendingImprovementAuction.prioritySeatId,
+          pendingImprovementAuction: {
+            ...state.pendingImprovementAuction,
+            prioritySeatId: nextPrioritySeatId ?? state.pendingImprovementAuction.prioritySeatId,
+            passedSeatIds: state.pendingImprovementAuction.passedSeatIds.includes(passerSeatId)
+              ? state.pendingImprovementAuction.passedSeatIds
+              : [...state.pendingImprovementAuction.passedSeatIds, passerSeatId],
+          },
+        });
+      }
       const deedId = payloadSeatId(event, "deedId");
       const passerSeatId = payloadSeatId(event, "passerSeatId");
       if (
@@ -541,6 +660,15 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
       });
     }
     case "AuctionClosed": {
+      if (state.phase === "ImprovementAuction") {
+        return freezeState({
+          ...state,
+          phase: "ResolveMove",
+          prioritySeatId: undefined,
+          pendingImprovementAuction: undefined,
+          scarceImprovementDemands: [],
+        });
+      }
       const deedId = payloadSeatId(event, "deedId");
       const sold = payloadBoolean(event, "sold");
       const winningBid = payloadNumber(event, "winningBid");
@@ -591,6 +719,97 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
           ...state.bank,
           cash: state.bank.cash + winningBid,
           deedIds: state.bank.deedIds.filter((candidate) => candidate !== deedId),
+        },
+      });
+    }
+    case "ScarceImprovementRequested": {
+      const seatId = payloadSeatId(event, "seatId");
+      const deedId = payloadSeatId(event, "deedId");
+      const fromLevel = payloadNumber(event, "fromLevel");
+      const toLevel = payloadNumber(event, "toLevel");
+      const inventoryKind = payloadSeatId(event, "inventoryKind");
+      const inventoryDelta = payloadNumber(event, "inventoryDelta");
+      const baseCost = payloadNumber(event, "baseCost");
+      if (
+        seatId === undefined ||
+        deedId === undefined ||
+        fromLevel === undefined ||
+        toLevel === undefined ||
+        inventoryKind === undefined ||
+        inventoryDelta === undefined ||
+        baseCost === undefined
+      ) {
+        return state;
+      }
+      const existing = state.scarceImprovementDemands ?? [];
+      if (existing.some((demand) => demand.seatId === seatId && demand.deedId === deedId)) {
+        return state;
+      }
+      return freezeState({
+        ...state,
+        scarceImprovementDemands: [
+          ...existing,
+          { seatId, deedId, fromLevel, toLevel, inventoryKind, inventoryDelta, baseCost },
+        ],
+      });
+    }
+    case "ScarceImprovementAwarded": {
+      const seatId = payloadSeatId(event, "seatId");
+      const deedId = payloadSeatId(event, "deedId");
+      const toLevel = payloadNumber(event, "toLevel");
+      const amount = payloadNumber(event, "amount");
+      const inventoryKind = payloadSeatId(event, "inventoryKind");
+      const inventoryDelta = payloadNumber(event, "inventoryDelta");
+      if (
+        seatId === undefined ||
+        deedId === undefined ||
+        toLevel === undefined ||
+        amount === undefined ||
+        inventoryKind === undefined ||
+        inventoryDelta === undefined
+      ) {
+        return state;
+      }
+      const seat = findSeat(state, seatId);
+      const deed = state.deeds.find((candidate) => candidate.deedId === deedId);
+      const inventory = state.bank.improvementInventory[inventoryKind];
+      const remainingDemands = payloadDemands(event, "remainingDemands");
+      const nextBalance = seat === undefined ? undefined : seat.balance - amount;
+      const nextBankCash = state.bank.cash + amount;
+      const nextInventory = inventory === undefined ? undefined : inventory - inventoryDelta;
+      if (
+        seat === undefined ||
+        deed === undefined ||
+        inventory === undefined ||
+        nextBalance === undefined ||
+        !Number.isSafeInteger(nextBalance) ||
+        nextBalance < 0 ||
+        !Number.isSafeInteger(nextBankCash) ||
+        nextInventory === undefined ||
+        !Number.isSafeInteger(nextInventory) ||
+        nextInventory < 0
+      ) {
+        return state;
+      }
+      return freezeState({
+        ...state,
+        phase: "ResolveMove",
+        prioritySeatId: undefined,
+        pendingImprovementAuction: undefined,
+        scarceImprovementDemands: remainingDemands,
+        seats: state.seats.map((candidate) =>
+          candidate.seatId === seatId ? { ...candidate, balance: nextBalance } : candidate,
+        ),
+        deeds: state.deeds.map((candidate) =>
+          candidate.deedId === deedId ? { ...candidate, improvementLevel: toLevel } : candidate,
+        ),
+        bank: {
+          ...state.bank,
+          cash: nextBankCash,
+          improvementInventory: {
+            ...state.bank.improvementInventory,
+            [inventoryKind]: nextInventory,
+          },
         },
       });
     }
@@ -705,6 +924,10 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         prioritySeatId: payloadSeatId(event, "nextSeatId") ?? state.prioritySeatId,
         effectQueue: [],
         pendingChoice: undefined,
+        ...(state.scarceImprovementDemands === undefined ? {} : { scarceImprovementDemands: [] }),
+        ...(state.pendingImprovementAuction === undefined
+          ? {}
+          : { pendingImprovementAuction: undefined }),
       });
     case "GameCompleted":
     case "GameEndedNoContest":
@@ -808,6 +1031,49 @@ function nextAuctionSeatId(
     }
   }
   return undefined;
+}
+
+function nextDemandSeatId(
+  state: GameState,
+  afterSeatId: SeatId,
+  demands: readonly ScarceImprovementDemand[],
+  passedSeatIds: readonly SeatId[],
+): SeatId | undefined {
+  const demandSeatIds = new Set(demands.map((demand) => demand.seatId));
+  const startIndex = state.seats.findIndex((seat) => seat.seatId === afterSeatId);
+  if (startIndex < 0) return undefined;
+  for (let offset = 1; offset <= state.seats.length; offset += 1) {
+    const candidate = state.seats[(startIndex + offset) % state.seats.length];
+    if (
+      candidate?.status === "active" &&
+      demandSeatIds.has(candidate.seatId) &&
+      !passedSeatIds.includes(candidate.seatId)
+    ) {
+      return candidate.seatId;
+    }
+  }
+  return undefined;
+}
+
+function improvementAuctionOutcome(
+  state: GameState,
+  auction: PendingImprovementAuction,
+): AuctionOutcome {
+  const demandSeatIds = [...new Set(auction.demands.map((demand) => demand.seatId))].filter(
+    (seatId) => state.seats.some((seat) => seat.seatId === seatId && seat.status === "active"),
+  );
+  const nonPassedSeatIds = demandSeatIds.filter(
+    (seatId) => !auction.passedSeatIds.includes(seatId),
+  );
+  if (auction.highBidderSeatId !== undefined && nonPassedSeatIds.length === 1) {
+    return nonPassedSeatIds[0] === auction.highBidderSeatId
+      ? { kind: "sale", winnerSeatId: auction.highBidderSeatId }
+      : { kind: "open" };
+  }
+  if (auction.highBidderSeatId === undefined && nonPassedSeatIds.length === 0) {
+    return { kind: "noSale" };
+  }
+  return { kind: "open" };
 }
 
 type AuctionOutcome =
@@ -2062,16 +2328,24 @@ function resolveBuyImprovement(
     );
   }
   const inventory = state.bank.improvementInventory[context.inventoryKind];
-  const inventoryDelta = nextLevel.inventoryDelta;
-  if (inventory === undefined || !Number.isSafeInteger(inventoryDelta)) {
+  const inventoryDelta = rules.configuration.unlimitedImprovementInventory
+    ? 0
+    : nextLevel.inventoryDelta;
+  if (
+    (!rules.configuration.unlimitedImprovementInventory && inventory === undefined) ||
+    !Number.isSafeInteger(inventoryDelta)
+  ) {
     return reject(
       "ILLEGAL_ACTION",
       "IMPROVEMENT_INVENTORY_EXHAUSTED",
       "The bank has no available improvement pieces for this level.",
     );
   }
-  const nextInventory = inventory - inventoryDelta;
-  if (!Number.isSafeInteger(nextInventory) || nextInventory < 0) {
+  const nextInventory = (inventory ?? 0) - inventoryDelta;
+  if (
+    !rules.configuration.unlimitedImprovementInventory &&
+    (!Number.isSafeInteger(nextInventory) || nextInventory < 0)
+  ) {
     return reject(
       "ILLEGAL_ACTION",
       "IMPROVEMENT_INVENTORY_EXHAUSTED",
@@ -2195,16 +2469,24 @@ function resolveSellImprovement(
   }
   const amount = Math.floor((cost * ratio.numerator) / ratio.denominator);
   const inventory = state.bank.improvementInventory[context.inventoryKind];
-  const inventoryDelta = previousLevel.inventoryDelta;
-  if (inventory === undefined || !Number.isSafeInteger(inventoryDelta)) {
+  const inventoryDelta = rules.configuration.unlimitedImprovementInventory
+    ? 0
+    : previousLevel.inventoryDelta;
+  if (
+    (!rules.configuration.unlimitedImprovementInventory && inventory === undefined) ||
+    !Number.isSafeInteger(inventoryDelta)
+  ) {
     return reject(
       "ILLEGAL_ACTION",
       "IMPROVEMENT_INVENTORY_INVALID",
       "The returned improvement pieces cannot fit in bank inventory.",
     );
   }
-  const nextInventory = inventory + inventoryDelta;
-  if (!Number.isSafeInteger(nextInventory) || nextInventory < 0) {
+  const nextInventory = (inventory ?? 0) + inventoryDelta;
+  if (
+    !rules.configuration.unlimitedImprovementInventory &&
+    (!Number.isSafeInteger(nextInventory) || nextInventory < 0)
+  ) {
     return reject(
       "ILLEGAL_ACTION",
       "IMPROVEMENT_INVENTORY_INVALID",
@@ -2236,6 +2518,448 @@ function resolveSellImprovement(
     },
   } satisfies EngineEvent);
   return { ok: true, state: freezeState(applyEvent(state, event)), events: Object.freeze([event]) };
+}
+
+function scarceDemandContext(
+  state: GameState,
+  actorSeatId: SeatId,
+  deedId: string,
+  rules: RuleSet,
+): ScarceImprovementDemand | Rejection {
+  const context = improvementContext(state, rules, deedId);
+  if ("ok" in context) return context;
+  const actor = findSeat(state, actorSeatId);
+  if (actor === undefined || context.deedState.ownerSeatId !== actorSeatId) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "IMPROVEMENT_NOT_OWNED",
+      "A seat may only request an improvement for its own deed.",
+    );
+  }
+  if (
+    context.deedState.mortgaged ||
+    context.districtDeedStates.some((deed) => deed.mortgaged) ||
+    context.districtDeedStates.some((deed) => deed.ownerSeatId !== actorSeatId)
+  ) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "DISTRICT_NOT_COMPLETE",
+      "A district must be complete and unmortgaged before building.",
+    );
+  }
+  const currentLevel = context.deedState.improvementLevel;
+  const nextLevel = context.deed.improvementLevels?.find(
+    (level) => level.level === currentLevel + 1,
+  );
+  const baseCost = context.deed.improvementCost;
+  if (nextLevel === undefined) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "IMPROVEMENT_AT_MAX_LEVEL",
+      "The deed is already fully improved.",
+    );
+  }
+  if (currentLevel > Math.min(...context.districtDeedStates.map((deed) => deed.improvementLevel))) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "EVEN_BUILDING_REQUIRED",
+      "A deed cannot be improved ahead of the lowest deed in its district.",
+    );
+  }
+  if (baseCost === undefined || !Number.isSafeInteger(baseCost) || baseCost < 0) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "INVALID_IMPROVEMENT_COST",
+      "The deed has no valid improvement cost.",
+    );
+  }
+  const inventory = state.bank.improvementInventory[context.inventoryKind];
+  if (!Number.isSafeInteger(nextLevel.inventoryDelta) || nextLevel.inventoryDelta <= 0) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "INVALID_SCARCE_INVENTORY_DELTA",
+      "A scarce improvement demand must consume a positive inventory quantity.",
+    );
+  }
+  if (inventory === undefined || inventory < nextLevel.inventoryDelta) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "IMPROVEMENT_INVENTORY_EXHAUSTED",
+      "The bank has no available improvement pieces for this demand.",
+    );
+  }
+  if (actor.balance < baseCost) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "INSUFFICIENT_FUNDS",
+      "The requesting seat cannot afford the improvement base cost.",
+    );
+  }
+  return {
+    seatId: actorSeatId,
+    deedId,
+    fromLevel: currentLevel,
+    toLevel: nextLevel.level,
+    inventoryKind: context.inventoryKind,
+    inventoryDelta: nextLevel.inventoryDelta,
+    baseCost,
+  };
+}
+
+function validateStoredDemand(
+  state: GameState,
+  demand: ScarceImprovementDemand,
+  rules: RuleSet,
+): Rejection | undefined {
+  const current = scarceDemandContext(state, demand.seatId, demand.deedId, rules);
+  if ("ok" in current) return current;
+  if (
+    current.fromLevel !== demand.fromLevel ||
+    current.toLevel !== demand.toLevel ||
+    current.inventoryKind !== demand.inventoryKind ||
+    current.inventoryDelta !== demand.inventoryDelta ||
+    current.baseCost !== demand.baseCost
+  ) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "SCARCE_DEMAND_STALE",
+      "A declared improvement demand is no longer legal.",
+    );
+  }
+  return undefined;
+}
+
+function validateImprovementAuction(
+  state: GameState,
+  actorSeatId: SeatId,
+  rules: RuleSet,
+): Rejection | PendingImprovementAuction {
+  const actorRejection = requireActiveActor(state, actorSeatId);
+  if (actorRejection !== undefined) return actorRejection;
+  if (state.phase !== "ImprovementAuction" || state.pendingImprovementAuction === undefined) {
+    return reject(
+      "PHASE_MISMATCH",
+      "IMPROVEMENT_AUCTION_NOT_PENDING",
+      "An auction command requires an active improvement auction.",
+    );
+  }
+  const auction = state.pendingImprovementAuction;
+  if (auction.prioritySeatId !== actorSeatId) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "AUCTION_PRIORITY_REQUIRED",
+      "Only the current auction priority seat may act.",
+    );
+  }
+  if (auction.passedSeatIds.includes(actorSeatId)) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "AUCTION_ALREADY_PASSED",
+      "A seat that passed cannot act again in this auction.",
+    );
+  }
+  if (!auction.demands.some((demand) => demand.seatId === actorSeatId)) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "SCARCE_DEMANDER_REQUIRED",
+      "Only seats with a declared improvement demand may bid.",
+    );
+  }
+  const inventory = state.bank.improvementInventory[auction.demands[0]?.inventoryKind ?? ""];
+  if (inventory === undefined || inventory <= 0) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "IMPROVEMENT_INVENTORY_EXHAUSTED",
+      "The improvement inventory is exhausted.",
+    );
+  }
+  for (const demand of auction.demands) {
+    const stale = validateStoredDemand(state, demand, rules);
+    if (stale !== undefined) return stale;
+  }
+  if (
+    !Number.isSafeInteger(auction.highBid) ||
+    auction.highBid < 0 ||
+    (auction.highBidderSeatId !== undefined &&
+      !auction.demands.some((demand) => demand.seatId === auction.highBidderSeatId))
+  ) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "INVALID_IMPROVEMENT_AUCTION_STATE",
+      "The improvement auction high bid is not valid.",
+    );
+  }
+  return auction;
+}
+
+/** RULE-006, RULE-008, CONTENT-005: resolve one no-timer scarce-unit bid/pass. */
+function resolveImprovementAuction(
+  state: GameState,
+  actorSeatId: SeatId,
+  command: "bid" | "pass",
+  amount: number | undefined,
+  rules: RuleSet,
+): Resolution {
+  const validated = validateImprovementAuction(state, actorSeatId, rules);
+  if ("ok" in validated) return validated;
+  const auction = validated;
+  const actor = findSeat(state, actorSeatId);
+  const demand = auction.demands.find((candidate) => candidate.seatId === actorSeatId);
+  if (actor === undefined || demand === undefined) {
+    return reject("INVALID_PAYLOAD", "UNKNOWN_SEAT", "The auction seat is not in the game.");
+  }
+  if (command === "bid") {
+    if (amount === undefined || !Number.isSafeInteger(amount) || amount < 0) {
+      return reject(
+        "INVALID_PAYLOAD",
+        "INVALID_BID_AMOUNT",
+        "Auction bids must be non-negative integer minor units.",
+      );
+    }
+    if (amount <= auction.highBid) {
+      return reject(
+        "ILLEGAL_ACTION",
+        "BID_MUST_INCREASE",
+        "A bid must be greater than the current high bid.",
+      );
+    }
+    if (
+      !Number.isSafeInteger(demand.baseCost + amount) ||
+      demand.baseCost + amount > actor.balance
+    ) {
+      return reject(
+        "ILLEGAL_ACTION",
+        "BID_EXCEEDS_BALANCE",
+        "The bid plus the content-defined improvement cost exceeds the balance.",
+      );
+    }
+  }
+  const nextPassedSeatIds =
+    command === "pass" ? [...auction.passedSeatIds, actorSeatId] : auction.passedSeatIds;
+  const nextAuction: PendingImprovementAuction =
+    command === "bid"
+      ? {
+          ...auction,
+          highBid: amount as number,
+          highBidderSeatId: actorSeatId,
+          prioritySeatId:
+            nextDemandSeatId(state, actorSeatId, auction.demands, auction.passedSeatIds) ??
+            actorSeatId,
+        }
+      : {
+          ...auction,
+          passedSeatIds: nextPassedSeatIds,
+          prioritySeatId:
+            nextDemandSeatId(state, actorSeatId, auction.demands, nextPassedSeatIds) ?? actorSeatId,
+        };
+  const outcome = improvementAuctionOutcome(state, nextAuction);
+  const actionEvent = freezeEvent({
+    type: command === "bid" ? "AuctionBidPlaced" : "AuctionPassed",
+    eventVersion: 1,
+    actorSeatId,
+    payload:
+      command === "bid"
+        ? {
+            auctionKind: "improvement",
+            deedId: demand.deedId,
+            bidderSeatId: actorSeatId,
+            amount,
+            previousBid: auction.highBid,
+            nextPrioritySeatId: outcome.kind === "open" ? nextAuction.prioritySeatId : undefined,
+          }
+        : {
+            auctionKind: "improvement",
+            deedId: demand.deedId,
+            passerSeatId: actorSeatId,
+            nextPrioritySeatId: outcome.kind === "open" ? nextAuction.prioritySeatId : undefined,
+          },
+  } satisfies EngineEvent);
+  const events: EngineEvent[] = [actionEvent];
+  if (outcome.kind === "noSale") {
+    events.push(
+      freezeEvent({
+        type: "AuctionClosed",
+        eventVersion: 1,
+        actorSeatId,
+        payload: { auctionKind: "improvement", sold: false, winningBid: 0 },
+      }),
+    );
+  } else if (outcome.kind === "sale") {
+    const winnerDemand = auction.demands.find(
+      (candidate) => candidate.seatId === outcome.winnerSeatId,
+    );
+    if (winnerDemand === undefined) {
+      return reject(
+        "INVALID_PAYLOAD",
+        "INVALID_IMPROVEMENT_AUCTION_STATE",
+        "The auction winner has no demand.",
+      );
+    }
+    const winningBid = nextAuction.highBid;
+    const amountPaid = winningBid + winnerDemand.baseCost;
+    const inventory = state.bank.improvementInventory[winnerDemand.inventoryKind];
+    const nextInventory =
+      inventory === undefined ? undefined : inventory - winnerDemand.inventoryDelta;
+    if (
+      !Number.isSafeInteger(amountPaid) ||
+      !Number.isSafeInteger(nextInventory) ||
+      nextInventory === undefined ||
+      nextInventory < 0
+    ) {
+      return reject(
+        "INVALID_PAYLOAD",
+        "IMPROVEMENT_AUCTION_OVERFLOW",
+        "The scarce improvement settlement cannot be represented.",
+      );
+    }
+    const remainingDemands = auction.demands.filter((candidate) => candidate !== winnerDemand);
+    const remainingInventoryDemand = remainingDemands.reduce(
+      (total, candidate) => total + candidate.inventoryDelta,
+      0,
+    );
+    const remainingDemandSeatCount = new Set(remainingDemands.map((candidate) => candidate.seatId))
+      .size;
+    const continues =
+      nextInventory > 0 &&
+      remainingDemandSeatCount >= 2 &&
+      remainingInventoryDemand > nextInventory;
+    events.push(
+      freezeEvent({
+        type: "ScarceImprovementAwarded",
+        eventVersion: 1,
+        actorSeatId,
+        payload: {
+          auctionKind: "improvement",
+          seatId: winnerDemand.seatId,
+          deedId: winnerDemand.deedId,
+          fromLevel: winnerDemand.fromLevel,
+          toLevel: winnerDemand.toLevel,
+          winningBid,
+          baseCost: winnerDemand.baseCost,
+          amount: amountPaid,
+          inventoryKind: winnerDemand.inventoryKind,
+          inventoryDelta: winnerDemand.inventoryDelta,
+          remainingDemands: continues ? remainingDemands : [],
+        },
+      }),
+    );
+    if (continues) {
+      const prioritySeatId =
+        nextDemandSeatId(state, outcome.winnerSeatId, remainingDemands, []) ??
+        remainingDemands[0]?.seatId;
+      if (prioritySeatId === undefined) {
+        return reject(
+          "INVALID_PAYLOAD",
+          "NO_AUCTION_PRIORITY",
+          "No demand seat is available for the next auction.",
+        );
+      }
+      events.push(
+        freezeEvent({
+          type: "AuctionOpened",
+          eventVersion: 1,
+          actorSeatId,
+          payload: {
+            auctionKind: "improvement",
+            highBid: 0,
+            prioritySeatId,
+            demands: remainingDemands,
+          },
+        }),
+      );
+    }
+  }
+  return {
+    ok: true,
+    state: freezeState(events.reduce(applyEvent, state)),
+    events: Object.freeze(events),
+  };
+}
+
+function resolveScarceImprovementRequest(
+  state: GameState,
+  actorSeatId: SeatId,
+  deedId: string,
+  rules: RuleSet,
+): Resolution {
+  const actorRejection = requireActiveActor(state, actorSeatId);
+  if (actorRejection !== undefined) return actorRejection;
+  if (state.phase !== "ResolveMove" && state.phase !== "TurnStart") {
+    return reject(
+      "PHASE_MISMATCH",
+      "SCARCE_IMPROVEMENT_REQUIRES_MANAGE_PHASE",
+      "Scarce improvement demands may only be declared during management.",
+    );
+  }
+  if (rules.configuration.unlimitedImprovementInventory) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "SCARCE_AUCTION_DISABLED",
+      "Unlimited improvement inventory bypasses scarcity auctions.",
+    );
+  }
+  const demand = scarceDemandContext(state, actorSeatId, deedId, rules);
+  if ("ok" in demand) return demand;
+  const existing = state.scarceImprovementDemands ?? [];
+  if (
+    existing.some((candidate) => candidate.seatId === actorSeatId && candidate.deedId === deedId)
+  ) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "SCARCE_DEMAND_DUPLICATE",
+      "That improvement demand is already declared.",
+    );
+  }
+  const demands = [...existing, demand];
+  const inventory = state.bank.improvementInventory[demand.inventoryKind];
+  if (inventory === undefined || inventory <= 0) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "IMPROVEMENT_INVENTORY_EXHAUSTED",
+      "The bank has no available improvement pieces.",
+    );
+  }
+  const requestEvent = freezeEvent({
+    type: "ScarceImprovementRequested",
+    eventVersion: 1,
+    actorSeatId,
+    payload: { ...demand },
+  } satisfies EngineEvent);
+  const events: EngineEvent[] = [requestEvent];
+  const demandSeatCount = new Set(demands.map((candidate) => candidate.seatId)).size;
+  if (
+    demandSeatCount >= 2 &&
+    demands.reduce((total, candidate) => total + candidate.inventoryDelta, 0) > inventory
+  ) {
+    const prioritySeatId = demands.find((candidate) =>
+      state.seats.some((seat) => seat.seatId === candidate.seatId && seat.status === "active"),
+    )?.seatId;
+    if (prioritySeatId === undefined) {
+      return reject(
+        "INVALID_PAYLOAD",
+        "NO_AUCTION_PRIORITY",
+        "No active demand seat is available.",
+      );
+    }
+    events.push(
+      freezeEvent({
+        type: "AuctionOpened",
+        eventVersion: 1,
+        actorSeatId,
+        payload: {
+          auctionKind: "improvement",
+          highBid: 0,
+          prioritySeatId,
+          demands,
+        },
+      }),
+    );
+  }
+  return {
+    ok: true,
+    state: freezeState(events.reduce(applyEvent, state)),
+    events: Object.freeze(events),
+  };
 }
 
 function resolveRollDice(state: GameState, actorSeatId: SeatId, rules: RuleSet): Resolution {
@@ -2372,10 +3096,27 @@ export function resolve(state: GameState, command: ActorScopedCommand, rules: Ru
       return resolveAcquireDeed(state, command.actorSeatId, command.command.deedId, rules);
     case "DeclineAcquisition":
       return declineAcquisition(state, command.actorSeatId, command.command.deedId, rules);
-    case "PlaceAuctionBid":
-      return resolveAuction(state, command.actorSeatId, "bid", command.command.amount, rules);
     case "PassAuction":
-      return resolveAuction(state, command.actorSeatId, "pass", undefined, rules);
+      return state.phase === "ImprovementAuction"
+        ? resolveImprovementAuction(state, command.actorSeatId, "pass", undefined, rules)
+        : resolveAuction(state, command.actorSeatId, "pass", undefined, rules);
+    case "RequestScarceImprovement":
+      return resolveScarceImprovementRequest(
+        state,
+        command.actorSeatId,
+        command.command.deedId,
+        rules,
+      );
+    case "PlaceAuctionBid":
+      return state.phase === "ImprovementAuction"
+        ? resolveImprovementAuction(
+            state,
+            command.actorSeatId,
+            "bid",
+            command.command.amount,
+            rules,
+          )
+        : resolveAuction(state, command.actorSeatId, "bid", command.command.amount, rules);
     case "BuyImprovement":
       return resolveBuyImprovement(state, command.actorSeatId, command.command.deedId, rules);
     case "SellImprovement":
