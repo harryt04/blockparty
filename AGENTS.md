@@ -4,7 +4,9 @@ This repository contains **planning documents only**. There is no source code, n
 
 `docs/` is the implementation authority. Read the relevant spec before you write code. Do not invent behavior that a document already defines.
 
-The next planned work is [MILE-003](docs/delivery/roadmap.md) — platform skeleton and deterministic engine seam. [MILE-002](docs/delivery/roadmap.md) (legal, brand, and policy approvals) is a hard gate before it.
+Implementation is unblocked. The project owner settled the name — **Blockparty** — and recorded that [MILE-002](docs/delivery/roadmap.md) no longer gates development. The brand documents supersede the earlier "provisional, uncleared" language, and ticket 0.0 in the backlog carries that correction through the remaining documents.
+
+The work queue is [build-backlog.md](docs/delivery/build-backlog.md): 62 dependency-ordered tickets covering MILE-003 through MILE-008. Take one ticket per session. Do not add a ticket to it.
 
 ## Normative precedence
 

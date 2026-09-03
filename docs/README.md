@@ -35,6 +35,9 @@ When documents disagree, use this order and correct the lower-level document:
 | Engineering | [Security, privacy, analytics](engineering/security-privacy-analytics.md) | Threat model, PostHog policy, data minimization, and acceptance checks |
 | Delivery | [Test strategy](delivery/test-strategy.md) | CI, scenario, browser, accessibility, soak, load, and release evidence |
 | Delivery | [Roadmap](delivery/roadmap.md) | Dependency-ordered tracer bullets and bounded `gnhf` workflow |
+| Delivery | [Build backlog](delivery/build-backlog.md) | The closed 62-ticket agent work queue; one ticket per session |
+| Delivery | [gnhf prompt](gnhf-prompt.md) | The per-iteration loop prompt for autonomous agents |
+| Delivery | [gnhf CLI](gnhf-cli.md) | The exact gnhf commands, branch policy, and stop condition |
 | Delivery | [Operations](delivery/operations.md) | Coolify deployment, observability, backup, recovery, and incidents |
 | Historical | [Original prompt](mvp-prd-prompt.md) | Superseded input; never implementation authority; exclude from public package unless counsel approves |
 
