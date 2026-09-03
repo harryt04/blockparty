@@ -79,6 +79,18 @@ describe("validateBundle", () => {
       "d-sawhorse-lane",
     ],
     [
+      "missing transit rent table",
+      (bundle: Mutable<ContentBundle>) => (bundle.deeds[2].transitRentByCount = undefined),
+      "INCOMPLETE_RENT_LEVELS",
+      "d-food-truck-row",
+    ],
+    [
+      "missing utility multiplier table",
+      (bundle: Mutable<ContentBundle>) => (bundle.deeds[5].utilityMultiplierByCount = undefined),
+      "INCOMPLETE_RENT_LEVELS",
+      "d-hydrant-hookup",
+    ],
+    [
       "impossible inventory",
       (bundle: Mutable<ContentBundle>) =>
         (bundle.economy.improvementInventory = { stall: 0, stage: 0 }),

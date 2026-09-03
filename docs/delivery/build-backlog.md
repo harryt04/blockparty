@@ -230,12 +230,13 @@ print the seed on failure.
       Proves: acquisition and ledger tables cover affordability, authority, atomicity, and cash bounds; TEST-002 pure-engine table/scenario layer.
       Implemented immutable deed/bank ledgers, purchase offers, atomic acquisition, and decline-to-auction handoff; `packages/game-engine/test/acquisition-ledger.test.ts` proves affordability, authority, atomicity, cash bounds, variants, and replay.
 
-- [ ] **A5 — Rent: district, transit, and utility**
-      Blocked by: A4
-      Requirements: RULE-004, RULE-005, CONTENT-004
-      Read: docs/product/rules.md, docs/product/game-content.md
-      Acceptance: owned unmortgaged deeds charge exact data-defined category rent, including complete-district and dice-dependent rules, through the ledgered obligation path.
-      Proves: rent tables cover all categories, mortgage/owner landings, complete districts, and utility rolls; TEST-002 pure-engine table layer.
+- [x] **A5 — Rent: district, transit, and utility**
+  Blocked by: A4
+  Requirements: RULE-004, RULE-005, CONTENT-004
+  Read: docs/product/rules.md, docs/product/game-content.md
+  Acceptance: owned unmortgaged deeds charge exact data-defined category rent, including complete-district and dice-dependent rules, through the ledgered obligation path.
+  Proves: rent tables cover all categories, mortgage/owner landings, complete districts, and utility rolls; TEST-002 pure-engine table layer.
+  Implemented content-backed district, transit, and utility rent calculation with self/mortgage exclusions, atomic `RentPaid`, and immutable insufficient-funds obligations; `packages/game-engine/test/rent.test.ts` covers the category table and replay cases.
 
 - [ ] **A6 — Deed auction**
       Blocked by: A5

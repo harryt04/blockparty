@@ -398,6 +398,43 @@ export function validateBundle(
       "Redemption charge",
     );
     requireMoney(deed.baseRent, `deeds.${deedId}.baseRent`, deedId, "Base rent");
+    const validateRentTable = (
+      values: readonly number[] | undefined,
+      path: string,
+      label: string,
+    ) => {
+      if (!Array.isArray(values) || values.length < 2) {
+        fail(
+          "INCOMPLETE_RENT_LEVELS",
+          path,
+          idMessage(`${label} must include an entry for every supported owner count.`, deedId),
+        );
+        return;
+      }
+      values.forEach((value, index) =>
+        requireMoney(value, `${path}.${index}`, deedId, `${label} entry`),
+      );
+    };
+    if (deed.category === "district") {
+      requireMoney(
+        deed.completeDistrictMultiplier,
+        `deeds.${deedId}.completeDistrictMultiplier`,
+        deedId,
+        "Complete district multiplier",
+      );
+    } else if (deed.category === "transit") {
+      validateRentTable(
+        deed.transitRentByCount,
+        `deeds.${deedId}.transitRentByCount`,
+        "Transit rent table",
+      );
+    } else {
+      validateRentTable(
+        deed.utilityMultiplierByCount,
+        `deeds.${deedId}.utilityMultiplierByCount`,
+        "Utility multiplier table",
+      );
+    }
     if (typeof deed.spaceId !== "string" || !spaceIds.has(deed.spaceId)) {
       fail(
         "MISSING_DEED_SPACE",
@@ -421,6 +458,13 @@ export function validateBundle(
       );
     }
     if (deed.category === "district") {
+      if (deed.transitRentByCount !== undefined || deed.utilityMultiplierByCount !== undefined) {
+        fail(
+          "UNEXPECTED_RENT_TABLE",
+          `deeds.${deedId}`,
+          idMessage("District deeds cannot define transit or utility rent tables.", deedId),
+        );
+      }
       if (deed.districtId === undefined || !districtIds.has(deed.districtId)) {
         fail(
           "INVALID_DISTRICT",
@@ -504,6 +548,27 @@ export function validateBundle(
           "UNEXPECTED_IMPROVEMENT_SCHEDULE",
           `deeds.${deedId}`,
           idMessage("Only district deeds may have improvement schedules.", deedId),
+        );
+      }
+      if (deed.category === "transit" && deed.utilityMultiplierByCount !== undefined) {
+        fail(
+          "UNEXPECTED_RENT_TABLE",
+          `deeds.${deedId}.utilityMultiplierByCount`,
+          idMessage("Transit deeds cannot define utility multipliers.", deedId),
+        );
+      }
+      if (deed.category === "utility" && deed.transitRentByCount !== undefined) {
+        fail(
+          "UNEXPECTED_RENT_TABLE",
+          `deeds.${deedId}.transitRentByCount`,
+          idMessage("Utility deeds cannot define transit rent tables.", deedId),
+        );
+      }
+      if (deed.completeDistrictMultiplier !== undefined) {
+        fail(
+          "UNEXPECTED_RENT_TABLE",
+          `deeds.${deedId}.completeDistrictMultiplier`,
+          idMessage("Only district deeds may define a complete-district multiplier.", deedId),
         );
       }
     }

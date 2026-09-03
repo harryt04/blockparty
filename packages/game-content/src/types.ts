@@ -78,6 +78,21 @@ export interface Deed {
   readonly mortgageValue: Money;
   readonly redemptionCharge: Money;
   readonly baseRent: Money;
+  /**
+   * Multiplier applied to level-zero rent when the district is complete.
+   * Required for district deeds; kept as an integer ratio by content.
+   */
+  readonly completeDistrictMultiplier?: Money;
+  /**
+   * Rent indexed by the owner's count, with index zero intentionally unused.
+   * Required for transit deeds.
+   */
+  readonly transitRentByCount?: readonly Money[];
+  /**
+   * Dice multiplier indexed by the owner's count, with index zero unused.
+   * Required for utility deeds.
+   */
+  readonly utilityMultiplierByCount?: readonly Money[];
   readonly improvementCost?: Money;
   readonly improvementLevels?: readonly ImprovementLevel[];
 }

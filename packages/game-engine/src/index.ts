@@ -12,8 +12,8 @@
  * events. The server assigns journal sequence and aggregate version after
  * resolution; the engine does not know they exist.
  *
- * SCAFFOLD: every entry point carries its real signature and returns a typed
- * UNIMPLEMENTED rejection. Rules land ticket by ticket behind these seams.
+ * Unimplemented commands retain their typed rejection while rules land ticket
+ * by ticket behind these seams.
  */
 import type {
   ActorScopedCommand,
@@ -24,7 +24,7 @@ import type {
   RulesConfiguration,
   SeatId,
 } from "@blockparty/contracts";
-import type { BoardSpace, ContentBundle, ContentEffect } from "@blockparty/game-content";
+import type { BoardSpace, ContentBundle, ContentEffect, Deed } from "@blockparty/game-content";
 import { nextInt, type PrngState } from "./prng";
 
 export * from "./prng";
@@ -67,14 +67,23 @@ export interface PendingChoice {
   readonly continuation: readonly QueuedEffect[];
 }
 
+/** A blocking payment with the exact queue continuation retained. RULE-007, ENG-025. */
+export interface PendingObligation {
+  readonly debtorSeatId: SeatId;
+  readonly creditorSeatId?: SeatId;
+  readonly amount: Money;
+  readonly reasonCode: string;
+  readonly continuation: readonly QueuedEffect[];
+}
+
 /**
  * The authoritative game state. See ENG-021.
  *
  * `seed` and `prng` are secret server data. They are excluded from every
  * projection, analytics event, URL, and log. See ENG-022 and PROTO-004.
  *
- * Auctions, trades, obligations, and card resolution are added by their rule
- * tickets. A4 owns deed ownership and the bank ledger seam.
+ * Auctions, trades, and card resolution are added by their rule tickets. A4
+ * owns deed ownership and the bank ledger; A5 owns rent obligations.
  */
 export interface DeedState {
   readonly deedId: string;
@@ -122,6 +131,8 @@ export interface GameState {
   readonly pendingChoice?: PendingChoice;
   /** A deed landing that is waiting for the active seat's buy/decline choice. */
   readonly pendingAcquisitionDeedId?: string;
+  /** The currently blocking payment, if the active seat cannot pay immediately. */
+  readonly obligation?: PendingObligation;
   /** Serialized handoff to the ordered auction reducer in A6. */
   readonly pendingAuction?: PendingAuction;
   /** Server-only. Never projected. */
@@ -245,6 +256,13 @@ function freezeState(state: GameState): GameState {
           choiceId: state.pendingChoice.choiceId,
           continuation: freezeQueue(state.pendingChoice.continuation),
         });
+  const obligation =
+    state.obligation === undefined
+      ? undefined
+      : Object.freeze({
+          ...state.obligation,
+          continuation: freezeQueue(state.obligation.continuation),
+        });
   return Object.freeze({
     ...state,
     seats: Object.freeze(seats),
@@ -253,6 +271,7 @@ function freezeState(state: GameState): GameState {
     lastRoll,
     effectQueue,
     pendingChoice,
+    obligation,
   });
 }
 
@@ -388,6 +407,48 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
           ...state.bank,
           cash: state.bank.cash + price,
           deedIds: state.bank.deedIds.filter((candidate) => candidate !== deedId),
+        },
+      });
+    }
+    case "RentPaid": {
+      const debtorSeatId = payloadSeatId(event, "debtorSeatId");
+      const creditorSeatId = payloadSeatId(event, "creditorSeatId");
+      const amount = payloadNumber(event, "amount");
+      if (debtorSeatId === undefined || creditorSeatId === undefined || amount === undefined) {
+        return state;
+      }
+      return freezeState({
+        ...state,
+        phase: "ResolveMove",
+        obligation: undefined,
+        seats: state.seats.map((seat) =>
+          seat.seatId === debtorSeatId
+            ? { ...seat, balance: seat.balance - amount }
+            : seat.seatId === creditorSeatId
+              ? { ...seat, balance: seat.balance + amount }
+              : seat,
+        ),
+      });
+    }
+    case "ObligationCreated": {
+      const debtorSeatId = payloadSeatId(event, "debtorSeatId");
+      const creditorSeatId = payloadSeatId(event, "creditorSeatId");
+      const amount = payloadNumber(event, "amount");
+      const reasonCode = payloadSeatId(event, "reasonCode");
+      if (debtorSeatId === undefined || amount === undefined || reasonCode === undefined) {
+        return state;
+      }
+      const continuation = payloadQueuedEffects(event) ?? [];
+      return freezeState({
+        ...state,
+        phase: "AwaitDebt",
+        effectQueue: continuation,
+        obligation: {
+          debtorSeatId,
+          creditorSeatId,
+          amount,
+          reasonCode,
+          continuation,
         },
       });
     }
@@ -615,6 +676,117 @@ function queuedEffects(space: BoardSpace): readonly QueuedEffect[] {
   return space.effects.map((effect) => ({ sourceId: space.spaceId, effect }));
 }
 
+interface RentCalculation {
+  readonly amount: Money;
+  readonly basis: Readonly<Record<string, boolean | number | string>>;
+}
+
+function calculateRent(
+  state: GameState,
+  rules: RuleSet,
+  deed: Deed,
+  deedState: DeedState,
+  ownerSeatId: SeatId,
+): RentCalculation | Rejection {
+  const ownerDeeds = state.deeds.filter((candidate) => candidate.ownerSeatId === ownerSeatId);
+  switch (deed.category) {
+    case "district": {
+      const districtId = deed.districtId;
+      const district = rules.content.districts.find(
+        (candidate) => candidate.districtId === districtId,
+      );
+      if (district === undefined || deed.completeDistrictMultiplier === undefined) {
+        return reject(
+          "INVALID_PAYLOAD",
+          "INVALID_DISTRICT_RENT_DATA",
+          "The district deed has no complete-district rent data.",
+        );
+      }
+      const complete = district.deedIds.every((districtDeedId) => {
+        const member = state.deeds.find((candidate) => candidate.deedId === districtDeedId);
+        return member?.ownerSeatId === ownerSeatId && !member.mortgaged;
+      });
+      if (deedState.improvementLevel === 0) {
+        const multiplier = complete ? deed.completeDistrictMultiplier : 1;
+        const amount = deed.baseRent * multiplier;
+        if (!Number.isSafeInteger(amount)) {
+          return reject(
+            "INVALID_PAYLOAD",
+            "RENT_OVERFLOW",
+            "The rent does not fit in minor units.",
+          );
+        }
+        return {
+          amount,
+          basis: {
+            category: "district",
+            improvementLevel: 0,
+            completeDistrict: complete,
+            multiplier,
+          },
+        };
+      }
+      const level = deed.improvementLevels?.find(
+        (candidate) => candidate.level === deedState.improvementLevel,
+      );
+      if (level === undefined) {
+        return reject(
+          "INVALID_PAYLOAD",
+          "INVALID_IMPROVEMENT_LEVEL",
+          "The deed improvement level has no rent data.",
+        );
+      }
+      return {
+        amount: level.rent,
+        basis: { category: "district", improvementLevel: level.level, completeDistrict: complete },
+      };
+    }
+    case "transit": {
+      const count = ownerDeeds.filter((candidate) => {
+        const owned = rules.content.deeds.find(
+          (candidateDeed) => candidateDeed.deedId === candidate.deedId,
+        );
+        return owned?.category === "transit";
+      }).length;
+      const amount = deed.transitRentByCount?.[count];
+      if (amount === undefined) {
+        return reject(
+          "INVALID_PAYLOAD",
+          "INVALID_TRANSIT_RENT_DATA",
+          "The transit deed has no rent for the owner's deed count.",
+        );
+      }
+      return { amount, basis: { category: "transit", ownedTransitCount: count } };
+    }
+    case "utility": {
+      const count = ownerDeeds.filter((candidate) => {
+        const owned = rules.content.deeds.find(
+          (candidateDeed) => candidateDeed.deedId === candidate.deedId,
+        );
+        return owned?.category === "utility";
+      }).length;
+      const multiplier = deed.utilityMultiplierByCount?.[count];
+      const dice = state.lastRoll;
+      if (multiplier === undefined || dice === undefined) {
+        return reject(
+          "INVALID_PAYLOAD",
+          "UTILITY_ROLL_REQUIRED",
+          "Utility rent requires the recorded movement roll.",
+        );
+      }
+      const rollTotal = dice[0] + dice[1];
+      const amount = rollTotal * multiplier;
+      if (!Number.isSafeInteger(amount)) {
+        return reject("INVALID_PAYLOAD", "RENT_OVERFLOW", "The rent does not fit in minor units.");
+      }
+      return {
+        amount,
+        basis: { category: "utility", ownedUtilityCount: count, rollTotal, multiplier },
+      };
+    }
+  }
+}
+
 function moveEvent(
   actorSeatId: SeatId,
   movement: Movement,
@@ -827,12 +999,101 @@ function resolveDeedLanding(
       : rules.content.deeds.find((candidate) => candidate.deedId === deedId);
   const deedState =
     deedId === undefined ? undefined : state.deeds.find((candidate) => candidate.deedId === deedId);
-  if (
-    seat === undefined ||
-    deed === undefined ||
-    deedState === undefined ||
-    !state.bank.deedIds.includes(deed.deedId)
-  ) {
+  if (seat === undefined || deed === undefined || deedState === undefined) {
+    return { state: freezeState({ ...state, effectQueue: [] }), events: Object.freeze([]) };
+  }
+
+  if (deedState.ownerSeatId !== undefined) {
+    if (deedState.ownerSeatId === actorSeatId || deedState.mortgaged) {
+      // RULE-005: a player never pays rent to themselves, and a mortgaged deed
+      // earns no rent. Both cases finish the landing without an obligation.
+      return {
+        state: freezeState({ ...state, phase: "ResolveMove", effectQueue: [] }),
+        events: Object.freeze([]),
+      };
+    }
+
+    const rent = calculateRent(state, rules, deed, deedState, deedState.ownerSeatId);
+    if ("ok" in rent) {
+      return { state: freezeState({ ...state, effectQueue: [] }), events: Object.freeze([]) };
+    }
+    const creditorSeatId = deedState.ownerSeatId;
+    const creditor = findSeat(state, creditorSeatId);
+    if (creditor === undefined || !Number.isSafeInteger(creditor.balance + rent.amount)) {
+      return {
+        state: freezeState({ ...state, effectQueue: [] }),
+        events: Object.freeze([]),
+      };
+    }
+    const reasonCode = "RENT_DUE";
+    const continuation: readonly QueuedEffect[] = [];
+    if (seat.balance < rent.amount) {
+      const obligation: PendingObligation = {
+        debtorSeatId: actorSeatId,
+        creditorSeatId,
+        amount: rent.amount,
+        reasonCode,
+        continuation,
+      };
+      return {
+        state: freezeState({
+          ...state,
+          phase: "AwaitDebt",
+          effectQueue: continuation,
+          obligation,
+        }),
+        events: Object.freeze([
+          freezeEvent({
+            type: "ObligationCreated",
+            eventVersion: 1,
+            actorSeatId,
+            payload: {
+              debtorSeatId: actorSeatId,
+              creditorSeatId,
+              amount: rent.amount,
+              reasonCode,
+              reason: "RENT_DUE",
+              deedId: deed.deedId,
+              ...rent.basis,
+              remainingEffects: continuation,
+            },
+          }),
+        ]),
+      };
+    }
+
+    return {
+      state: freezeState({
+        ...state,
+        phase: "ResolveMove",
+        effectQueue: continuation,
+        obligation: undefined,
+        seats: state.seats.map((candidate) =>
+          candidate.seatId === actorSeatId
+            ? { ...candidate, balance: candidate.balance - rent.amount }
+            : candidate.seatId === creditorSeatId
+              ? { ...candidate, balance: candidate.balance + rent.amount }
+              : candidate,
+        ),
+      }),
+      events: Object.freeze([
+        freezeEvent({
+          type: "RentPaid",
+          eventVersion: 1,
+          actorSeatId,
+          payload: {
+            deedId: deed.deedId,
+            debtorSeatId: actorSeatId,
+            creditorSeatId,
+            amount: rent.amount,
+            ...rent.basis,
+          },
+        }),
+      ]),
+    };
+  }
+
+  if (!state.bank.deedIds.includes(deed.deedId)) {
     return { state: freezeState({ ...state, effectQueue: [] }), events: Object.freeze([]) };
   }
 

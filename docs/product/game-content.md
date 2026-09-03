@@ -21,6 +21,15 @@ This document defines what `packages/game-content` must supply without prescribi
 | CONTENT-010 | Balance evidence includes reproducible simulations and human playtests across 2–6 seats, all-human and bot mixes, standard/short presets, and each variant independently. Record duration, elimination timing, money supply, asset concentration, and stalled-game rate.                                                            |
 | CONTENT-011 | Release review compares the complete selection and arrangement, economy, board presentation, terminology, decks, and art against identified legal risks. Public release requires the attorney gate; mechanical implementation alone is not a safety conclusion.                                                                     |
 
+Rent data is category-specific and remains part of each deed's immutable
+content: district deeds provide `completeDistrictMultiplier` for level-zero
+rent when every deed in the district is owned and unmortgaged; transit deeds
+provide `transitRentByCount`, indexed by the owner's transit-deed count; and
+utility deeds provide `utilityMultiplierByCount`, indexed by the owner's
+utility-deed count. Index zero is reserved in both count tables so the index
+matches the canonical owned count. All entries are non-negative integer minor
+units (or integer multipliers) validated before the bundle is selectable.
+
 ## Effect DSL
 
 Effects are typed data, not executable scripts. The initial closed set is:
