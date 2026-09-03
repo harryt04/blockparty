@@ -202,6 +202,12 @@ export async function claimSeatInTransaction(
   const updatedSeats = game.seats.map((candidate) =>
     candidate.seatId === seat.seatId ? claimedSeat : candidate,
   );
+  const snapshot = {
+    ...game.snapshot,
+    seats: game.snapshot.seats.map((candidate) =>
+      candidate.seatId === seat.seatId ? { ...candidate, kind: "human" as const } : candidate,
+    ),
+  };
   const lobby = projectLobby(game, inviteId, updatedSeats, seat.seatId);
 
   const filter: Filter<GameDocument> = {
@@ -210,7 +216,7 @@ export async function claimSeatInTransaction(
     seats: game.seats,
   };
   const update: UpdateFilter<GameDocument> = {
-    $set: { seats: updatedSeats, lobby },
+    $set: { seats: updatedSeats, lobby, snapshot },
   };
   const result = await store.games.updateOne(filter, update, { session });
   if (result.matchedCount !== 1) throw new JoinUnavailableError();

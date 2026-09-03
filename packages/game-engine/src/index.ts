@@ -47,7 +47,8 @@ export interface RuleSet {
 
 export interface SeatState {
   readonly seatId: SeatId;
-  readonly kind: "human" | "bot";
+  /** Open is retained only while the lobby is waiting for a claimant. */
+  readonly kind: "human" | "bot" | "open";
   readonly status: "active" | "eliminated";
   readonly balance: Money;
   readonly position: number;
@@ -2441,7 +2442,7 @@ function requireActiveActor(state: GameState, actorSeatId: SeatId): Rejection | 
   if (seat === undefined) {
     return reject("ILLEGAL_ACTION", "UNKNOWN_SEAT", "The actor seat is not part of this game.");
   }
-  if (seat.status !== "active") {
+  if (seat.status !== "active" || seat.kind === "open") {
     return reject("ILLEGAL_ACTION", "SEAT_NOT_ACTIVE", "Only an active seat may act.");
   }
   return undefined;
@@ -2459,6 +2460,13 @@ function resolveStartGame(state: GameState, actorSeatId: SeatId, rules: RuleSet)
   }
 
   const activeSeats = state.seats.filter((seat) => seat.status === "active");
+  if (activeSeats.some((seat) => seat.kind === "open")) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "LOBBY_NOT_READY",
+      "Every seat must be claimed or filled by a bot before starting.",
+    );
+  }
   if (activeSeats.length < 2) {
     return reject(
       "ILLEGAL_ACTION",

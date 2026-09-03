@@ -15,7 +15,12 @@ import type {
   SeatToken,
 } from "@blockparty/contracts";
 import { DEFAULT_CONTENT_VERSION, canonicalHashBundle, getBundle } from "@blockparty/game-content";
-import { ENGINE_VERSION, STATE_SCHEMA_VERSION } from "@blockparty/game-engine";
+import {
+  deriveInitialState,
+  ENGINE_VERSION,
+  STATE_SCHEMA_VERSION,
+  type GameState,
+} from "@blockparty/game-engine";
 import {
   COOKIE_NAMES,
   COOKIE_OPTIONS,
@@ -51,9 +56,11 @@ export interface GameDocument {
   readonly engineVersion: string;
   /** Server-only 256-bit seed. Never copied to a projection, log, or response. */
   readonly secretSeed: Binary;
+  /** Authoritative server snapshot. Never serialize this object to a client. */
+  readonly snapshot: GameState;
   readonly lobby: LobbyProjection;
-  readonly aggregateVersion: 0;
-  readonly lastSequence: 0;
+  readonly aggregateVersion: number;
+  readonly lastSequence: number;
   readonly createdAt: Date;
   readonly lastAuthoritativeActionAt: Date;
   readonly expiresAt: Date;
@@ -200,6 +207,37 @@ function projectLobby(
   };
 }
 
+function createLobbySnapshot(
+  gameId: GameId,
+  seats: readonly GameSeatRecord[],
+  contentVersion: string,
+  seed: Uint8Array,
+): GameState {
+  return {
+    stateSchemaVersion: STATE_SCHEMA_VERSION,
+    contentVersion,
+    gameId,
+    aggregateVersion: 0,
+    phase: "Lobby",
+    seats: seats.map((seat) => ({
+      seatId: seat.seatId,
+      kind: seat.kind,
+      status: "active",
+      balance: 0,
+      position: 0,
+      deedIds: [],
+      detained: false,
+      detentionTurnsRemaining: 0,
+      detentionReleaseCardIds: [],
+    })),
+    deeds: [],
+    bank: { cash: 0, deedIds: [], improvementInventory: {} },
+    consecutiveMatchingRolls: 0,
+    effectQueue: [],
+    prng: deriveInitialState(seed),
+  };
+}
+
 function capabilityDocument(
   token: string,
   gameId: GameId,
@@ -244,6 +282,7 @@ export async function createGameInTransaction(
   const host = generateCapability();
   const reclaim = generateCapability();
   const lobby = projectLobby(gameId, inviteId, request, versions, seats, hostSeatId, expiresAt);
+  const seed = randomBytes(32);
 
   const game: GameDocument = {
     _id: gameId,
@@ -259,7 +298,8 @@ export async function createGameInTransaction(
     variantSchemaVersion: versions.variantSchemaVersion,
     stateSchemaVersion: versions.stateSchemaVersion,
     engineVersion: versions.engineVersion,
-    secretSeed: new Binary(randomBytes(32)),
+    secretSeed: new Binary(seed),
+    snapshot: createLobbySnapshot(gameId, seats, versions.contentVersion, seed),
     lobby,
     aggregateVersion: 0,
     lastSequence: 0,

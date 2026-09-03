@@ -59,8 +59,12 @@ the hash-only, cookie-only issuance control for SEC-002 in
 admission, normalized pseudonyms, and separate seat/reclaim cookie issuance in
 `apps/web/src/server/games/join-game.ts`. Evidence is in
 `apps/web/test/create-game.test.ts`, `apps/web/test/join-game.test.ts`, and
-`apps/web/test/join-route.test.ts`; command and transport controls remain
-planned.
+`apps/web/test/join-route.test.ts`; command and transport controls are
+implemented for B4 in `apps/web/src/server/commands/handle-command.ts` and the
+commands Route Handler, with evidence in `apps/web/test/command-path.test.ts`.
+
+B4 additionally provides the implementation and evidence for PRD-NFR-004,
+ENG-015, PROTO-001, PROTO-002, and the command-authority portion of SEC-002.
 
 | Requirement IDs      | Source                                                                                                        | Implementation owner                | Required evidence                                                            | Loop         | Status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | -------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

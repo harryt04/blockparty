@@ -360,12 +360,13 @@ seat. Each ticket removes the corresponding builder from
       Proves: separate-client join integration tests cover validation, races, full rooms, replayed invites, and generic errors; TEST-002 protocol/security layer.
       Implemented database-backed invite status and transactional seat claims with normalized grapheme-aware pseudonyms, hash-only seat/reclaim authorities, generic unavailable responses, and audit records. Proven by `apps/web/test/join-game.test.ts` and `apps/web/test/join-route.test.ts`; full CI passes.
 
-- [ ] **B4 — The transactional command path**
+- [x] **B4 — The transactional command path**
       Blocked by: B3
       Requirements: PRD-NFR-004, ENG-015, PROTO-001, PROTO-002, SEC-002
       Read: docs/engineering/realtime-and-data.md, docs/engineering/game-engine.md, docs/engineering/security-privacy-analytics.md
       Acceptance: one replica-set transaction authenticates/locks, checks `commandId`, loads snapshot, compares `expectedVersion`, resolves, appends events, updates snapshot, stores receipt, commits, then publishes; duplicates return the committed ACK and failures commit nothing.
       Proves: concurrent/restart integration tests cover every ENG-015 step, duplicate ID, stale version, rollback, monotonic sequence/version, and publish-after-commit; TEST-002 protocol-integration layer.
+      Implemented the receipt-first Mongo transaction, optimistic aggregate update, journaled engine events, durable ACK, capability-scoped route authentication, and post-commit delivery. Proven by `apps/web/test/command-path.test.ts` with duplicate, stale, rollback, monotonic sequence/version, and publish-after-commit cases.
 
 - [ ] **B5 — Authorized projections and bootstrap**
       Blocked by: B4
