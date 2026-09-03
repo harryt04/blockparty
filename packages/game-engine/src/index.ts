@@ -59,6 +59,8 @@ export interface SeatState {
 export interface QueuedEffect {
   readonly sourceId: string;
   readonly effect: ContentEffect;
+  /** Resume a multi-recipient player-payment effect after one leg becomes debt. */
+  readonly playerIndex?: number;
 }
 
 /** A choice blocks the queue while retaining the exact remaining work. RULE-007, ENG-025. */
@@ -238,14 +240,22 @@ function payloadQueuedEffects(event: EngineEvent): readonly QueuedEffect[] | und
   const value = event.payload.remainingEffects;
   if (!Array.isArray(value)) return undefined;
   if (
-    !value.every(
-      (entry): entry is QueuedEffect =>
-        typeof entry === "object" &&
-        entry !== null &&
-        typeof (entry as { sourceId?: unknown }).sourceId === "string" &&
-        typeof (entry as { effect?: unknown }).effect === "object" &&
-        (entry as { effect?: unknown }).effect !== null,
-    )
+    !value.every((entry): entry is QueuedEffect => {
+      if (
+        typeof entry !== "object" ||
+        entry === null ||
+        typeof (entry as { sourceId?: unknown }).sourceId !== "string" ||
+        typeof (entry as { effect?: unknown }).effect !== "object" ||
+        (entry as { effect?: unknown }).effect === null
+      ) {
+        return false;
+      }
+      const playerIndex = (entry as { playerIndex?: unknown }).playerIndex;
+      return (
+        playerIndex === undefined ||
+        (typeof playerIndex === "number" && Number.isSafeInteger(playerIndex) && playerIndex >= 0)
+      );
+    })
   ) {
     return undefined;
   }
@@ -368,7 +378,11 @@ function freezeState(state: GameState): GameState {
   const freezeQueue = (queue: readonly QueuedEffect[]): readonly QueuedEffect[] =>
     Object.freeze(
       queue.map((entry) =>
-        Object.freeze({ sourceId: entry.sourceId, effect: Object.freeze({ ...entry.effect }) }),
+        Object.freeze({
+          sourceId: entry.sourceId,
+          effect: Object.freeze({ ...entry.effect }),
+          ...(entry.playerIndex === undefined ? {} : { playerIndex: entry.playerIndex }),
+        }),
       ),
     );
   const deeds = Object.freeze(state.deeds.map((deed) => Object.freeze({ ...deed })));
@@ -914,6 +928,52 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
           reasonCode,
           continuation,
         },
+      });
+    }
+    case "ObligationSettled": {
+      const debtorSeatId = payloadSeatId(event, "debtorSeatId");
+      const creditorSeatId = payloadSeatId(event, "creditorSeatId");
+      const amount = payloadNumber(event, "amount");
+      const continuation = payloadQueuedEffects(event);
+      if (
+        debtorSeatId === undefined ||
+        amount === undefined ||
+        amount < 0 ||
+        continuation === undefined
+      ) {
+        return state;
+      }
+      const debtor = findSeat(state, debtorSeatId);
+      const creditor = creditorSeatId === undefined ? undefined : findSeat(state, creditorSeatId);
+      const nextDebtorBalance = debtor === undefined ? undefined : debtor.balance - amount;
+      const nextCreditorBalance = creditor === undefined ? undefined : creditor.balance + amount;
+      const nextBankCash =
+        creditorSeatId === undefined ? state.bank.cash + amount : state.bank.cash;
+      if (
+        debtor === undefined ||
+        (creditorSeatId !== undefined && creditor === undefined) ||
+        creditorSeatId === debtorSeatId ||
+        nextDebtorBalance === undefined ||
+        !Number.isSafeInteger(nextDebtorBalance) ||
+        nextDebtorBalance < 0 ||
+        (nextCreditorBalance !== undefined && !Number.isSafeInteger(nextCreditorBalance)) ||
+        !Number.isSafeInteger(nextBankCash)
+      ) {
+        return state;
+      }
+      return freezeState({
+        ...state,
+        phase: "ResolveMove",
+        effectQueue: continuation,
+        obligation: undefined,
+        seats: state.seats.map((seat) =>
+          seat.seatId === debtorSeatId
+            ? { ...seat, balance: nextDebtorBalance }
+            : seat.seatId === creditorSeatId
+              ? { ...seat, balance: nextCreditorBalance as number }
+              : seat,
+        ),
+        bank: { ...state.bank, cash: nextBankCash },
       });
     }
     case "AcquisitionDeclined":
@@ -2397,10 +2457,14 @@ function resolveEffectQueue(
         const seat = findSeat(nextState, actorSeatId);
         if (seat === undefined || !Number.isSafeInteger(amount) || amount < 0) break;
         if (seat.balance < amount) {
-          return paymentObligation(nextState, actorSeatId, amount, undefined, "CARD_PAY_BANK", [
-            entry,
-            ...remaining,
-          ]);
+          return paymentObligation(
+            nextState,
+            actorSeatId,
+            amount,
+            undefined,
+            "CARD_PAY_BANK",
+            remaining,
+          );
         }
         const payment = bankPaymentEvent(actorSeatId, amount, "CARD_PAY_BANK", remaining);
         events.push(payment);
@@ -2452,8 +2516,15 @@ function resolveEffectQueue(
         const otherSeats = nextState.seats.filter(
           (seat) => seat.status === "active" && seat.seatId !== actorSeatId,
         );
+        const firstPlayerIndex = entry.playerIndex ?? 0;
         let working = nextState;
-        for (const otherSeat of otherSeats) {
+        for (
+          let playerIndex = firstPlayerIndex;
+          playerIndex < otherSeats.length;
+          playerIndex += 1
+        ) {
+          const otherSeat = otherSeats[playerIndex];
+          if (otherSeat === undefined) break;
           const payerSeatId = effect.type === "PayEachPlayer" ? actorSeatId : otherSeat.seatId;
           const recipientSeatId = effect.type === "PayEachPlayer" ? otherSeat.seatId : actorSeatId;
           const payer = findSeat(working, payerSeatId);
@@ -2465,7 +2536,7 @@ function resolveEffectQueue(
               amount,
               recipientSeatId,
               effect.type === "PayEachPlayer" ? "CARD_PAY_EACH_PLAYER" : "CARD_COLLECT_EACH_PLAYER",
-              remaining,
+              [{ ...entry, playerIndex }, ...remaining],
             );
           }
           const payment = freezeEvent({
@@ -2512,7 +2583,7 @@ function resolveEffectQueue(
             amount,
             undefined,
             "CARD_REPAIR_CHARGE",
-            [entry, ...remaining],
+            remaining,
           );
         }
         const payment = bankPaymentEvent(actorSeatId, amount, "CARD_REPAIR_CHARGE", remaining);
@@ -3587,15 +3658,22 @@ function resolveSellImprovement(
 ): Resolution {
   const actorRejection = requireActiveActor(state, actorSeatId);
   if (actorRejection !== undefined) return actorRejection;
-  if (state.phase !== "ResolveMove" && state.phase !== "TurnStart") {
+  if (state.phase !== "ResolveMove" && state.phase !== "TurnStart" && state.phase !== "AwaitDebt") {
     return reject(
       "PHASE_MISMATCH",
       "IMPROVEMENT_REQUIRES_MANAGE_PHASE",
-      "Improvements may only be sold after movement resolution.",
+      "Improvements may only be sold during management or debt resolution.",
     );
   }
   if (state.activeSeatId !== actorSeatId) {
     return reject("ILLEGAL_ACTION", "OUT_OF_TURN", "Only the active seat may sell improvements.");
+  }
+  if (state.phase === "AwaitDebt" && state.obligation?.debtorSeatId !== actorSeatId) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "DEBTOR_REQUIRED",
+      "Only the debtor may sell improvements during an obligation.",
+    );
   }
   const context = improvementContext(state, rules, deedId);
   if ("ok" in context) return context;
@@ -4270,6 +4348,124 @@ function resolveRollDice(state: GameState, actorSeatId: SeatId, rules: RuleSet):
 }
 
 /**
+ * Settles one visible obligation after the debtor has raised enough cash.
+ * Liquidation commands are separate transactions; this command only settles
+ * the fixed debt or rejects while it remains underfunded. RULE-007, RULE-009,
+ * ENG-025.
+ */
+function resolvePayObligation(state: GameState, actorSeatId: SeatId, rules: RuleSet): Resolution {
+  const actorRejection = requireActiveActor(state, actorSeatId);
+  if (actorRejection !== undefined) return actorRejection;
+  if (state.phase !== "AwaitDebt" || state.obligation === undefined) {
+    return reject(
+      "PHASE_MISMATCH",
+      "OBLIGATION_NOT_PENDING",
+      "A payment can only be made while an obligation is pending.",
+    );
+  }
+  const obligation = state.obligation;
+  if (state.activeSeatId !== actorSeatId || obligation.debtorSeatId !== actorSeatId) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "DEBTOR_REQUIRED",
+      "Only the debtor may settle this obligation.",
+    );
+  }
+  if (!Number.isSafeInteger(obligation.amount) || obligation.amount < 0) {
+    return reject("INVALID_PAYLOAD", "INVALID_OBLIGATION", "The pending obligation is invalid.");
+  }
+  const debtor = findSeat(state, actorSeatId);
+  const creditor =
+    obligation.creditorSeatId === undefined
+      ? undefined
+      : findSeat(state, obligation.creditorSeatId);
+  if (debtor === undefined) {
+    return reject("INVALID_PAYLOAD", "UNKNOWN_DEBTOR", "The obligation debtor is not in the game.");
+  }
+  if (obligation.creditorSeatId !== undefined && creditor === undefined) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "UNKNOWN_CREDITOR",
+      "The obligation creditor is not in the game.",
+    );
+  }
+  if (creditor?.seatId === debtor.seatId) {
+    return reject("INVALID_PAYLOAD", "SELF_CREDITOR", "An obligation cannot be payable to itself.");
+  }
+  if (debtor.balance < obligation.amount) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "INSUFFICIENT_FUNDS",
+      "The debtor still needs legal liquidity before settling this obligation.",
+    );
+  }
+  const nextDebtorBalance = debtor.balance - obligation.amount;
+  const nextCreditorBalance =
+    creditor === undefined ? undefined : creditor.balance + obligation.amount;
+  const nextBankCash =
+    creditor === undefined ? state.bank.cash + obligation.amount : state.bank.cash;
+  if (
+    !Number.isSafeInteger(nextDebtorBalance) ||
+    nextDebtorBalance < 0 ||
+    (nextCreditorBalance !== undefined && !Number.isSafeInteger(nextCreditorBalance)) ||
+    !Number.isSafeInteger(nextBankCash)
+  ) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "OBLIGATION_SETTLEMENT_OVERFLOW",
+      "The obligation settlement cannot be represented.",
+    );
+  }
+
+  const settled = freezeEvent({
+    type: "ObligationSettled",
+    eventVersion: 1,
+    actorSeatId,
+    payload: {
+      debtorSeatId: actorSeatId,
+      ...(obligation.creditorSeatId === undefined
+        ? {}
+        : { creditorSeatId: obligation.creditorSeatId }),
+      amount: obligation.amount,
+      reasonCode: obligation.reasonCode,
+      remainingEffects: obligation.continuation,
+    },
+  } satisfies EngineEvent);
+  let nextState = freezeState(applyEvent(state, settled));
+  const events: EngineEvent[] = [settled];
+
+  // A11's final Detention-fee route resumes with the required roll only after
+  // the fee itself has settled. It deliberately remains untimed. RULE-009.
+  if (obligation.reasonCode === "DETENTION_RELEASE_FEE") {
+    const released = freezeEvent({
+      type: "DetentionReleased",
+      eventVersion: 1,
+      actorSeatId,
+      payload: { seatId: actorSeatId, reason: "RELEASE_FEE" },
+    } satisfies EngineEvent);
+    events.push(released);
+    nextState = freezeState(applyEvent(nextState, released));
+    const rolled = resolveRollDice(nextState, actorSeatId, rules);
+    if (!rolled.ok) return rolled;
+    return {
+      ok: true,
+      state: rolled.state,
+      events: Object.freeze([...events, ...rolled.events]),
+    };
+  }
+
+  if (nextState.resolvingCard !== undefined || obligation.continuation.length > 0) {
+    const resumed = resolveEffectQueue(nextState, actorSeatId, rules, obligation.continuation);
+    return {
+      ok: true,
+      state: resumed.state,
+      events: Object.freeze([...events, ...resumed.events]),
+    };
+  }
+  return { ok: true, state: nextState, events: Object.freeze(events) };
+}
+
+/**
  * Accepts or rejects one actor-scoped command against an immutable state.
  * Returns a new immutable state plus ordered domain events, or a rejection.
  * The server performs no rule shortcut around this call. See ENG-015 step 5.
@@ -4321,6 +4517,8 @@ export function resolve(state: GameState, command: ActorScopedCommand, rules: Ru
       return resolveMortgage(state, command.actorSeatId, command.command.deedId, rules);
     case "RedeemMortgage":
       return resolveRedeemMortgage(state, command.actorSeatId, command.command.deedId, rules);
+    case "PayObligation":
+      return resolvePayObligation(state, command.actorSeatId, rules);
     default:
       return unimplemented(command.command.type);
   }

@@ -286,12 +286,13 @@ print the seed on failure.
       Proves: detention transition tables cover every release path and final-attempt edge; TEST-002 pure-engine table layer.
       Implemented replayable Detention choice routes for held release cards, post-attempt fees, matching attempts, failed-attempt turn completion, and VAR-004 income suppression; `packages/game-engine/test/detention.test.ts` covers release, movement, replay, asset retention, and no-timer transitions.
 
-- [ ] **A12 — Obligation and debt**
+- [x] **A12 — Obligation and debt**
       Blocked by: A5, A9
       Requirements: RULE-007, RULE-011, ENG-025
       Read: docs/product/rules.md, docs/engineering/game-engine.md
       Acceptance: unaffordable charges enter serialized debt, permit only legal liquidity, preserve creditor/amount/continuation, and settle atomically without timers.
       Proves: bank/player debt scenarios cover liquidity, settlement, stale actions, pause, and continuation; TEST-002 pure-engine scenario layer.
+      Implemented atomic bank/player obligation settlement, serialized continuation resumption, and debtor-only mortgage/improvement-sale liquidity; `packages/game-engine/test/debt.test.ts` covers settlement, replay, liquidity, underfunded debt, and authority.
 
 - [ ] **A13 — Trades and staleness**
       Blocked by: A12
