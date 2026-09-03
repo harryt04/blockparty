@@ -206,6 +206,11 @@ export interface GameState {
   readonly pendingImprovementAuction?: PendingImprovementAuction;
   /** Escrow-free offer; assets remain with their owners until acceptance. */
   readonly pendingTrade?: PendingTrade;
+  /** Seats eliminated in order, retained for final standings. RULE-011. */
+  readonly eliminationOrder?: readonly SeatId[];
+  /** Terminal outcome, present only after completion or no-contest. */
+  readonly terminalReason?: "WINNER" | "NO_WINNER" | "NO_CONTEST";
+  readonly winnerSeatId?: SeatId;
   /** Server-only deck cursors and future order. Never expose in a projection. ENG-022. */
   readonly decks?: readonly DeckState[];
   /** Server-only card context used to return ordinary cards after resolution. */
@@ -457,6 +462,21 @@ function payloadTradeTransferCharges(event: EngineEvent): readonly TradeTransfer
       Number.isSafeInteger(charge.amount) &&
       charge.amount >= 0
     );
+  });
+}
+
+interface ReturnedReleaseCard {
+  readonly deckId: string;
+  readonly cardId: string;
+}
+
+function payloadReturnedReleaseCards(event: EngineEvent): readonly ReturnedReleaseCard[] {
+  const value = event.payload.returnedReleaseCards;
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is ReturnedReleaseCard => {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return false;
+    const card = entry as Record<string, unknown>;
+    return typeof card.deckId === "string" && typeof card.cardId === "string";
   });
 }
 
@@ -1014,6 +1034,133 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
           item.deedId === deedId ? { ...item, ownerSeatId: toSeatId } : item,
         ),
         bank: { ...state.bank, cash: state.bank.cash + chargePaid },
+      });
+    }
+    case "BankruptcyDeclared": {
+      const debtorSeatId = payloadSeatId(event, "debtorSeatId");
+      const creditorSeatId = payloadSeatId(event, "creditorSeatId");
+      const amountPaid = payloadNumber(event, "amountPaid");
+      const transferChargePaid = payloadNumber(event, "transferChargePaid") ?? 0;
+      const transferredDeedIds = payloadStringArray(event, "transferredDeedIds") ?? [];
+      const returnedDeedIds = payloadStringArray(event, "returnedDeedIds") ?? [];
+      const transferredCardIds = payloadStringArray(event, "transferredReleaseCardIds") ?? [];
+      const returnedCards = payloadReturnedReleaseCards(event);
+      if (
+        debtorSeatId === undefined ||
+        amountPaid === undefined ||
+        amountPaid < 0 ||
+        transferChargePaid < 0 ||
+        (transferredDeedIds.length > 0 && creditorSeatId === undefined)
+      ) {
+        return state;
+      }
+      const debtor = findSeat(state, debtorSeatId);
+      const creditor = creditorSeatId === undefined ? undefined : findSeat(state, creditorSeatId);
+      if (
+        debtor === undefined ||
+        (creditorSeatId !== undefined && creditor === undefined) ||
+        creditorSeatId === debtorSeatId ||
+        !Number.isSafeInteger(debtor.balance - amountPaid) ||
+        debtor.balance - amountPaid < 0 ||
+        (creditor !== undefined &&
+          !Number.isSafeInteger(creditor.balance + amountPaid - transferChargePaid)) ||
+        (creditor !== undefined && creditor.balance + amountPaid - transferChargePaid < 0) ||
+        !Number.isSafeInteger(
+          state.bank.cash + (creditor === undefined ? amountPaid : transferChargePaid),
+        )
+      ) {
+        return state;
+      }
+      const transferredDeeds = new Set(transferredDeedIds);
+      const returnedDeeds = new Set(returnedDeedIds);
+      const transferredCards = new Set(transferredCardIds);
+      const nextDecks = state.decks?.map((deck) => {
+        const additions = returnedCards
+          .filter((card) => card.deckId === deck.deckId)
+          .map((card) => card.cardId);
+        return additions.length === 0
+          ? deck
+          : { ...deck, discardPile: [...deck.discardPile, ...additions] };
+      });
+      return freezeState({
+        ...state,
+        phase: "ResolveMove",
+        obligation: undefined,
+        pendingTrade: undefined,
+        pendingAuction: undefined,
+        pendingAcquisitionDeedId: undefined,
+        seats: state.seats.map((seat) => {
+          if (seat.seatId === debtorSeatId) {
+            return {
+              ...seat,
+              balance: seat.balance - amountPaid,
+              deedIds: seat.deedIds.filter(
+                (id) => !transferredDeeds.has(id) && !returnedDeeds.has(id),
+              ),
+              detentionReleaseCardIds: seat.detentionReleaseCardIds.filter(
+                (id) =>
+                  !transferredCards.has(id) && !returnedCards.some((card) => card.cardId === id),
+              ),
+            };
+          }
+          if (creditor?.seatId === seat.seatId) {
+            return {
+              ...seat,
+              balance: seat.balance + amountPaid - transferChargePaid,
+              deedIds: [
+                ...seat.deedIds,
+                ...transferredDeedIds.filter((id) => !seat.deedIds.includes(id)),
+              ],
+              detentionReleaseCardIds: [
+                ...seat.detentionReleaseCardIds,
+                ...transferredCardIds.filter((id) => !seat.detentionReleaseCardIds.includes(id)),
+              ],
+            };
+          }
+          return seat;
+        }),
+        deeds: state.deeds.map((deed) =>
+          transferredDeeds.has(deed.deedId)
+            ? { ...deed, ownerSeatId: creditorSeatId }
+            : returnedDeeds.has(deed.deedId)
+              ? { ...deed, ownerSeatId: undefined, mortgaged: deed.mortgaged }
+              : deed,
+        ),
+        bank: {
+          ...state.bank,
+          cash: state.bank.cash + (creditor === undefined ? amountPaid : transferChargePaid),
+          deedIds: [
+            ...state.bank.deedIds,
+            ...returnedDeedIds.filter((id) => !state.bank.deedIds.includes(id)),
+          ],
+        },
+        ...(nextDecks === undefined ? {} : { decks: nextDecks }),
+      });
+    }
+    case "SeatEliminated": {
+      const seatId = payloadSeatId(event, "seatId");
+      if (seatId === undefined) return state;
+      const eliminationOrder = payloadStringArray(event, "eliminationOrder") ?? [
+        ...(state.eliminationOrder ?? []),
+        seatId,
+      ];
+      const nextSeatId = payloadSeatId(event, "nextSeatId");
+      return freezeState({
+        ...state,
+        phase: "TurnStart",
+        activeSeatId: nextSeatId,
+        prioritySeatId: nextSeatId,
+        eliminationOrder,
+        seats: state.seats.map((seat) =>
+          seat.seatId === seatId
+            ? { ...seat, status: "eliminated", deedIds: [], detentionReleaseCardIds: [] }
+            : seat,
+        ),
+        pendingTrade: undefined,
+        pendingAuction: undefined,
+        pendingAcquisitionDeedId: undefined,
+        effectQueue: [],
+        pendingChoice: undefined,
       });
     }
     case "RentPaid": {
@@ -1654,9 +1801,34 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
           ? {}
           : { pendingImprovementAuction: undefined }),
       });
-    case "GameCompleted":
+    case "GameCompleted": {
+      const winnerSeatId = payloadSeatId(event, "winnerSeatId");
+      return freezeState({
+        ...state,
+        phase: "Finished",
+        terminalReason: winnerSeatId === undefined ? "NO_WINNER" : "WINNER",
+        ...(winnerSeatId === undefined ? {} : { winnerSeatId }),
+        pendingTrade: undefined,
+        pendingAuction: undefined,
+        pendingAcquisitionDeedId: undefined,
+        effectQueue: [],
+        pendingChoice: undefined,
+        obligation: undefined,
+      });
+    }
     case "GameEndedNoContest":
-      return freezeState({ ...state, phase: "Finished" });
+      return freezeState({
+        ...state,
+        phase: "Finished",
+        terminalReason: "NO_CONTEST",
+        winnerSeatId: undefined,
+        pendingTrade: undefined,
+        pendingAuction: undefined,
+        pendingAcquisitionDeedId: undefined,
+        effectQueue: [],
+        pendingChoice: undefined,
+        obligation: undefined,
+      });
     default:
       return state;
   }
@@ -4631,6 +4803,251 @@ function resolveRollDice(state: GameState, actorSeatId: SeatId, rules: RuleSet):
   return { ok: true, state: queued.state, events: Object.freeze([...events, ...queued.events]) };
 }
 
+function bankruptcyLiquidity(state: GameState, actorSeatId: SeatId, rules: RuleSet): number {
+  const actor = findSeat(state, actorSeatId);
+  if (actor === undefined) return 0;
+  let proceeds = actor.balance;
+  const ratio = rules.content.economy.improvementResaleRatio;
+  for (const deedState of state.deeds.filter(
+    (deed) => deed.ownerSeatId === actorSeatId && deed.improvementLevel > 0,
+  )) {
+    const deed = rules.content.deeds.find((candidate) => candidate.deedId === deedState.deedId);
+    if (deed?.improvementCost === undefined) continue;
+    for (let level = deedState.improvementLevel; level > 0; level -= 1) {
+      proceeds += Math.floor((deed.improvementCost * ratio.numerator) / ratio.denominator);
+    }
+  }
+  // Improvements are sold first during bankruptcy, so every currently
+  // unmortgaged deed is a potential mortgage source after liquidation.
+  for (const deedState of state.deeds.filter(
+    (deed) => deed.ownerSeatId === actorSeatId && !deed.mortgaged,
+  )) {
+    const deed = rules.content.deeds.find((candidate) => candidate.deedId === deedState.deedId);
+    if (deed === undefined) continue;
+    const district =
+      deed.districtId === undefined
+        ? undefined
+        : rules.content.districts.find((candidate) => candidate.districtId === deed.districtId);
+    const districtHasImprovements =
+      district?.deedIds.some(
+        (districtDeedId) =>
+          state.deeds.find((candidate) => candidate.deedId === districtDeedId)?.improvementLevel !==
+          0,
+      ) ?? false;
+    if (!districtHasImprovements) proceeds += deed.mortgageValue;
+  }
+  return proceeds;
+}
+
+/** RULE-011: bankruptcy is an explicit proof-producing command, never a timeout. */
+function resolveDeclareBankruptcy(
+  state: GameState,
+  actorSeatId: SeatId,
+  rules: RuleSet,
+): Resolution {
+  const actorRejection = requireActiveActor(state, actorSeatId);
+  if (actorRejection !== undefined) return actorRejection;
+  if (state.phase !== "AwaitDebt" || state.obligation === undefined) {
+    return reject(
+      "PHASE_MISMATCH",
+      "BANKRUPTCY_REQUIRES_DEBT",
+      "Bankruptcy may only be declared while an obligation is pending.",
+    );
+  }
+  const obligation = state.obligation;
+  if (obligation.debtorSeatId !== actorSeatId || state.activeSeatId !== actorSeatId) {
+    return reject("ILLEGAL_ACTION", "DEBTOR_REQUIRED", "Only the debtor may declare bankruptcy.");
+  }
+  if (bankruptcyLiquidity(state, actorSeatId, rules) >= obligation.amount) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "BANKRUPTCY_LIQUIDITY_AVAILABLE",
+      "The debtor still has a legal liquidation sequence that can settle the obligation.",
+    );
+  }
+
+  let working = state;
+  const events: EngineEvent[] = [];
+  const ratio = rules.content.economy.improvementResaleRatio;
+  // Liquidate highest levels first so every generated sale remains even-building legal.
+  while (true) {
+    const candidates = working.deeds
+      .filter((deed) => deed.ownerSeatId === actorSeatId && deed.improvementLevel > 0)
+      .sort(
+        (left, right) =>
+          right.improvementLevel - left.improvementLevel || left.deedId.localeCompare(right.deedId),
+      );
+    const candidate = candidates[0];
+    if (candidate === undefined) break;
+    const deed = rules.content.deeds.find((item) => item.deedId === candidate.deedId);
+    const level = deed?.improvementLevels?.find(
+      (item) => item.level === candidate.improvementLevel,
+    );
+    const inventoryKind = Object.keys(rules.content.economy.improvementInventory)[0];
+    if (deed?.improvementCost === undefined || level === undefined || inventoryKind === undefined) {
+      return reject(
+        "INVALID_PAYLOAD",
+        "INVALID_BANKRUPTCY_LIQUIDATION_DATA",
+        "The content bundle cannot describe the required improvement liquidation.",
+      );
+    }
+    const amount = Math.floor((deed.improvementCost * ratio.numerator) / ratio.denominator);
+    const sold = freezeEvent({
+      type: "ImprovementSold",
+      eventVersion: 1,
+      actorSeatId,
+      payload: {
+        deedId: candidate.deedId,
+        seatId: actorSeatId,
+        fromLevel: candidate.improvementLevel,
+        toLevel: candidate.improvementLevel - 1,
+        amount,
+        inventoryKind,
+        inventoryDelta: level.inventoryDelta,
+        reason: "BANKRUPTCY_LIQUIDATION",
+      },
+    } satisfies EngineEvent);
+    events.push(sold);
+    working = freezeState(applyEvent(working, sold));
+  }
+
+  const debtor = findSeat(working, actorSeatId);
+  if (debtor === undefined) {
+    return reject("INVALID_PAYLOAD", "UNKNOWN_DEBTOR", "The debtor is not in the game.");
+  }
+  const creditor =
+    obligation.creditorSeatId === undefined
+      ? undefined
+      : findSeat(working, obligation.creditorSeatId);
+  if (obligation.creditorSeatId !== undefined && creditor === undefined) {
+    return reject("INVALID_PAYLOAD", "UNKNOWN_CREDITOR", "The creditor is not in the game.");
+  }
+  const amountPaid = Math.min(debtor.balance, obligation.amount);
+  const debtorDeedIds = working.deeds
+    .filter((deed) => deed.ownerSeatId === actorSeatId)
+    .map((deed) => deed.deedId);
+  const debtorCardIds = [...debtor.detentionReleaseCardIds];
+  const returnedReleaseCards =
+    creditor === undefined
+      ? debtorCardIds.flatMap((cardId) => {
+          const deck = rules.content.decks.find((candidate) =>
+            candidate.cards.some((card) => card.cardId === cardId),
+          );
+          return deck === undefined ? [] : [{ deckId: deck.deckId, cardId }];
+        })
+      : [];
+  const transferChargeDue =
+    creditor === undefined
+      ? 0
+      : debtorDeedIds.reduce((total, deedId) => {
+          const deed = working.deeds.find((candidate) => candidate.deedId === deedId);
+          const definition = rules.content.deeds.find((candidate) => candidate.deedId === deedId);
+          return total + (deed?.mortgaged ? (definition?.transferCharge ?? 0) : 0);
+        }, 0);
+  const transferChargePaid =
+    creditor === undefined ? 0 : Math.min(transferChargeDue, creditor.balance + amountPaid);
+  const nextSeatId =
+    transferChargeDue > transferChargePaid && creditor !== undefined
+      ? creditor.seatId
+      : nextActiveSeatId(working, actorSeatId);
+  const bankruptcy = freezeEvent({
+    type: "BankruptcyDeclared",
+    eventVersion: 1,
+    actorSeatId,
+    payload: {
+      debtorSeatId: actorSeatId,
+      ...(creditor === undefined ? {} : { creditorSeatId: creditor.seatId }),
+      amountDue: obligation.amount,
+      amountPaid,
+      dischargedAmount: obligation.amount - amountPaid,
+      ...(creditor === undefined
+        ? { returnedDeedIds: debtorDeedIds, returnedReleaseCards }
+        : {
+            transferredDeedIds: debtorDeedIds,
+            transferredReleaseCardIds: debtorCardIds,
+            transferChargeDue,
+            transferChargePaid,
+          }),
+    },
+  } satisfies EngineEvent);
+  events.push(bankruptcy);
+  working = freezeState(applyEvent(working, bankruptcy));
+  const eliminated = freezeEvent({
+    type: "SeatEliminated",
+    eventVersion: 1,
+    actorSeatId,
+    payload: {
+      seatId: actorSeatId,
+      eliminationOrder: [...(state.eliminationOrder ?? []), actorSeatId],
+      ...(nextSeatId === undefined ? {} : { nextSeatId }),
+      reason: "BANKRUPTCY",
+    },
+  } satisfies EngineEvent);
+  events.push(eliminated);
+  working = freezeState(applyEvent(working, eliminated));
+
+  const unpaidTransferCharge = transferChargeDue - transferChargePaid;
+  if (unpaidTransferCharge > 0 && creditor !== undefined) {
+    const debt = freezeEvent({
+      type: "ObligationCreated",
+      eventVersion: 1,
+      actorSeatId: creditor.seatId,
+      payload: {
+        debtorSeatId: creditor.seatId,
+        amount: unpaidTransferCharge,
+        reasonCode: "MORTGAGED_DEED_TRANSFER_CHARGE",
+        remainingEffects: [],
+      },
+    } satisfies EngineEvent);
+    events.push(debt);
+    working = freezeState(applyEvent(working, debt));
+  } else {
+    const activeSeats = working.seats.filter((seat) => seat.status === "active");
+    const winner = activeSeats.length === 1 ? activeSeats[0] : undefined;
+    if (activeSeats.length <= 1) {
+      const completed = freezeEvent({
+        type: "GameCompleted",
+        eventVersion: 1,
+        actorSeatId,
+        payload: {
+          ...(winner === undefined ? {} : { winnerSeatId: winner.seatId }),
+          reason: winner === undefined ? "NO_WINNER" : "LAST_ACTIVE_SEAT",
+        },
+      } satisfies EngineEvent);
+      events.push(completed);
+      working = freezeState(applyEvent(working, completed));
+    }
+  }
+  return { ok: true, state: working, events: Object.freeze(events) };
+}
+
+/** PRD-FUN-019: only an active host-boundary command can end a game without a winner. */
+function resolveEndNoContest(state: GameState, actorSeatId: SeatId): Resolution {
+  const actorRejection = requireActiveActor(state, actorSeatId);
+  if (actorRejection !== undefined) return actorRejection;
+  const safeBoundary =
+    (state.phase === "TurnStart" || state.phase === "AwaitRoll") &&
+    state.effectQueue.length === 0 &&
+    state.pendingChoice === undefined &&
+    state.obligation === undefined &&
+    state.pendingAuction === undefined &&
+    state.pendingAcquisitionDeedId === undefined;
+  if (!safeBoundary) {
+    return reject(
+      "PHASE_MISMATCH",
+      "NO_CONTEST_REQUIRES_SAFE_BOUNDARY",
+      "No-contest can only be committed at a safe command boundary.",
+    );
+  }
+  const event = freezeEvent({
+    type: "GameEndedNoContest",
+    eventVersion: 1,
+    actorSeatId,
+    payload: { hostSeatId: actorSeatId, priorPhase: state.phase },
+  } satisfies EngineEvent);
+  return { ok: true, state: freezeState(applyEvent(state, event)), events: Object.freeze([event]) };
+}
+
 /**
  * Settles one visible obligation after the debtor has raised enough cash.
  * Liquidation commands are separate transactions; this command only settles
@@ -5200,6 +5617,8 @@ export function resolve(state: GameState, command: ActorScopedCommand, rules: Ru
       return resolveRedeemMortgage(state, command.actorSeatId, command.command.deedId, rules);
     case "PayObligation":
       return resolvePayObligation(state, command.actorSeatId, rules);
+    case "DeclareBankruptcy":
+      return resolveDeclareBankruptcy(state, command.actorSeatId, rules);
     case "ProposeTrade":
       return resolveProposeTrade(
         state,
@@ -5233,6 +5652,8 @@ export function resolve(state: GameState, command: ActorScopedCommand, rules: Ru
         command.command.tradeId,
         rules,
       );
+    case "EndNoContest":
+      return resolveEndNoContest(state, command.actorSeatId);
     default:
       return unimplemented(command.command.type);
   }

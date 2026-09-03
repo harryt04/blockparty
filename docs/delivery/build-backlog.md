@@ -302,12 +302,13 @@ print the seed on failure.
       Proves: trade scenarios/generated offers cover authority, staleness, charges, atomicity, and invariants; TEST-002 pure-engine scenario/property layer.
       Implemented escrow-free trade proposals with canonical cash/deed/release-card terms, atomic acceptance and mortgage transfer charges, named rejection/cancellation, stale invalidation, and debt liquidity support; `packages/game-engine/test/trade.test.ts` covers the reducer scenarios and replay.
 
-- [ ] **A14 — Bankruptcy, elimination, endgame, and no-contest**
-      Blocked by: A12
-      Requirements: RULE-011, PRD-FUN-015, PRD-FUN-019
-      Read: docs/product/rules.md, docs/product/prd.md
-      Acceptance: unresolved debt disposes assets by creditor rule, eliminates seats from turns, produces configured winner/no-winner outcomes, and permits irreversible host no-contest only at a safe boundary.
-      Proves: bankruptcy/endgame scenarios cover both creditors, inventory, winner/no-winner, and no-contest legality; TEST-002 pure-engine scenario layer.
+- [x] **A14 — Bankruptcy, elimination, endgame, and no-contest**
+  Blocked by: A12
+  Requirements: RULE-011, PRD-FUN-015, PRD-FUN-019
+  Read: docs/product/rules.md, docs/product/prd.md
+  Acceptance: unresolved debt disposes assets by creditor rule, eliminates seats from turns, produces configured winner/no-winner outcomes, and permits irreversible host no-contest only at a safe boundary.
+  Proves: bankruptcy/endgame scenarios cover both creditors, inventory, winner/no-winner, and no-contest legality; TEST-002 pure-engine scenario layer.
+  Implemented replayable bankruptcy liquidation, creditor/bank asset handling, elimination, terminal winner/no-winner outcomes, and safe-boundary no-contest; `packages/game-engine/test/bankruptcy.test.ts` covers the scenarios and replay.
 
 - [ ] **A15 — `legalActions` and `actionAvailability`**
       Blocked by: A14
