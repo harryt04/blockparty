@@ -154,12 +154,13 @@ provenance review.
       Acceptance: PRs and pushes to `master` run job `ci` on `.nvmrc` Node after a frozen install; active ruleset 22211730 requires a PR with zero approvals and status `ci`, and blocks branch deletion and force pushes.
       Proves: workflow inspection and ruleset API evidence, followed by recorded PR merge-block and rejected non-fast-forward push checks; TEST-002 CI/deployment-control layer.
 
-- [ ] **0.3 — Content validator: the full CONTENT-009 check set**
+- [x] **0.3 — Content validator: the full CONTENT-009 check set**
       Blocked by: 0.2
       Requirements: CONTENT-003, CONTENT-007, CONTENT-009, ENG-024
       Read: docs/product/game-content.md, docs/product/rule-variants.md
       Acceptance: `validateBundle` rejects incomplete rents, impossible inventory, unrepresentable effects, invalid card targets, and out-of-bounds variant data, alongside every structural check, naming the offending canonical ID.
       Proves: targeted valid/broken fixtures cover every CONTENT-009 rejection in `pnpm run ci`; TEST-002 content-validation Vitest layer.
+      Implemented the complete content/effect/economy validator with canonical-ID diagnostics; `packages/game-content/test/validate.test.ts` covers the valid bundle and every rejection category.
 
 - [?] **0.4 — Content v1.0.0 (a): route topology and spaces**
   Blocked by: 0.3
