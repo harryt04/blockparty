@@ -76,6 +76,8 @@ export interface Deed {
   readonly districtId?: DistrictId;
   readonly price: Money;
   readonly mortgageValue: Money;
+  /** Immediate charge owed to the bank when a mortgaged deed changes hands. */
+  readonly transferCharge: Money;
   readonly redemptionCharge: Money;
   readonly baseRent: Money;
   /**

@@ -262,12 +262,13 @@ print the seed on failure.
       Proves: contention scenarios cover order, passes, price, inventory, pause, and continuation; TEST-002 pure-engine scenario layer.
       Implemented the serialized improvement-demand phase, deterministic bidding/pass rounds, content-priced atomic awards, inventory exhaustion, VAR-008 bypass, and event-only replay; `packages/game-engine/test/scarce-improvements.test.ts` covers contention, no-sale, continuation, and fixed-seed scenarios.
 
-- [ ] **A9 — Mortgage, redeem, and transfer charge**
+- [x] **A9 — Mortgage, redeem, and transfer charge**
       Blocked by: A7
       Requirements: RULE-005, RULE-008, CONTENT-004
       Read: docs/product/rules.md, docs/product/game-content.md
       Acceptance: eligible deeds mortgage/redeem at exact values, suppress rent while mortgaged, and apply transfer charges atomically without negative cash.
       Proves: mortgage lifecycle tables cover eligibility, rent, redemption, transfer, and ledger balance; TEST-002 pure-engine table layer.
+      Implemented immutable mortgage/redemption events, debt-compatible mortgage liquidation, and content-defined mortgaged-deed transfer charges; `packages/game-engine/test/mortgage.test.ts` covers lifecycle, replay, eligibility, rent suppression state, and atomic cash bounds.
 
 - [ ] **A10 — Cards, decks, and retained release cards**
       Blocked by: A3

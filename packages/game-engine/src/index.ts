@@ -495,6 +495,110 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         },
       });
     }
+    case "DeedMortgaged": {
+      const deedId = payloadSeatId(event, "deedId");
+      const ownerSeatId = payloadSeatId(event, "ownerSeatId");
+      const amount = payloadNumber(event, "amount");
+      const deed =
+        deedId === undefined ? undefined : state.deeds.find((item) => item.deedId === deedId);
+      const owner = ownerSeatId === undefined ? undefined : findSeat(state, ownerSeatId);
+      if (
+        deed === undefined ||
+        owner === undefined ||
+        amount === undefined ||
+        amount < 0 ||
+        deed.ownerSeatId !== ownerSeatId ||
+        deed.mortgaged ||
+        !Number.isSafeInteger(owner.balance + amount) ||
+        !Number.isSafeInteger(state.bank.cash - amount)
+      ) {
+        return state;
+      }
+      return freezeState({
+        ...state,
+        seats: state.seats.map((seat) =>
+          seat.seatId === ownerSeatId ? { ...seat, balance: seat.balance + amount } : seat,
+        ),
+        deeds: state.deeds.map((item) =>
+          item.deedId === deedId ? { ...item, mortgaged: true } : item,
+        ),
+        bank: { ...state.bank, cash: state.bank.cash - amount },
+      });
+    }
+    case "MortgageRedeemed": {
+      const deedId = payloadSeatId(event, "deedId");
+      const ownerSeatId = payloadSeatId(event, "ownerSeatId");
+      const amount = payloadNumber(event, "amount");
+      const deed =
+        deedId === undefined ? undefined : state.deeds.find((item) => item.deedId === deedId);
+      const owner = ownerSeatId === undefined ? undefined : findSeat(state, ownerSeatId);
+      if (
+        deed === undefined ||
+        owner === undefined ||
+        amount === undefined ||
+        amount < 0 ||
+        deed.ownerSeatId !== ownerSeatId ||
+        !deed.mortgaged ||
+        !Number.isSafeInteger(owner.balance - amount) ||
+        owner.balance - amount < 0 ||
+        !Number.isSafeInteger(state.bank.cash + amount)
+      ) {
+        return state;
+      }
+      return freezeState({
+        ...state,
+        seats: state.seats.map((seat) =>
+          seat.seatId === ownerSeatId ? { ...seat, balance: seat.balance - amount } : seat,
+        ),
+        deeds: state.deeds.map((item) =>
+          item.deedId === deedId ? { ...item, mortgaged: false } : item,
+        ),
+        bank: { ...state.bank, cash: state.bank.cash + amount },
+      });
+    }
+    case "DeedTransferred": {
+      const deedId = payloadSeatId(event, "deedId");
+      const fromSeatId = payloadSeatId(event, "fromSeatId");
+      const toSeatId = payloadSeatId(event, "toSeatId");
+      const chargePaid = payloadNumber(event, "chargePaid") ?? 0;
+      if (deedId === undefined || fromSeatId === undefined || toSeatId === undefined) {
+        return state;
+      }
+      const deed = state.deeds.find((item) => item.deedId === deedId);
+      const fromSeat = findSeat(state, fromSeatId);
+      const toSeat = findSeat(state, toSeatId);
+      if (
+        deed === undefined ||
+        fromSeat === undefined ||
+        toSeat === undefined ||
+        fromSeatId === toSeatId ||
+        deed.ownerSeatId !== fromSeatId ||
+        chargePaid < 0 ||
+        !Number.isSafeInteger(toSeat.balance - chargePaid) ||
+        toSeat.balance - chargePaid < 0 ||
+        !Number.isSafeInteger(state.bank.cash + chargePaid)
+      ) {
+        return state;
+      }
+      return freezeState({
+        ...state,
+        seats: state.seats.map((seat) =>
+          seat.seatId === fromSeatId
+            ? { ...seat, deedIds: seat.deedIds.filter((id) => id !== deedId) }
+            : seat.seatId === toSeatId
+              ? {
+                  ...seat,
+                  balance: seat.balance - chargePaid,
+                  deedIds: seat.deedIds.includes(deedId) ? seat.deedIds : [...seat.deedIds, deedId],
+                }
+              : seat,
+        ),
+        deeds: state.deeds.map((item) =>
+          item.deedId === deedId ? { ...item, ownerSeatId: toSeatId } : item,
+        ),
+        bank: { ...state.bank, cash: state.bank.cash + chargePaid },
+      });
+    }
     case "RentPaid": {
       const debtorSeatId = payloadSeatId(event, "debtorSeatId");
       const creditorSeatId = payloadSeatId(event, "creditorSeatId");
@@ -2204,6 +2308,245 @@ function declineAcquisition(
   };
 }
 
+function managementActorRejection(
+  state: GameState,
+  actorSeatId: SeatId,
+  action: "mortgage" | "redeem",
+): Rejection | undefined {
+  const actorRejection = requireActiveActor(state, actorSeatId);
+  if (actorRejection !== undefined) return actorRejection;
+  const allowedPhase =
+    state.phase === "ResolveMove" ||
+    state.phase === "TurnStart" ||
+    (action === "mortgage" && state.phase === "AwaitDebt");
+  if (!allowedPhase) {
+    return reject(
+      "PHASE_MISMATCH",
+      action === "mortgage" ? "MORTGAGE_REQUIRES_MANAGE_PHASE" : "REDEEM_REQUIRES_MANAGE_PHASE",
+      "This deed action is not available during the current resolution phase.",
+    );
+  }
+  if (state.activeSeatId !== actorSeatId) {
+    return reject("ILLEGAL_ACTION", "OUT_OF_TURN", "Only the active seat may manage deeds.");
+  }
+  if (state.phase === "AwaitDebt" && state.obligation?.debtorSeatId !== actorSeatId) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "DEBTOR_REQUIRED",
+      "Only the debtor may mortgage assets during an obligation.",
+    );
+  }
+  return undefined;
+}
+
+/** RULE-005, RULE-008: mortgage an eligible deed and pay its owner atomically. */
+function resolveMortgage(
+  state: GameState,
+  actorSeatId: SeatId,
+  deedId: string,
+  rules: RuleSet,
+): Resolution {
+  const phaseRejection = managementActorRejection(state, actorSeatId, "mortgage");
+  if (phaseRejection !== undefined) return phaseRejection;
+  const deed = rules.content.deeds.find((candidate) => candidate.deedId === deedId);
+  const deedState = state.deeds.find((candidate) => candidate.deedId === deedId);
+  const actor = findSeat(state, actorSeatId);
+  if (deed === undefined || deedState === undefined || actor === undefined) {
+    return reject("INVALID_PAYLOAD", "UNKNOWN_DEED", "The deed is not in the content ledger.");
+  }
+  if (deedState.ownerSeatId !== actorSeatId) {
+    return reject("ILLEGAL_ACTION", "DEED_NOT_OWNED", "Only the deed owner may mortgage it.");
+  }
+  if (deedState.mortgaged) {
+    return reject("ILLEGAL_ACTION", "DEED_ALREADY_MORTGAGED", "The deed is already mortgaged.");
+  }
+  if (deedState.improvementLevel !== 0) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "IMPROVEMENT_PRESENT",
+      "A deed with improvements cannot be mortgaged.",
+    );
+  }
+  if (deed.category === "district" && deed.districtId !== undefined) {
+    const district = rules.content.districts.find(
+      (candidate) => candidate.districtId === deed.districtId,
+    );
+    if (
+      district?.deedIds.some(
+        (id) => state.deeds.find((item) => item.deedId === id)?.improvementLevel !== 0,
+      )
+    ) {
+      return reject(
+        "ILLEGAL_ACTION",
+        "DISTRICT_HAS_IMPROVEMENTS",
+        "A district deed cannot be mortgaged while any district deed has improvements.",
+      );
+    }
+  }
+  if (!Number.isSafeInteger(deed.mortgageValue) || deed.mortgageValue < 0) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "INVALID_MORTGAGE_VALUE",
+      "The deed has no valid mortgage value.",
+    );
+  }
+  if (!Number.isSafeInteger(state.bank.cash - deed.mortgageValue)) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "BANK_CASH_OVERFLOW",
+      "The bank ledger cannot represent this mortgage payment.",
+    );
+  }
+  const event = freezeEvent({
+    type: "DeedMortgaged",
+    eventVersion: 1,
+    actorSeatId,
+    payload: { deedId, ownerSeatId: actorSeatId, amount: deed.mortgageValue },
+  } satisfies EngineEvent);
+  return { ok: true, state: freezeState(applyEvent(state, event)), events: Object.freeze([event]) };
+}
+
+/** RULE-005, RULE-008: redeem a mortgage with content-defined integer charges. */
+function resolveRedeemMortgage(
+  state: GameState,
+  actorSeatId: SeatId,
+  deedId: string,
+  rules: RuleSet,
+): Resolution {
+  const phaseRejection = managementActorRejection(state, actorSeatId, "redeem");
+  if (phaseRejection !== undefined) return phaseRejection;
+  const deed = rules.content.deeds.find((candidate) => candidate.deedId === deedId);
+  const deedState = state.deeds.find((candidate) => candidate.deedId === deedId);
+  const actor = findSeat(state, actorSeatId);
+  if (deed === undefined || deedState === undefined || actor === undefined) {
+    return reject("INVALID_PAYLOAD", "UNKNOWN_DEED", "The deed is not in the content ledger.");
+  }
+  if (deedState.ownerSeatId !== actorSeatId) {
+    return reject("ILLEGAL_ACTION", "DEED_NOT_OWNED", "Only the deed owner may redeem it.");
+  }
+  if (!deedState.mortgaged) {
+    return reject("ILLEGAL_ACTION", "DEED_NOT_MORTGAGED", "Only a mortgaged deed can be redeemed.");
+  }
+  if (
+    !Number.isSafeInteger(deed.mortgageValue) ||
+    deed.mortgageValue < 0 ||
+    !Number.isSafeInteger(deed.redemptionCharge) ||
+    deed.redemptionCharge < 0 ||
+    !Number.isSafeInteger(deed.mortgageValue + deed.redemptionCharge)
+  ) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "INVALID_REDEMPTION_DATA",
+      "The deed has invalid redemption data.",
+    );
+  }
+  const amount = deed.mortgageValue + deed.redemptionCharge;
+  if (actor.balance < amount) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "INSUFFICIENT_FUNDS",
+      "The active seat cannot afford this redemption.",
+    );
+  }
+  if (!Number.isSafeInteger(state.bank.cash + amount)) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "BANK_CASH_OVERFLOW",
+      "The bank ledger cannot represent this redemption payment.",
+    );
+  }
+  const event = freezeEvent({
+    type: "MortgageRedeemed",
+    eventVersion: 1,
+    actorSeatId,
+    payload: {
+      deedId,
+      ownerSeatId: actorSeatId,
+      amount,
+      mortgageValue: deed.mortgageValue,
+      redemptionCharge: deed.redemptionCharge,
+    },
+  } satisfies EngineEvent);
+  return { ok: true, state: freezeState(applyEvent(state, event)), events: Object.freeze([event]) };
+}
+
+/**
+ * Transfers one deed for future trade/bankruptcy reducers. A mortgaged deed
+ * stays mortgaged; its transfer charge is paid atomically when possible, or
+ * becomes a visible bank obligation. RULE-005, RULE-007, CONTENT-004.
+ */
+export function transferDeed(
+  state: GameState,
+  fromSeatId: SeatId,
+  toSeatId: SeatId,
+  deedId: string,
+  rules: RuleSet,
+): Resolution {
+  const deed = rules.content.deeds.find((candidate) => candidate.deedId === deedId);
+  const deedState = state.deeds.find((candidate) => candidate.deedId === deedId);
+  const fromSeat = findSeat(state, fromSeatId);
+  const toSeat = findSeat(state, toSeatId);
+  if (deed === undefined || deedState === undefined) {
+    return reject("INVALID_PAYLOAD", "UNKNOWN_DEED", "The deed is not in the content ledger.");
+  }
+  if (fromSeat === undefined || toSeat === undefined || fromSeatId === toSeatId) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "INVALID_TRANSFER_PARTIES",
+      "A deed transfer needs two distinct seats.",
+    );
+  }
+  if (deedState.ownerSeatId !== fromSeatId) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "DEED_NOT_OWNED",
+      "The transferring seat does not own this deed.",
+    );
+  }
+  if (!Number.isSafeInteger(deed.transferCharge) || deed.transferCharge < 0) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "INVALID_TRANSFER_CHARGE",
+      "The deed has no valid transfer charge.",
+    );
+  }
+  const transferCharge = deedState.mortgaged ? deed.transferCharge : 0;
+  const chargePaid = toSeat.balance >= transferCharge ? transferCharge : 0;
+  if (!Number.isSafeInteger(state.bank.cash + chargePaid)) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "BANK_CASH_OVERFLOW",
+      "The bank ledger cannot represent this transfer charge.",
+    );
+  }
+  const transferEvent = freezeEvent({
+    type: "DeedTransferred",
+    eventVersion: 1,
+    actorSeatId: fromSeatId,
+    payload: { deedId, fromSeatId, toSeatId, transferCharge, chargePaid },
+  } satisfies EngineEvent);
+  const transferred = applyEvent(state, transferEvent);
+  if (chargePaid === transferCharge) {
+    return { ok: true, state: freezeState(transferred), events: Object.freeze([transferEvent]) };
+  }
+  const debtEvent = freezeEvent({
+    type: "ObligationCreated",
+    eventVersion: 1,
+    actorSeatId: toSeatId,
+    payload: {
+      debtorSeatId: toSeatId,
+      amount: transferCharge,
+      reasonCode: "MORTGAGED_DEED_TRANSFER_CHARGE",
+      remainingEffects: state.effectQueue,
+    },
+  } satisfies EngineEvent);
+  return {
+    ok: true,
+    state: freezeState(applyEvent(transferred, debtEvent)),
+    events: Object.freeze([transferEvent, debtEvent]),
+  };
+}
+
 interface ImprovementContext {
   readonly deed: Deed;
   readonly deedState: DeedState;
@@ -3121,6 +3464,10 @@ export function resolve(state: GameState, command: ActorScopedCommand, rules: Ru
       return resolveBuyImprovement(state, command.actorSeatId, command.command.deedId, rules);
     case "SellImprovement":
       return resolveSellImprovement(state, command.actorSeatId, command.command.deedId, rules);
+    case "MortgageDeed":
+      return resolveMortgage(state, command.actorSeatId, command.command.deedId, rules);
+    case "RedeemMortgage":
+      return resolveRedeemMortgage(state, command.actorSeatId, command.command.deedId, rules);
     default:
       return unimplemented(command.command.type);
   }

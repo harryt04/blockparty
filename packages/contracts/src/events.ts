@@ -39,6 +39,7 @@ export const DomainEventType = z.enum([
   "AcquisitionDeclined",
   "DeedMortgaged",
   "MortgageRedeemed",
+  "DeedTransferred",
   "ImprovementBought",
   "ImprovementSold",
   "ScarceImprovementRequested",

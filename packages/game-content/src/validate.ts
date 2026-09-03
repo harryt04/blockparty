@@ -391,6 +391,7 @@ export function validateBundle(
     }
     requireMoney(deed.price, `deeds.${deedId}.price`, deedId, "Price");
     requireMoney(deed.mortgageValue, `deeds.${deedId}.mortgageValue`, deedId, "Mortgage value");
+    requireMoney(deed.transferCharge, `deeds.${deedId}.transferCharge`, deedId, "Transfer charge");
     requireMoney(
       deed.redemptionCharge,
       `deeds.${deedId}.redemptionCharge`,

@@ -63,6 +63,12 @@ describe("validateBundle", () => {
       "d-sawhorse-lane",
     ],
     [
+      "negative transfer charge",
+      (bundle: Mutable<ContentBundle>) => (bundle.deeds[0].transferCharge = -1),
+      "NON_INTEGER_MONEY",
+      "d-sawhorse-lane",
+    ],
+    [
       "non-integer money",
       (bundle: Mutable<ContentBundle>) => (bundle.economy.startPayment = 1.5),
       "NON_INTEGER_MONEY",
