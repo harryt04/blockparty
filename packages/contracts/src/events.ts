@@ -52,12 +52,15 @@ export const DomainEventType = z.enum([
   // Money and obligations
   "RentPaid",
   "FeePaid",
+  "BankPaymentCollected",
+  "PlayerPaymentCollected",
   "ObligationCreated",
   "ObligationSettled",
   "JackpotFunded",
   "JackpotPaid",
   // Cards and detention
   "CardDrawn",
+  "CardDiscarded",
   "DetentionEntered",
   "DetentionReleased",
   "DetentionReleaseCardGranted",

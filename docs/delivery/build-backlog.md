@@ -270,12 +270,13 @@ print the seed on failure.
       Proves: mortgage lifecycle tables cover eligibility, rent, redemption, transfer, and ledger balance; TEST-002 pure-engine table layer.
       Implemented immutable mortgage/redemption events, debt-compatible mortgage liquidation, and content-defined mortgaged-deed transfer charges; `packages/game-engine/test/mortgage.test.ts` covers lifecycle, replay, eligibility, rent suppression state, and atomic cash bounds.
 
-- [ ] **A10 — Cards, decks, and retained release cards**
+- [x] **A10 — Cards, decks, and retained release cards**
       Blocked by: A3
       Requirements: RULE-007, CONTENT-003, CONTENT-006, ENG-022
       Read: docs/product/rules.md, docs/product/game-content.md, docs/engineering/game-engine.md
       Acceptance: recorded shuffles/draws drive both decks, effects run in order, retained cards leave/return correctly, and future order remains secret.
       Proves: fixed-seed deck goldens and every-effect lifecycle scenarios; TEST-002 pure-engine golden/scenario layer.
+      Implemented server-only deterministic deck cursors, replayable card draws/discards, ordered effect execution, and retained-card removal; `packages/game-engine/test/cards.test.ts` proves fixed-seed shuffles, both deck paths, lifecycle ordering, and replay.
 
 - [ ] **A11 — Detention**
       Blocked by: A10

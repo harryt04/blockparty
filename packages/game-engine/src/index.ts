@@ -76,6 +76,20 @@ export interface PendingObligation {
   readonly continuation: readonly QueuedEffect[];
 }
 
+/** Server-only deck cursor state. Future order is never part of a projection. ENG-022. */
+export interface DeckState {
+  readonly deckId: string;
+  readonly drawPile: readonly string[];
+  readonly discardPile: readonly string[];
+}
+
+/** The card whose ordered effects are currently being resolved. */
+export interface ResolvingCard {
+  readonly deckId: string;
+  readonly cardId: string;
+  readonly retainable: boolean;
+}
+
 /**
  * The authoritative game state. See ENG-021.
  *
@@ -160,6 +174,12 @@ export interface GameState {
   readonly scarceImprovementDemands?: readonly ScarceImprovementDemand[];
   /** Serialized handoff to the scarce-improvement auction reducer. */
   readonly pendingImprovementAuction?: PendingImprovementAuction;
+  /** Server-only deck cursors and future order. Never expose in a projection. ENG-022. */
+  readonly decks?: readonly DeckState[];
+  /** Server-only card context used to return ordinary cards after resolution. */
+  readonly resolvingCard?: ResolvingCard;
+  /** Nested card effects retain their outer card context until completion. */
+  readonly resolvingCardStack?: readonly ResolvingCard[];
   /** Server-only. Never projected. */
   readonly prng: PrngState;
 }
@@ -254,6 +274,58 @@ function payloadInventory(
   return Object.fromEntries(entries) as Readonly<Record<string, number>>;
 }
 
+function payloadDeckStates(event: EngineEvent): readonly DeckState[] | undefined {
+  const value = event.payload.deckOrders;
+  if (!Array.isArray(value)) return undefined;
+  const states: DeckState[] = [];
+  for (const entry of value) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return undefined;
+    const record = entry as Record<string, unknown>;
+    const deckId = record.deckId;
+    const cardIds = record.cardIds;
+    if (
+      typeof deckId !== "string" ||
+      !Array.isArray(cardIds) ||
+      !cardIds.every((cardId): cardId is string => typeof cardId === "string")
+    ) {
+      return undefined;
+    }
+    states.push({ deckId, drawPile: cardIds, discardPile: [] });
+  }
+  return states;
+}
+
+function payloadResolvingCard(event: EngineEvent): ResolvingCard | undefined {
+  const deckId = payloadString(event, "deckId");
+  const cardId = payloadString(event, "cardId");
+  const retainable = payloadBoolean(event, "retainable");
+  if (deckId === undefined || cardId === undefined || retainable === undefined) return undefined;
+  return { deckId, cardId, retainable };
+}
+
+function payloadResolvingCardStack(event: EngineEvent): readonly ResolvingCard[] | undefined {
+  const value = event.payload.resolvingCardStack;
+  if (!Array.isArray(value)) return undefined;
+  const stack: ResolvingCard[] = [];
+  for (const entry of value) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return undefined;
+    const record = entry as Record<string, unknown>;
+    if (
+      typeof record.deckId !== "string" ||
+      typeof record.cardId !== "string" ||
+      typeof record.retainable !== "boolean"
+    ) {
+      return undefined;
+    }
+    stack.push({
+      deckId: record.deckId,
+      cardId: record.cardId,
+      retainable: record.retainable,
+    });
+  }
+  return stack;
+}
+
 function payloadString(event: EngineEvent, key: string): string | undefined {
   const value = event.payload[key];
   return typeof value === "string" && value.length > 0 ? value : undefined;
@@ -337,6 +409,24 @@ function freezeState(state: GameState): GameState {
           ),
           passedSeatIds: Object.freeze([...state.pendingImprovementAuction.passedSeatIds]),
         });
+  const decks =
+    state.decks === undefined
+      ? undefined
+      : Object.freeze(
+          state.decks.map((deck) =>
+            Object.freeze({
+              ...deck,
+              drawPile: Object.freeze([...deck.drawPile]),
+              discardPile: Object.freeze([...deck.discardPile]),
+            }),
+          ),
+        );
+  const resolvingCard =
+    state.resolvingCard === undefined ? undefined : Object.freeze({ ...state.resolvingCard });
+  const resolvingCardStack =
+    state.resolvingCardStack === undefined
+      ? undefined
+      : Object.freeze(state.resolvingCardStack.map((card) => Object.freeze({ ...card })));
   return Object.freeze({
     ...state,
     seats: Object.freeze(seats),
@@ -349,6 +439,9 @@ function freezeState(state: GameState): GameState {
     pendingAuction,
     ...(scarceImprovementDemands === undefined ? {} : { scarceImprovementDemands }),
     ...(pendingImprovementAuction === undefined ? {} : { pendingImprovementAuction }),
+    ...(decks === undefined ? {} : { decks }),
+    ...(resolvingCard === undefined ? {} : { resolvingCard }),
+    ...(resolvingCardStack === undefined ? {} : { resolvingCardStack }),
   });
 }
 
@@ -390,6 +483,7 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
           : state.seats;
       const deedIds = payloadStringArray(event, "deedIds");
       const improvementInventory = payloadInventory(event, "improvementInventory");
+      const decks = payloadDeckStates(event);
       return freezeState({
         ...state,
         seats,
@@ -414,6 +508,9 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         pendingChoice: undefined,
         pendingAcquisitionDeedId: undefined,
         pendingAuction: undefined,
+        ...(decks === undefined ? {} : { decks }),
+        resolvingCard: undefined,
+        resolvingCardStack: undefined,
         ...(state.scarceImprovementDemands === undefined ? {} : { scarceImprovementDemands: [] }),
         ...(state.pendingImprovementAuction === undefined
           ? {}
@@ -430,6 +527,8 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         pendingChoice: undefined,
         pendingAcquisitionDeedId: undefined,
         pendingAuction: undefined,
+        resolvingCard: undefined,
+        resolvingCardStack: undefined,
         ...(state.scarceImprovementDemands === undefined ? {} : { scarceImprovementDemands: [] }),
         ...(state.pendingImprovementAuction === undefined
           ? {}
@@ -454,6 +553,7 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
       return freezeState({
         ...state,
         phase: "ResolveMove",
+        effectQueue: payloadQueuedEffects(event) ?? state.effectQueue,
         seats: state.seats.map((seat) =>
           seat.seatId === seatId ? { ...seat, position, detained: false } : seat,
         ),
@@ -467,6 +567,122 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         ...state,
         seats: state.seats.map((seat) =>
           seat.seatId === seatId ? { ...seat, balance: seat.balance + amount } : seat,
+        ),
+      });
+    }
+    case "BankPaymentCollected": {
+      const seatId = payloadSeatId(event, "seatId");
+      const amount = payloadNumber(event, "amount");
+      if (seatId === undefined || amount === undefined || amount < 0) return state;
+      return freezeState({
+        ...state,
+        effectQueue: payloadQueuedEffects(event) ?? state.effectQueue,
+        seats: state.seats.map((seat) =>
+          seat.seatId === seatId ? { ...seat, balance: seat.balance + amount } : seat,
+        ),
+        bank: { ...state.bank, cash: state.bank.cash - amount },
+      });
+    }
+    case "PlayerPaymentCollected": {
+      const payerSeatId = payloadSeatId(event, "payerSeatId");
+      const recipientSeatId = payloadSeatId(event, "recipientSeatId");
+      const amount = payloadNumber(event, "amount");
+      if (
+        payerSeatId === undefined ||
+        recipientSeatId === undefined ||
+        amount === undefined ||
+        amount < 0
+      ) {
+        return state;
+      }
+      return freezeState({
+        ...state,
+        effectQueue: payloadQueuedEffects(event) ?? state.effectQueue,
+        seats: state.seats.map((seat) =>
+          seat.seatId === payerSeatId
+            ? { ...seat, balance: seat.balance - amount }
+            : seat.seatId === recipientSeatId
+              ? { ...seat, balance: seat.balance + amount }
+              : seat,
+        ),
+      });
+    }
+    case "FeePaid": {
+      const seatId = payloadSeatId(event, "seatId");
+      const amount = payloadNumber(event, "amount");
+      if (seatId === undefined || amount === undefined || amount < 0) return state;
+      return freezeState({
+        ...state,
+        effectQueue: payloadQueuedEffects(event) ?? state.effectQueue,
+        seats: state.seats.map((seat) =>
+          seat.seatId === seatId ? { ...seat, balance: seat.balance - amount } : seat,
+        ),
+        bank: { ...state.bank, cash: state.bank.cash + amount },
+      });
+    }
+    case "CardDrawn": {
+      const deckId = payloadString(event, "deckId");
+      const cardId = payloadString(event, "cardId");
+      const resolvingCard = payloadResolvingCard(event);
+      if (deckId === undefined || cardId === undefined || resolvingCard === undefined) return state;
+      const deckStates = state.decks?.map((deck) =>
+        deck.deckId === deckId
+          ? {
+              ...deck,
+              drawPile: payloadStringArray(event, "remainingCardIds") ?? deck.drawPile,
+              discardPile: payloadStringArray(event, "discardCardIds") ?? deck.discardPile,
+            }
+          : deck,
+      );
+      return freezeState({
+        ...state,
+        phase: "ResolveMove",
+        effectQueue: payloadQueuedEffects(event) ?? state.effectQueue,
+        resolvingCard,
+        resolvingCardStack: payloadResolvingCardStack(event) ?? state.resolvingCardStack,
+        ...(deckStates === undefined ? {} : { decks: deckStates }),
+      });
+    }
+    case "CardDiscarded": {
+      const deckId = payloadString(event, "deckId");
+      const cardId = payloadString(event, "cardId");
+      if (deckId === undefined || cardId === undefined) return state;
+      const deckStates = state.decks?.map((deck) =>
+        deck.deckId === deckId ? { ...deck, discardPile: [...deck.discardPile, cardId] } : deck,
+      );
+      return freezeState({
+        ...state,
+        effectQueue: payloadQueuedEffects(event) ?? state.effectQueue,
+        resolvingCard:
+          state.resolvingCard?.cardId === cardId
+            ? state.resolvingCardStack?.at(-1)
+            : state.resolvingCard,
+        resolvingCardStack:
+          state.resolvingCard?.cardId === cardId
+            ? state.resolvingCardStack?.slice(0, -1)
+            : state.resolvingCardStack,
+        ...(deckStates === undefined ? {} : { decks: deckStates }),
+      });
+    }
+    case "DetentionReleaseCardGranted": {
+      const seatId = payloadSeatId(event, "seatId");
+      const cardId = payloadSeatId(event, "cardId");
+      if (seatId === undefined || cardId === undefined) return state;
+      return freezeState({
+        ...state,
+        effectQueue: payloadQueuedEffects(event) ?? state.effectQueue,
+        resolvingCard:
+          state.resolvingCard?.cardId === cardId
+            ? state.resolvingCardStack?.at(-1)
+            : state.resolvingCard,
+        resolvingCardStack:
+          state.resolvingCard?.cardId === cardId
+            ? state.resolvingCardStack?.slice(0, -1)
+            : state.resolvingCardStack,
+        seats: state.seats.map((seat) =>
+          seat.seatId === seatId && !seat.detentionReleaseCardIds.includes(cardId)
+            ? { ...seat, detentionReleaseCardIds: [...seat.detentionReleaseCardIds, cardId] }
+            : seat,
         ),
       });
     }
@@ -1111,6 +1327,25 @@ function initialBankState(rules: RuleSet): BankState {
   };
 }
 
+function shuffleCardIds(
+  cardIds: readonly string[],
+  prng: PrngState,
+): { readonly cardIds: readonly string[]; readonly prng: PrngState } {
+  const shuffled = [...cardIds];
+  let next = prng;
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const draw = nextInt(next, index + 1);
+    next = draw.next;
+    const swapIndex = draw.value;
+    const current = shuffled[index];
+    const swap = shuffled[swapIndex];
+    if (current === undefined || swap === undefined) continue;
+    shuffled[index] = swap;
+    shuffled[swapIndex] = current;
+  }
+  return { cardIds: Object.freeze(shuffled), prng: next };
+}
+
 function nextActiveSeatId(state: GameState, afterSeatId: SeatId): SeatId | undefined {
   const startIndex = state.seats.findIndex((seat) => seat.seatId === afterSeatId);
   if (startIndex < 0) return undefined;
@@ -1542,6 +1777,7 @@ function moveEvent(
   actorSeatId: SeatId,
   movement: Movement,
   movementType: "normalDice" | "forced",
+  remainingEffects: readonly QueuedEffect[] = [],
 ): EngineEvent {
   return freezeEvent({
     type: "TokenMoved",
@@ -1555,6 +1791,7 @@ function moveEvent(
       crossedStart: movement.crossedStart > 0,
       startCrossings: movement.crossedStart,
       movementType,
+      remainingEffects,
     },
   });
 }
@@ -1567,6 +1804,7 @@ function applyMovement(
   events: EngineEvent[],
   movementType: "normalDice" | "forced",
   exactNormalStart: boolean,
+  remainingEffects: readonly QueuedEffect[] = [],
 ): GameState {
   let nextState = freezeState({
     ...state,
@@ -1576,7 +1814,7 @@ function applyMovement(
         : seat,
     ),
   });
-  events.push(moveEvent(actorSeatId, movement, movementType));
+  events.push(moveEvent(actorSeatId, movement, movementType, remainingEffects));
 
   const startPayment = rules.content.economy.startPayment;
   const payments =
@@ -1691,6 +1929,18 @@ function resolveStartGame(state: GameState, actorSeatId: SeatId, rules: RuleSet)
     return reject("INVALID_PAYLOAD", "NO_FIRST_SEAT", "The game has no eligible first seat.");
   }
 
+  const deckOrders: { readonly deckId: string; readonly cardIds: readonly string[] }[] = [];
+  const decks: DeckState[] = [];
+  for (const deck of rules.content.decks) {
+    const shuffled = shuffleCardIds(
+      deck.cards.map((card) => card.cardId),
+      prng,
+    );
+    prng = shuffled.prng;
+    deckOrders.push({ deckId: deck.deckId, cardIds: shuffled.cardIds });
+    decks.push({ deckId: deck.deckId, drawPile: shuffled.cardIds, discardPile: [] });
+  }
+
   const nextState = freezeState({
     ...state,
     seats: orderedSeats,
@@ -1703,6 +1953,8 @@ function resolveStartGame(state: GameState, actorSeatId: SeatId, rules: RuleSet)
     lastRoll: undefined,
     pendingAcquisitionDeedId: undefined,
     pendingAuction: undefined,
+    decks,
+    resolvingCard: undefined,
     prng,
   });
   const events = [
@@ -1719,6 +1971,9 @@ function resolveStartGame(state: GameState, actorSeatId: SeatId, rules: RuleSet)
         deedIds: rules.content.deeds.map((deed) => deed.deedId),
         bankCash: 0,
         improvementInventory: rules.content.economy.improvementInventory,
+        // Shuffle order is an internal event fact for replay. The server must
+        // strip it from every public projection. ENG-022, PROTO-004.
+        deckOrders,
       },
     }),
     freezeEvent({
@@ -1734,6 +1989,52 @@ function resolveStartGame(state: GameState, actorSeatId: SeatId, rules: RuleSet)
 interface QueueResolution {
   readonly state: GameState;
   readonly events: readonly EngineEvent[];
+}
+
+function paymentObligation(
+  state: GameState,
+  actorSeatId: SeatId,
+  amount: Money,
+  creditorSeatId: SeatId | undefined,
+  reasonCode: string,
+  continuation: readonly QueuedEffect[],
+): QueueResolution {
+  const event = freezeEvent({
+    type: "ObligationCreated",
+    eventVersion: 1,
+    actorSeatId,
+    payload: {
+      debtorSeatId: actorSeatId,
+      ...(creditorSeatId === undefined ? {} : { creditorSeatId }),
+      amount,
+      reasonCode,
+      remainingEffects: continuation,
+    },
+  } satisfies EngineEvent);
+  return {
+    state: freezeState(applyEvent(state, event)),
+    events: Object.freeze([event]),
+  };
+}
+
+function cardDefinition(rules: RuleSet, deckId: string, cardId: string) {
+  return rules.content.decks
+    .find((deck) => deck.deckId === deckId)
+    ?.cards.find((card) => card.cardId === cardId);
+}
+
+function bankPaymentEvent(
+  actorSeatId: SeatId,
+  amount: Money,
+  reasonCode: string,
+  remainingEffects: readonly QueuedEffect[] = [],
+): EngineEvent {
+  return freezeEvent({
+    type: "FeePaid",
+    eventVersion: 1,
+    actorSeatId,
+    payload: { seatId: actorSeatId, amount, reasonCode, remainingEffects },
+  });
 }
 
 function resolveDeedLanding(
@@ -1943,20 +2244,226 @@ function resolveEffectQueue(
     const [entry, ...remaining] = nextState.effectQueue;
     if (entry === undefined) break;
 
-    switch (entry.effect.type) {
+    // A non-retained card leaves circulation once its final instruction has
+    // completed. The card context is server-only; its identity is revealed by
+    // the CardDrawn event, not by a future deck projection. ENG-022.
+    if (
+      nextState.resolvingCard !== undefined &&
+      entry.sourceId !== nextState.resolvingCard.cardId
+    ) {
+      const card = nextState.resolvingCard;
+      const discarded = freezeEvent({
+        type: "CardDiscarded",
+        eventVersion: 1,
+        actorSeatId,
+        payload: {
+          deckId: card.deckId,
+          cardId: card.cardId,
+          remainingEffects: [entry, ...remaining],
+          resolvingCardStack: nextState.resolvingCardStack ?? [],
+        },
+      } satisfies EngineEvent);
+      events.push(discarded);
+      nextState = freezeState(applyEvent(nextState, discarded));
+      continue;
+    }
+
+    const effect = entry.effect;
+    switch (effect.type) {
+      case "Draw": {
+        const deck = nextState.decks?.find((candidate) => candidate.deckId === effect.deckId);
+        const contentDeck = rules.content.decks.find(
+          (candidate) => candidate.deckId === effect.deckId,
+        );
+        if (deck === undefined || contentDeck === undefined) break;
+
+        let drawPile = [...deck.drawPile];
+        let discardPile = [...deck.discardPile];
+        let prng = nextState.prng;
+        if (drawPile.length === 0) {
+          if (discardPile.length === 0) break;
+          const reshuffled = shuffleCardIds(discardPile, prng);
+          drawPile = [...reshuffled.cardIds];
+          discardPile = [];
+          prng = reshuffled.prng;
+        }
+        const cardId = drawPile.shift();
+        const card =
+          cardId === undefined ? undefined : cardDefinition(rules, effect.deckId, cardId);
+        if (card === undefined || cardId === undefined) break;
+        const cardEffects = card.effects.map((effect) => ({ sourceId: card.cardId, effect }));
+        const queuedEffects = [...cardEffects, ...remaining];
+        const resolvingCardStack =
+          nextState.resolvingCard === undefined
+            ? (nextState.resolvingCardStack ?? [])
+            : [...(nextState.resolvingCardStack ?? []), nextState.resolvingCard];
+        const drawEvent = freezeEvent({
+          type: "CardDrawn",
+          eventVersion: 1,
+          actorSeatId,
+          payload: {
+            deckId: effect.deckId,
+            cardId,
+            retainable: card.retainable,
+            remainingCardIds: drawPile,
+            discardCardIds: discardPile,
+            remainingEffects: queuedEffects,
+            resolvingCardStack,
+          },
+        } satisfies EngineEvent);
+        events.push(drawEvent);
+        nextState = freezeState({ ...nextState, prng });
+        nextState = freezeState(applyEvent(nextState, drawEvent));
+        continue;
+      }
+      case "PayBank": {
+        const amount = effect.amount;
+        const seat = findSeat(nextState, actorSeatId);
+        if (seat === undefined || !Number.isSafeInteger(amount) || amount < 0) break;
+        if (seat.balance < amount) {
+          return paymentObligation(nextState, actorSeatId, amount, undefined, "CARD_PAY_BANK", [
+            entry,
+            ...remaining,
+          ]);
+        }
+        const payment = bankPaymentEvent(actorSeatId, amount, "CARD_PAY_BANK", remaining);
+        events.push(payment);
+        nextState = freezeState(applyEvent(nextState, payment));
+        nextState = freezeState({ ...nextState, effectQueue: remaining });
+        continue;
+      }
+      case "CollectBank": {
+        const amount = effect.amount;
+        if (!Number.isSafeInteger(amount) || amount < 0) break;
+        const payment = freezeEvent({
+          type: "BankPaymentCollected",
+          eventVersion: 1,
+          actorSeatId,
+          payload: {
+            seatId: actorSeatId,
+            amount,
+            reasonCode: "CARD_COLLECT_BANK",
+            remainingEffects: remaining,
+          },
+        } satisfies EngineEvent);
+        events.push(payment);
+        nextState = freezeState(applyEvent(nextState, payment));
+        nextState = freezeState({ ...nextState, effectQueue: remaining });
+        continue;
+      }
+      case "PayEachPlayer":
+      case "CollectEachPlayer": {
+        const amount = effect.amount;
+        if (!Number.isSafeInteger(amount) || amount < 0) break;
+        const otherSeats = nextState.seats.filter(
+          (seat) => seat.status === "active" && seat.seatId !== actorSeatId,
+        );
+        let working = nextState;
+        for (const otherSeat of otherSeats) {
+          const payerSeatId = effect.type === "PayEachPlayer" ? actorSeatId : otherSeat.seatId;
+          const recipientSeatId = effect.type === "PayEachPlayer" ? otherSeat.seatId : actorSeatId;
+          const payer = findSeat(working, payerSeatId);
+          if (payer === undefined) break;
+          if (payer.balance < amount) {
+            return paymentObligation(
+              working,
+              actorSeatId,
+              amount,
+              recipientSeatId,
+              effect.type === "PayEachPlayer" ? "CARD_PAY_EACH_PLAYER" : "CARD_COLLECT_EACH_PLAYER",
+              remaining,
+            );
+          }
+          const payment = freezeEvent({
+            type: "PlayerPaymentCollected",
+            eventVersion: 1,
+            actorSeatId,
+            payload: {
+              payerSeatId,
+              recipientSeatId,
+              amount,
+              remainingEffects: remaining,
+              reasonCode:
+                effect.type === "PayEachPlayer"
+                  ? "CARD_PAY_EACH_PLAYER"
+                  : "CARD_COLLECT_EACH_PLAYER",
+            },
+          } satisfies EngineEvent);
+          events.push(payment);
+          working = freezeState(applyEvent(working, payment));
+        }
+        nextState = freezeState({ ...working, effectQueue: remaining });
+        continue;
+      }
+      case "RepairCharge": {
+        const seat = findSeat(nextState, actorSeatId);
+        if (seat === undefined) break;
+        let improvements = 0;
+        let landmarks = 0;
+        for (const deedState of nextState.deeds) {
+          if (deedState.ownerSeatId !== actorSeatId || deedState.improvementLevel <= 0) continue;
+          const deed = rules.content.deeds.find(
+            (candidate) => candidate.deedId === deedState.deedId,
+          );
+          const maxLevel = deed?.improvementLevels?.at(-1)?.level ?? 0;
+          if (deedState.improvementLevel === maxLevel) landmarks += 1;
+          else improvements += deedState.improvementLevel;
+        }
+        const amount = improvements * effect.perImprovement + landmarks * effect.perLandmark;
+        if (!Number.isSafeInteger(amount) || amount < 0) break;
+        if (seat.balance < amount) {
+          return paymentObligation(
+            nextState,
+            actorSeatId,
+            amount,
+            undefined,
+            "CARD_REPAIR_CHARGE",
+            [entry, ...remaining],
+          );
+        }
+        const payment = bankPaymentEvent(actorSeatId, amount, "CARD_REPAIR_CHARGE", remaining);
+        events.push(payment);
+        nextState = freezeState(applyEvent(nextState, payment));
+        nextState = freezeState({ ...nextState, effectQueue: remaining });
+        continue;
+      }
+      case "GrantDetentionReleaseCard": {
+        const card = nextState.resolvingCard;
+        if (card === undefined || !card.retainable) break;
+        const granted = freezeEvent({
+          type: "DetentionReleaseCardGranted",
+          eventVersion: 1,
+          actorSeatId,
+          payload: {
+            seatId: actorSeatId,
+            cardId: card.cardId,
+            deckId: card.deckId,
+            remainingEffects: remaining,
+            resolvingCardStack: nextState.resolvingCardStack ?? [],
+          },
+        } satisfies EngineEvent);
+        events.push(granted);
+        nextState = freezeState(applyEvent(nextState, granted));
+        nextState = freezeState({ ...nextState, effectQueue: remaining });
+        continue;
+      }
       case "MoveBy": {
         const seat = findSeat(nextState, actorSeatId);
         if (seat === undefined) break;
-        const movement = walkRoute(
-          rules,
-          seat.position,
-          entry.effect.spaces,
-          entry.effect.spaces >= 0,
-        );
+        const movement = walkRoute(rules, seat.position, effect.spaces, effect.spaces >= 0);
         if (!("toPosition" in movement)) break;
         const destination = findSpaceAtPosition(rules, movement.toPosition);
         if (destination === undefined) break;
-        nextState = applyMovement(nextState, actorSeatId, movement, rules, events, "forced", false);
+        nextState = applyMovement(
+          nextState,
+          actorSeatId,
+          movement,
+          rules,
+          events,
+          "forced",
+          false,
+          [...queuedEffects(destination), ...remaining],
+        );
         nextState = freezeState({
           ...nextState,
           effectQueue: [...queuedEffects(destination), ...remaining],
@@ -1965,16 +2472,25 @@ function resolveEffectQueue(
       }
       case "MoveTo": {
         const seat = findSeat(nextState, actorSeatId);
-        const destination = findSpace(rules, entry.effect.spaceId);
+        const destination = findSpace(rules, effect.spaceId);
         if (seat === undefined || destination === undefined) break;
         const movement = movementToTarget(
           rules,
           seat.position,
           destination,
-          entry.effect.collectStartWhenCrossed,
+          effect.collectStartWhenCrossed,
         );
         if (!("toPosition" in movement)) break;
-        nextState = applyMovement(nextState, actorSeatId, movement, rules, events, "forced", false);
+        nextState = applyMovement(
+          nextState,
+          actorSeatId,
+          movement,
+          rules,
+          events,
+          "forced",
+          false,
+          [...queuedEffects(destination), ...remaining],
+        );
         nextState = freezeState({
           ...nextState,
           effectQueue: [...queuedEffects(destination), ...remaining],
@@ -2013,6 +2529,22 @@ function resolveEffectQueue(
             },
           }),
         );
+        if (nextState.resolvingCard !== undefined) {
+          const card = nextState.resolvingCard;
+          const discarded = freezeEvent({
+            type: "CardDiscarded",
+            eventVersion: 1,
+            actorSeatId,
+            payload: {
+              deckId: card.deckId,
+              cardId: card.cardId,
+              remainingEffects: [],
+              resolvingCardStack: nextState.resolvingCardStack ?? [],
+            },
+          } satisfies EngineEvent);
+          events.push(discarded);
+          nextState = freezeState(applyEvent(nextState, discarded));
+        }
         return { state: nextState, events: Object.freeze(events) };
       }
       case "Choose": {
@@ -2021,7 +2553,7 @@ function resolveEffectQueue(
           ...nextState,
           phase: "AwaitChoice",
           effectQueue: continuation,
-          pendingChoice: { choiceId: entry.effect.choiceId, continuation },
+          pendingChoice: { choiceId: effect.choiceId, continuation },
         });
         events.push(
           freezeEvent({
@@ -2029,7 +2561,7 @@ function resolveEffectQueue(
             eventVersion: 1,
             actorSeatId,
             payload: {
-              choiceId: entry.effect.choiceId,
+              choiceId: effect.choiceId,
               remainingEffects: continuation,
             },
           }),
@@ -2051,6 +2583,23 @@ function resolveEffectQueue(
       state: freezeState({ ...nextState, effectQueue: [entry, ...remaining] }),
       events: Object.freeze(events),
     };
+  }
+
+  while (nextState.resolvingCard !== undefined) {
+    const card = nextState.resolvingCard;
+    const discarded = freezeEvent({
+      type: "CardDiscarded",
+      eventVersion: 1,
+      actorSeatId,
+      payload: {
+        deckId: card.deckId,
+        cardId: card.cardId,
+        remainingEffects: [],
+        resolvingCardStack: nextState.resolvingCardStack ?? [],
+      },
+    } satisfies EngineEvent);
+    events.push(discarded);
+    nextState = freezeState(applyEvent(nextState, discarded));
   }
 
   const deedLanding = resolveDeedLanding(
@@ -3411,6 +3960,7 @@ function resolveRollDice(state: GameState, actorSeatId: SeatId, rules: RuleSet):
     events,
     "normalDice",
     destination.spaceId === rules.content.startSpaceId,
+    queuedEffects(destination),
   );
   const queued = resolveEffectQueue(nextState, actorSeatId, rules, queuedEffects(destination));
   return { ok: true, state: queued.state, events: Object.freeze([...events, ...queued.events]) };

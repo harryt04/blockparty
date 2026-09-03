@@ -6,7 +6,8 @@ import { deriveInitialState } from "../src/prng";
 
 const SEED = Uint8Array.from(Array.from({ length: 32 }, (_, index) => (index * 17 + 3) & 0xff));
 const RULES: RuleSet = {
-  content: PLACEHOLDER_BUNDLE,
+  // A2 isolates turn-order/dice setup; deck shuffling belongs to A10.
+  content: { ...PLACEHOLDER_BUNDLE, decks: [] },
   configuration: STANDARD_CONFIGURATION,
 };
 
