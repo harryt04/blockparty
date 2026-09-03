@@ -7,9 +7,20 @@
  * response body or in a URL.
  */
 import { CreateGameRequest, type CreateGameResponse } from "@blockparty/contracts";
+import { getDb, withMongoTransaction } from "@/server/db/client";
+import { COLLECTIONS } from "@/server/db/collections";
+import { isProduction } from "@/server/env";
+import {
+  createGameInTransaction,
+  setCreationCookies,
+  type AuditDocument,
+  type CapabilityDocument,
+  type GameDocument,
+  type HostCapabilityDocument,
+  type InvitationDocument,
+} from "@/server/games/create-game";
 import { guardMutation } from "@/server/http/guards";
 import { jsonError, jsonOk } from "@/server/http/responses";
-import { stubLobby } from "@/server/stub-data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,15 +39,38 @@ export async function POST(request: Request) {
   const parsed = CreateGameRequest.safeParse(body);
   if (!parsed.success) return jsonError("INVALID_PAYLOAD");
 
-  // TODO(ENG-003): create the game aggregate in one transaction; generate the
-  // secret seed with node:crypto; capture the content, rules, variant, state,
-  // and engine versions; create the invitation; issue the host and seat
-  // capabilities as Set-Cookie headers; set the rolling 30-day expiry.
-  const gameId = "00000000-0000-4000-8000-000000000000";
-  const response: CreateGameResponse = {
-    gameId,
-    invitePath: "/join/placeholder-invite-id-not-real",
-    lobby: stubLobby(gameId),
-  };
-  return jsonOk(response, { status: 201 });
+  try {
+    const database = getDb();
+    const created = await withMongoTransaction((session) =>
+      createGameInTransaction(
+        {
+          games: database.collection<GameDocument>(COLLECTIONS.games),
+          invitations: database.collection<InvitationDocument>(COLLECTIONS.invitations),
+          capabilities: database.collection<CapabilityDocument>(COLLECTIONS.capabilities),
+          hostCapabilities: database.collection<HostCapabilityDocument>(
+            COLLECTIONS.hostCapabilities,
+          ),
+          auditLog: database.collection<AuditDocument>(COLLECTIONS.auditLog),
+        },
+        session,
+        parsed.data,
+        new Date(),
+        { production: isProduction },
+      ),
+    );
+
+    const responseBody: CreateGameResponse = {
+      gameId: created.lobby.gameId,
+      invitePath: created.lobby.invitePath!,
+      lobby: created.lobby,
+    };
+    const response = jsonOk(responseBody, { status: 201 });
+    setCreationCookies(response, created.capabilities);
+    return response;
+  } catch (error) {
+    if (error instanceof Error && error.message === "CONTENT_UNSUPPORTED") {
+      return jsonError("CONTENT_UNSUPPORTED");
+    }
+    return jsonError("SERVER_BUSY");
+  }
 }

@@ -344,12 +344,13 @@ seat. Each ticket removes the corresponding builder from
       Implemented bounded MongoDB sessions/pools, full index maintenance, lifecycle shutdown wiring, and replica-set-aware readiness.
       Proven by `apps/web/test/db.test.ts` (including a real replica-set run when `MONGODB_TEST_URI` is configured) and the full CI gate.
 
-- [ ] **B2 — Create game and capability issuance**
+- [x] **B2 — Create game and capability issuance**
       Blocked by: B1
       Requirements: PRD-FUN-001, PRD-FUN-002, PRD-FUN-013, ENG-010, SEC-002
       Read: docs/product/prd.md, docs/engineering/realtime-and-data.md, docs/engineering/security-privacy-analytics.md
       Acceptance: create persists a lobby with secret seed, captured versions/configuration/expiry and issues distinct high-entropy invite, host, seat, and reclaim authorities as secure cookies while storing hashes only.
       Proves: create integration cases inspect documents/cookies and prove no raw capability or seed crosses storage/response/log boundaries; TEST-002 protocol/security layer.
+      Implemented transaction-scoped lobby creation, immutable version/hash capture, 256-bit seed storage, 30-day expiry, audit record, and distinct host/seat/reclaim cookies with hash-only capability documents; `apps/web/test/create-game.test.ts` proves persistence and response/cookie secrecy.
 
 - [ ] **B3 — Join gate, seat claim, and pseudonym validation**
       Blocked by: B2
