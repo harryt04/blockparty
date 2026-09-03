@@ -80,11 +80,11 @@ function projectLobby(
   viewerSeatId: GameSeatRecord["seatId"],
 ): LobbyProjection {
   const openSeatCount = seats.filter((seat) => seat.kind === "open").length;
-  const lobbyBase = { ...game.lobby };
-  delete lobbyBase.startBlockedReason;
   return {
-    ...lobbyBase,
+    gameId: game._id,
+    status: "LOBBY",
     ...(game.name === undefined ? {} : { name: game.name }),
+    seatCount: game.seatCount,
     seats: seats.map((seat) => ({
       seatId: seat.seatId,
       ...(seat.name === undefined ? {} : { name: seat.name }),
@@ -99,6 +99,8 @@ function projectLobby(
         game.lobby.seats.find((previous) => previous.seatId === seat.seatId)?.connected === true,
       isSelf: seat.seatId === viewerSeatId,
     })),
+    configuration: game.configuration,
+    versions: game.lobby.versions,
     viewerSeatId,
     viewerIsHost: viewerSeatId === game.hostSeatId,
     invitePath: game.lobby.invitePath ?? `/join/${inviteId}`,
@@ -106,6 +108,7 @@ function projectLobby(
     ...(openSeatCount === 0
       ? {}
       : { startBlockedReason: "Every seat must be filled by a person or bot." }),
+    expiresAt: game.expiresAt.toISOString(),
   };
 }
 

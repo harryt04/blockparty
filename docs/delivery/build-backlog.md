@@ -368,12 +368,13 @@ seat. Each ticket removes the corresponding builder from
       Proves: concurrent/restart integration tests cover every ENG-015 step, duplicate ID, stale version, rollback, monotonic sequence/version, and publish-after-commit; TEST-002 protocol-integration layer.
       Implemented the receipt-first Mongo transaction, optimistic aggregate update, journaled engine events, durable ACK, capability-scoped route authentication, and post-commit delivery. Proven by `apps/web/test/command-path.test.ts` with duplicate, stale, rollback, monotonic sequence/version, and publish-after-commit cases.
 
-- [ ] **B5 — Authorized projections and bootstrap**
+- [x] **B5 — Authorized projections and bootstrap**
       Blocked by: B4
       Requirements: PRD-FUN-009, PRD-FUN-010, ENG-010, PROTO-004, SEC-002
       Read: docs/engineering/realtime-and-data.md, docs/engineering/security-privacy-analytics.md, docs/product/prd.md
       Acceptance: bootstrap constructs each seat's allowlisted lobby/game/summary projection without spread-delete, including legal actions but excluding seeds, future decks, raw capabilities, other-seat private state, and internal fields.
       Proves: per-seat projection integration tests use sentinel secret fields and fail on any extra key; TEST-002 protocol/security layer.
+      Implemented field-by-field lobby, game, and summary projection builders and wired bootstrap to authenticated persisted game state with seat-scoped legal actions. `apps/web/test/projection.test.ts` and `apps/web/test/bootstrap-route.test.ts` prove projection schemas, authority, and secret/private-state exclusion.
 
 - [ ] **B6 — Authenticated SSE, the change stream, and presence**
       Blocked by: B5
