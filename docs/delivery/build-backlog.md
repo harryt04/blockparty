@@ -318,12 +318,14 @@ print the seed on failure.
       Proves: phase/seat tables compare query output with command resolution across the state union; TEST-002 pure-engine table layer.
       Implemented reducer-backed legal-action enumeration for every supported phase, bounded auction parameters, detention choices, management targets, trade responses, and stable blocked-action copy; `packages/game-engine/test/legal-actions.test.ts` compares advertised actions with `resolve` and checks phase/seat reasons.
 
-- [ ] **A16 — Invariants, property tests, and golden replay fixtures**
+- [x] **A16 — Invariants, property tests, and golden replay fixtures**
       Blocked by: A15
       Requirements: ENG-022, ENG-023, ENG-027, ENG-028, RULE-001–012
       Read: docs/engineering/game-engine.md, docs/product/rules.md, docs/delivery/test-strategy.md
       Acceptance: post-resolution/replay invariants cover all rules and supported versions; immutable goldens replay each major workflow.
       Proves: fast-check legal sequences with recorded seeds, versioned goldens, and deliberate invariant corruptions; TEST-002 pure-engine property/golden layer.
+      Implemented invariant validation at the resolve/replay boundary, transition-level finite-inventory conservation, and deterministic fixed-seed replay coverage in `packages/game-engine/src/invariants.ts` and `packages/game-engine/test/invariants.test.ts`.
+      The property, golden, corruption, and existing workflow suites pass in the full CI gate.
 
 ---
 

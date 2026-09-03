@@ -27,6 +27,7 @@ import type {
 } from "@blockparty/contracts";
 import type { BoardSpace, ContentBundle, ContentEffect, Deed } from "@blockparty/game-content";
 import { nextInt, type PrngState } from "./prng";
+import { assertInvariants } from "./invariants";
 
 export * from "./prng";
 export * from "./invariants";
@@ -1197,6 +1198,7 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         ...state,
         phase: "AwaitDebt",
         effectQueue: continuation,
+        pendingChoice: undefined,
         obligation: {
           debtorSeatId,
           creditorSeatId,
@@ -1379,7 +1381,7 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         return freezeState({
           ...state,
           phase: "ResolveMove",
-          prioritySeatId: undefined,
+          prioritySeatId: state.activeSeatId,
           pendingImprovementAuction: undefined,
           scarceImprovementDemands: [],
         });
@@ -1665,7 +1667,7 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
       return freezeState({
         ...state,
         phase: "ResolveMove",
-        prioritySeatId: undefined,
+        prioritySeatId: state.activeSeatId,
         pendingImprovementAuction: undefined,
         scarceImprovementDemands: remainingDemands,
         seats: state.seats.map((candidate) =>
@@ -5631,58 +5633,75 @@ function resolveTradeResponse(
  * The server performs no rule shortcut around this call. See ENG-015 step 5.
  */
 export function resolve(state: GameState, command: ActorScopedCommand, rules: RuleSet): Resolution {
+  let result: Resolution;
   switch (command.command.type) {
     case "StartGame":
-      return resolveStartGame(state, command.actorSeatId, rules);
+      result = resolveStartGame(state, command.actorSeatId, rules);
+      break;
     case "RollDice":
-      return resolveRollDice(state, command.actorSeatId, rules);
+      result = resolveRollDice(state, command.actorSeatId, rules);
+      break;
     case "ChoosePendingOption":
-      return resolvePendingChoice(
+      result = resolvePendingChoice(
         state,
         command.actorSeatId,
         command.command.choiceId,
         command.command.optionId,
         rules,
       );
+      break;
     case "AcquireDeed":
-      return resolveAcquireDeed(state, command.actorSeatId, command.command.deedId, rules);
+      result = resolveAcquireDeed(state, command.actorSeatId, command.command.deedId, rules);
+      break;
     case "DeclineAcquisition":
-      return declineAcquisition(state, command.actorSeatId, command.command.deedId, rules);
+      result = declineAcquisition(state, command.actorSeatId, command.command.deedId, rules);
+      break;
     case "PassAuction":
-      return state.phase === "ImprovementAuction"
-        ? resolveImprovementAuction(state, command.actorSeatId, "pass", undefined, rules)
-        : resolveAuction(state, command.actorSeatId, "pass", undefined, rules);
+      result =
+        state.phase === "ImprovementAuction"
+          ? resolveImprovementAuction(state, command.actorSeatId, "pass", undefined, rules)
+          : resolveAuction(state, command.actorSeatId, "pass", undefined, rules);
+      break;
     case "RequestScarceImprovement":
-      return resolveScarceImprovementRequest(
+      result = resolveScarceImprovementRequest(
         state,
         command.actorSeatId,
         command.command.deedId,
         rules,
       );
+      break;
     case "PlaceAuctionBid":
-      return state.phase === "ImprovementAuction"
-        ? resolveImprovementAuction(
-            state,
-            command.actorSeatId,
-            "bid",
-            command.command.amount,
-            rules,
-          )
-        : resolveAuction(state, command.actorSeatId, "bid", command.command.amount, rules);
+      result =
+        state.phase === "ImprovementAuction"
+          ? resolveImprovementAuction(
+              state,
+              command.actorSeatId,
+              "bid",
+              command.command.amount,
+              rules,
+            )
+          : resolveAuction(state, command.actorSeatId, "bid", command.command.amount, rules);
+      break;
     case "BuyImprovement":
-      return resolveBuyImprovement(state, command.actorSeatId, command.command.deedId, rules);
+      result = resolveBuyImprovement(state, command.actorSeatId, command.command.deedId, rules);
+      break;
     case "SellImprovement":
-      return resolveSellImprovement(state, command.actorSeatId, command.command.deedId, rules);
+      result = resolveSellImprovement(state, command.actorSeatId, command.command.deedId, rules);
+      break;
     case "MortgageDeed":
-      return resolveMortgage(state, command.actorSeatId, command.command.deedId, rules);
+      result = resolveMortgage(state, command.actorSeatId, command.command.deedId, rules);
+      break;
     case "RedeemMortgage":
-      return resolveRedeemMortgage(state, command.actorSeatId, command.command.deedId, rules);
+      result = resolveRedeemMortgage(state, command.actorSeatId, command.command.deedId, rules);
+      break;
     case "PayObligation":
-      return resolvePayObligation(state, command.actorSeatId, rules);
+      result = resolvePayObligation(state, command.actorSeatId, rules);
+      break;
     case "DeclareBankruptcy":
-      return resolveDeclareBankruptcy(state, command.actorSeatId, rules);
+      result = resolveDeclareBankruptcy(state, command.actorSeatId, rules);
+      break;
     case "ProposeTrade":
-      return resolveProposeTrade(
+      result = resolveProposeTrade(
         state,
         command.actorSeatId,
         command.command.counterpartySeatId,
@@ -5690,37 +5709,49 @@ export function resolve(state: GameState, command: ActorScopedCommand, rules: Ru
         command.command.requested,
         rules,
       );
+      break;
     case "AcceptTrade":
-      return resolveTradeResponse(
+      result = resolveTradeResponse(
         state,
         command.actorSeatId,
         "accept",
         command.command.tradeId,
         rules,
       );
+      break;
     case "RejectTrade":
-      return resolveTradeResponse(
+      result = resolveTradeResponse(
         state,
         command.actorSeatId,
         "reject",
         command.command.tradeId,
         rules,
       );
+      break;
     case "CancelTrade":
-      return resolveTradeResponse(
+      result = resolveTradeResponse(
         state,
         command.actorSeatId,
         "cancel",
         command.command.tradeId,
         rules,
       );
+      break;
     case "EndNoContest":
-      return resolveEndNoContest(state, command.actorSeatId);
+      result = resolveEndNoContest(state, command.actorSeatId);
+      break;
     case "EndTurn":
-      return resolveEndTurn(state, command.actorSeatId);
+      result = resolveEndTurn(state, command.actorSeatId);
+      break;
     default:
-      return unimplemented(command.command.type);
+      result = unimplemented(command.command.type);
+      break;
   }
+  if (result.ok) {
+    // ENG-023: a successful command may never publish corrupted state.
+    assertInvariants(result.state, rules, state);
+  }
+  return result;
 }
 
 type ActionCandidate = {
@@ -6038,5 +6069,12 @@ export function replay(
   events: readonly EngineEvent[],
   _rules: RuleSet,
 ): GameState {
-  return events.reduce(applyEvent, initialState);
+  let state = initialState;
+  for (const event of events) {
+    state = applyEvent(state, event);
+  }
+  // ENG-022/ENG-023: replay validates the reconstructed state without
+  // consulting the PRNG or interpreting a complete-state replacement event.
+  assertInvariants(state, _rules, initialState);
+  return state;
 }
