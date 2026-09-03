@@ -206,12 +206,13 @@ print the seed on failure.
       Proves: fixed-seed goldens, event-only replay, and forbidden-import cases; TEST-002 pure-engine golden layer.
       Implemented xoshiro128** seeded draws, event-only lifecycle replay, and immutable PRNG snapshots; `packages/game-engine/test/engine-seam.test.ts` covers fixed-seed goldens, recorded dice data, replay identity, mutation detection, and validation.
 
-- [ ] **A2 — `GameState`, the phase union, `StartGame`, `RollDice`**
+- [x] **A2 — `GameState`, the phase union, `StartGame`, `RollDice`**
       Blocked by: A1
       Requirements: ENG-020, ENG-021, ENG-023, RULE-001, RULE-002, RULE-003
       Read: docs/engineering/game-engine.md, docs/product/rules.md
       Acceptance: immutable complete state and discriminated phases implement start/roll, deterministic order/ties, starting cash/positions, matching rolls, and independent seat/phase rejection.
       Proves: fixed-seed state tables and legal/illegal start/roll scenarios; TEST-002 pure-engine table/scenario layer.
+      Implemented immutable turn state, deterministic recorded setup ordering, seeded dice, matching-roll detention, and independent actor/phase guards; `packages/game-engine/test/start-roll.test.ts` covers fixed-seed state/scenario cases and mutation-sensitive matching behavior.
 
 - [ ] **A3 — Movement, Start crossing, and the serialized effect queue**
       Blocked by: A2

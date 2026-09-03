@@ -12,6 +12,7 @@ const initialState: GameState = {
   aggregateVersion: 0,
   phase: "Lobby",
   seats: [],
+  consecutiveMatchingRolls: 0,
   prng: deriveInitialState(SEED),
 };
 
@@ -86,6 +87,7 @@ describe("event-only replay", () => {
       phase: "TurnStart",
       activeSeatId: "seat-2",
       prioritySeatId: "seat-2",
+      lastRoll: [4, 2],
     };
 
     expect(replay(initialState, events, {} as RuleSet)).toEqual(expected);
