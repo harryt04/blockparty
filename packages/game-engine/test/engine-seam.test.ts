@@ -13,6 +13,7 @@ const initialState: GameState = {
   phase: "Lobby",
   seats: [],
   consecutiveMatchingRolls: 0,
+  effectQueue: [],
   prng: deriveInitialState(SEED),
 };
 

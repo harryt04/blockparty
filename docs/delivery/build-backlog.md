@@ -214,12 +214,13 @@ print the seed on failure.
       Proves: fixed-seed state tables and legal/illegal start/roll scenarios; TEST-002 pure-engine table/scenario layer.
       Implemented immutable turn state, deterministic recorded setup ordering, seeded dice, matching-roll detention, and independent actor/phase guards; `packages/game-engine/test/start-roll.test.ts` covers fixed-seed state/scenario cases and mutation-sensitive matching behavior.
 
-- [ ] **A3 — Movement, Start crossing, and the serialized effect queue**
+- [x] **A3 — Movement, Start crossing, and the serialized effect queue**
       Blocked by: A2
       Requirements: RULE-004, RULE-007, RULE-010, ENG-025, CONTENT-003
       Read: docs/product/rules.md, docs/engineering/game-engine.md
       Acceptance: movement follows route edges and Start rules; data-ordered effects serialize/resume continuations around choices, auctions, obligations, matching rolls, and detention.
       Proves: multi-effect movement scenarios assert order, crossing, continuation, and third-match detention; TEST-002 pure-engine scenario layer.
+      Implemented route-edge dice/forced movement, Start payment events, and immutable pending-choice continuations; `packages/game-engine/test/movement-queue.test.ts` proves crossing, exact-landing variant, queue insertion/resume, replay, and third-match Detention.
 
 - [ ] **A4 — Acquisition and the bank ledger**
       Blocked by: A3

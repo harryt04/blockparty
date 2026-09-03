@@ -30,6 +30,7 @@ const lobby = (): GameState => ({
   phase: "Lobby",
   seats: [seat("seat-a"), seat("seat-b"), seat("seat-c")],
   consecutiveMatchingRolls: 0,
+  effectQueue: [],
   prng: deriveInitialState(SEED),
 });
 
@@ -102,12 +103,19 @@ describe("A2 start and roll reducer", () => {
     expect(rolled.state.phase).toBe("ResolveMove");
     expect(rolled.state.lastRoll).toEqual([1, 5]);
     expect(rolled.state.consecutiveMatchingRolls).toBe(0);
-    expect(rolled.events).toHaveLength(1);
+    expect(rolled.events).toHaveLength(2);
     expect(rolled.events[0]?.type).toBe("DiceRolled");
     expect(rolled.events[0]?.payload).toMatchObject({
       dice: [1, 5],
       matching: false,
       consecutiveMatchingRolls: 0,
+    });
+    expect(rolled.events[1]?.type).toBe("TokenMoved");
+    expect(rolled.events[1]?.payload).toMatchObject({
+      fromPosition: 0,
+      toPosition: 6,
+      spaces: 6,
+      crossedStart: false,
     });
     expect(started.state.phase).toBe("AwaitRoll");
     expect(started.state.prng.draws).toBe(6);

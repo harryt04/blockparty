@@ -24,7 +24,7 @@ import type {
   RulesConfiguration,
   SeatId,
 } from "@blockparty/contracts";
-import type { ContentBundle } from "@blockparty/game-content";
+import type { BoardSpace, ContentBundle, ContentEffect } from "@blockparty/game-content";
 import { nextInt, type PrngState } from "./prng";
 
 export * from "./prng";
@@ -55,14 +55,26 @@ export interface SeatState {
   readonly detentionReleaseCardIds: readonly string[];
 }
 
+/** One immutable, serializable item in the data-defined effect queue. RULE-007. */
+export interface QueuedEffect {
+  readonly sourceId: string;
+  readonly effect: ContentEffect;
+}
+
+/** A choice blocks the queue while retaining the exact remaining work. RULE-007, ENG-025. */
+export interface PendingChoice {
+  readonly choiceId: string;
+  readonly continuation: readonly QueuedEffect[];
+}
+
 /**
  * The authoritative game state. See ENG-021.
  *
  * `seed` and `prng` are secret server data. They are excluded from every
  * projection, analytics event, URL, and log. See ENG-022 and PROTO-004.
  *
- * SCAFFOLD: ownership, decks, auctions, trades, the pending choice, and the
- * effect-queue continuation are added by the tickets that implement them.
+ * Ownership, decks, auctions, trades, obligations, and card resolution are
+ * added by their rule tickets; A3 owns movement and the serialized queue seam.
  */
 export interface GameState {
   readonly stateSchemaVersion: string;
@@ -77,6 +89,10 @@ export interface GameState {
   readonly consecutiveMatchingRolls: number;
   /** The last committed roll, if this game has rolled dice. */
   readonly lastRoll?: readonly [number, number];
+  /** Remaining data-defined effects. This is the serialized continuation. RULE-007. */
+  readonly effectQueue: readonly QueuedEffect[];
+  /** The currently blocking choice, if any. Its continuation mirrors effectQueue. */
+  readonly pendingChoice?: PendingChoice;
   /** Server-only. Never projected. */
   readonly prng: PrngState;
 }
@@ -122,6 +138,24 @@ function payloadDice(event: EngineEvent): readonly [number, number] | undefined 
   return [value[0] as number, value[1] as number];
 }
 
+function payloadQueuedEffects(event: EngineEvent): readonly QueuedEffect[] | undefined {
+  const value = event.payload.remainingEffects;
+  if (!Array.isArray(value)) return undefined;
+  if (
+    !value.every(
+      (entry): entry is QueuedEffect =>
+        typeof entry === "object" &&
+        entry !== null &&
+        typeof (entry as { sourceId?: unknown }).sourceId === "string" &&
+        typeof (entry as { effect?: unknown }).effect === "object" &&
+        (entry as { effect?: unknown }).effect !== null,
+    )
+  ) {
+    return undefined;
+  }
+  return value;
+}
+
 function freezeState(state: GameState): GameState {
   const seats = state.seats.map((seat) =>
     Object.freeze({
@@ -134,10 +168,26 @@ function freezeState(state: GameState): GameState {
     state.lastRoll === undefined
       ? undefined
       : (Object.freeze([state.lastRoll[0], state.lastRoll[1]]) as readonly [number, number]);
+  const freezeQueue = (queue: readonly QueuedEffect[]): readonly QueuedEffect[] =>
+    Object.freeze(
+      queue.map((entry) =>
+        Object.freeze({ sourceId: entry.sourceId, effect: Object.freeze({ ...entry.effect }) }),
+      ),
+    );
+  const effectQueue = freezeQueue(state.effectQueue);
+  const pendingChoice =
+    state.pendingChoice === undefined
+      ? undefined
+      : Object.freeze({
+          choiceId: state.pendingChoice.choiceId,
+          continuation: freezeQueue(state.pendingChoice.continuation),
+        });
   return Object.freeze({
     ...state,
     seats: Object.freeze(seats),
     lastRoll,
+    effectQueue,
+    pendingChoice,
   });
 }
 
@@ -185,6 +235,8 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         prioritySeatId: payloadSeatId(event, "firstSeatId") ?? state.prioritySeatId,
         consecutiveMatchingRolls: 0,
         lastRoll: undefined,
+        effectQueue: [],
+        pendingChoice: undefined,
       });
     }
     case "TurnStarted":
@@ -193,6 +245,8 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         phase: "AwaitRoll",
         activeSeatId: payloadSeatId(event, "seatId") ?? state.activeSeatId,
         prioritySeatId: payloadSeatId(event, "seatId") ?? state.prioritySeatId,
+        effectQueue: [],
+        pendingChoice: undefined,
       });
     case "DiceRolled": {
       // Dice values are event data. Replay changes no PRNG state and never
@@ -206,6 +260,47 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         consecutiveMatchingRolls: matchingRolls ?? state.consecutiveMatchingRolls,
       });
     }
+    case "TokenMoved": {
+      const seatId = payloadSeatId(event, "seatId");
+      const position = payloadNumber(event, "toPosition");
+      if (seatId === undefined || position === undefined) return state;
+      return freezeState({
+        ...state,
+        phase: "ResolveMove",
+        seats: state.seats.map((seat) =>
+          seat.seatId === seatId ? { ...seat, position, detained: false } : seat,
+        ),
+      });
+    }
+    case "StartPaymentCollected": {
+      const seatId = payloadSeatId(event, "seatId");
+      const amount = payloadNumber(event, "amount");
+      if (seatId === undefined || amount === undefined) return state;
+      return freezeState({
+        ...state,
+        seats: state.seats.map((seat) =>
+          seat.seatId === seatId ? { ...seat, balance: seat.balance + amount } : seat,
+        ),
+      });
+    }
+    case "PendingChoiceCreated": {
+      const choiceId = payloadSeatId(event, "choiceId");
+      const continuation = payloadQueuedEffects(event) ?? [];
+      if (choiceId === undefined) return state;
+      return freezeState({
+        ...state,
+        phase: "AwaitChoice",
+        effectQueue: continuation,
+        pendingChoice: { choiceId, continuation },
+      });
+    }
+    case "PendingChoiceResolved":
+      return freezeState({
+        ...state,
+        phase: "ResolveMove",
+        effectQueue: payloadQueuedEffects(event) ?? [],
+        pendingChoice: undefined,
+      });
     case "DetentionEntered": {
       const seatId = payloadSeatId(event, "seatId");
       const position = payloadNumber(event, "position");
@@ -213,6 +308,8 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
       return freezeState({
         ...state,
         phase: "TurnEnd",
+        effectQueue: [],
+        pendingChoice: undefined,
         seats: state.seats.map((seat) =>
           seat.seatId === seatId
             ? {
@@ -231,6 +328,8 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         phase: "TurnStart",
         activeSeatId: payloadSeatId(event, "nextSeatId") ?? state.activeSeatId,
         prioritySeatId: payloadSeatId(event, "nextSeatId") ?? state.prioritySeatId,
+        effectQueue: [],
+        pendingChoice: undefined,
       });
     case "GameCompleted":
     case "GameEndedNoContest":
@@ -284,6 +383,149 @@ const reject = (code: Rejection["code"], reasonCode: string, message: string): R
 
 function findSeat(state: GameState, seatId: SeatId): SeatState | undefined {
   return state.seats.find((seat) => seat.seatId === seatId);
+}
+
+function findSpaceAtPosition(rules: RuleSet, position: number): BoardSpace | undefined {
+  return rules.content.spaces.find((space) => space.routeIndex === position);
+}
+
+function findSpace(rules: RuleSet, spaceId: string): BoardSpace | undefined {
+  return rules.content.spaces.find((space) => space.spaceId === spaceId);
+}
+
+interface Movement {
+  readonly fromPosition: number;
+  readonly toPosition: number;
+  readonly forwardSteps: number;
+  readonly crossedStart: number;
+}
+
+/** Walks the authored route graph; routeIndex is only the serialized position. RULE-010. */
+function walkRoute(
+  rules: RuleSet,
+  fromPosition: number,
+  steps: number,
+  collectStart: boolean,
+): Movement | Rejection {
+  const start = findSpaceAtPosition(rules, fromPosition);
+  if (start === undefined) {
+    return reject("INVALID_PAYLOAD", "INVALID_POSITION", "The seat is not on the authored route.");
+  }
+
+  let current = start;
+  let crossedStart = 0;
+  if (steps >= 0) {
+    for (let index = 0; index < steps; index += 1) {
+      const next = findSpace(rules, current.next);
+      if (next === undefined) {
+        return reject("INVALID_PAYLOAD", "BROKEN_ROUTE", "The authored route has a missing edge.");
+      }
+      current = next;
+      if (collectStart && current.spaceId === rules.content.startSpaceId) crossedStart += 1;
+    }
+  } else {
+    for (let index = 0; index > steps; index -= 1) {
+      const previous = rules.content.spaces.find((space) => space.next === current.spaceId);
+      if (previous === undefined) {
+        return reject("INVALID_PAYLOAD", "BROKEN_ROUTE", "The authored route has no reverse edge.");
+      }
+      current = previous;
+    }
+  }
+
+  return {
+    fromPosition,
+    toPosition: current.routeIndex,
+    forwardSteps: steps,
+    crossedStart,
+  };
+}
+
+function movementToTarget(
+  rules: RuleSet,
+  fromPosition: number,
+  target: BoardSpace,
+  collectStart: boolean,
+): Movement | Rejection {
+  if (collectStart) {
+    const routeLength = rules.content.spaces.length;
+    const distance = (target.routeIndex - fromPosition + routeLength) % routeLength;
+    return walkRoute(rules, fromPosition, distance, true);
+  }
+  return walkRoute(rules, fromPosition, target.routeIndex - fromPosition, false);
+}
+
+function queuedEffects(space: BoardSpace): readonly QueuedEffect[] {
+  return space.effects.map((effect) => ({ sourceId: space.spaceId, effect }));
+}
+
+function moveEvent(
+  actorSeatId: SeatId,
+  movement: Movement,
+  movementType: "normalDice" | "forced",
+): EngineEvent {
+  return freezeEvent({
+    type: "TokenMoved",
+    eventVersion: 1,
+    actorSeatId,
+    payload: {
+      seatId: actorSeatId,
+      fromPosition: movement.fromPosition,
+      toPosition: movement.toPosition,
+      spaces: movement.forwardSteps,
+      crossedStart: movement.crossedStart > 0,
+      startCrossings: movement.crossedStart,
+      movementType,
+    },
+  });
+}
+
+function applyMovement(
+  state: GameState,
+  actorSeatId: SeatId,
+  movement: Movement,
+  rules: RuleSet,
+  events: EngineEvent[],
+  movementType: "normalDice" | "forced",
+  exactNormalStart: boolean,
+): GameState {
+  let nextState = freezeState({
+    ...state,
+    seats: state.seats.map((seat) =>
+      seat.seatId === actorSeatId
+        ? { ...seat, position: movement.toPosition, detained: false, detentionTurnsRemaining: 0 }
+        : seat,
+    ),
+  });
+  events.push(moveEvent(actorSeatId, movement, movementType));
+
+  const startPayment = rules.content.economy.startPayment;
+  const payments =
+    movement.crossedStart +
+    (exactNormalStart && rules.configuration.doubleStartOnExactLanding ? 1 : 0);
+  for (let index = 0; index < payments; index += 1) {
+    const reason =
+      exactNormalStart && index === payments - 1 && rules.configuration.doubleStartOnExactLanding
+        ? "EXACT_START_VARIANT"
+        : exactNormalStart
+          ? "EXACT_START"
+          : "CROSSED_START";
+    nextState = freezeState({
+      ...nextState,
+      seats: nextState.seats.map((seat) =>
+        seat.seatId === actorSeatId ? { ...seat, balance: seat.balance + startPayment } : seat,
+      ),
+    });
+    events.push(
+      freezeEvent({
+        type: "StartPaymentCollected",
+        eventVersion: 1,
+        actorSeatId,
+        payload: { seatId: actorSeatId, amount: startPayment, reason },
+      }),
+    );
+  }
+  return nextState;
 }
 
 function requireActiveActor(state: GameState, actorSeatId: SeatId): Rejection | undefined {
@@ -403,6 +645,197 @@ function resolveStartGame(state: GameState, actorSeatId: SeatId, rules: RuleSet)
   return { ok: true, state: nextState, events: Object.freeze(events) };
 }
 
+interface QueueResolution {
+  readonly state: GameState;
+  readonly events: readonly EngineEvent[];
+}
+
+/**
+ * Resolves the A3-owned movement/choice effects and leaves later-ticket
+ * effects at the front of the immutable queue. A later reducer can therefore
+ * continue the exact same serialized continuation without re-running movement.
+ */
+function resolveEffectQueue(
+  state: GameState,
+  actorSeatId: SeatId,
+  rules: RuleSet,
+  initialQueue: readonly QueuedEffect[],
+): QueueResolution {
+  let nextState = freezeState({
+    ...state,
+    phase: "ResolveMove",
+    effectQueue: initialQueue,
+    pendingChoice: undefined,
+  });
+  const events: EngineEvent[] = [];
+
+  while (nextState.effectQueue.length > 0) {
+    const [entry, ...remaining] = nextState.effectQueue;
+    if (entry === undefined) break;
+
+    switch (entry.effect.type) {
+      case "MoveBy": {
+        const seat = findSeat(nextState, actorSeatId);
+        if (seat === undefined) break;
+        const movement = walkRoute(
+          rules,
+          seat.position,
+          entry.effect.spaces,
+          entry.effect.spaces >= 0,
+        );
+        if (!("toPosition" in movement)) break;
+        const destination = findSpaceAtPosition(rules, movement.toPosition);
+        if (destination === undefined) break;
+        nextState = applyMovement(nextState, actorSeatId, movement, rules, events, "forced", false);
+        nextState = freezeState({
+          ...nextState,
+          effectQueue: [...queuedEffects(destination), ...remaining],
+        });
+        continue;
+      }
+      case "MoveTo": {
+        const seat = findSeat(nextState, actorSeatId);
+        const destination = findSpace(rules, entry.effect.spaceId);
+        if (seat === undefined || destination === undefined) break;
+        const movement = movementToTarget(
+          rules,
+          seat.position,
+          destination,
+          entry.effect.collectStartWhenCrossed,
+        );
+        if (!("toPosition" in movement)) break;
+        nextState = applyMovement(nextState, actorSeatId, movement, rules, events, "forced", false);
+        nextState = freezeState({
+          ...nextState,
+          effectQueue: [...queuedEffects(destination), ...remaining],
+        });
+        continue;
+      }
+      case "SendToDetention": {
+        const seat = findSeat(nextState, actorSeatId);
+        const detention = findSpace(rules, rules.content.detentionSpaceId);
+        if (seat === undefined || detention === undefined) break;
+        nextState = freezeState({
+          ...nextState,
+          phase: "TurnEnd",
+          effectQueue: [],
+          pendingChoice: undefined,
+          seats: nextState.seats.map((candidate) =>
+            candidate.seatId === actorSeatId
+              ? {
+                  ...candidate,
+                  position: detention.routeIndex,
+                  detained: true,
+                  detentionTurnsRemaining: 0,
+                }
+              : candidate,
+          ),
+        });
+        events.push(
+          freezeEvent({
+            type: "DetentionEntered",
+            eventVersion: 1,
+            actorSeatId,
+            payload: {
+              seatId: actorSeatId,
+              position: detention.routeIndex,
+              reason: "EFFECT",
+            },
+          }),
+        );
+        return { state: nextState, events: Object.freeze(events) };
+      }
+      case "Choose": {
+        const continuation = Object.freeze([...remaining]);
+        nextState = freezeState({
+          ...nextState,
+          phase: "AwaitChoice",
+          effectQueue: continuation,
+          pendingChoice: { choiceId: entry.effect.choiceId, continuation },
+        });
+        events.push(
+          freezeEvent({
+            type: "PendingChoiceCreated",
+            eventVersion: 1,
+            actorSeatId,
+            payload: {
+              choiceId: entry.effect.choiceId,
+              remainingEffects: continuation,
+            },
+          }),
+        );
+        return { state: nextState, events: Object.freeze(events) };
+      }
+      default:
+        // Payment, cards, and repairs are owned by later tickets. Keep the
+        // unconsumed item visible and ordered instead of silently dropping it.
+        return {
+          state: freezeState({ ...nextState, effectQueue: [entry, ...remaining] }),
+          events: Object.freeze(events),
+        };
+    }
+
+    // A malformed route/content item is retained for the server's corruption
+    // handling rather than turning a partial movement into a false success.
+    return {
+      state: freezeState({ ...nextState, effectQueue: [entry, ...remaining] }),
+      events: Object.freeze(events),
+    };
+  }
+
+  return { state: freezeState({ ...nextState, effectQueue: [] }), events: Object.freeze(events) };
+}
+
+function resolvePendingChoice(
+  state: GameState,
+  actorSeatId: SeatId,
+  choiceId: string,
+  optionId: string,
+  rules: RuleSet,
+): Resolution {
+  const actorRejection = requireActiveActor(state, actorSeatId);
+  if (actorRejection !== undefined) return actorRejection;
+  if (state.phase !== "AwaitChoice" || state.pendingChoice === undefined) {
+    return reject(
+      "PHASE_MISMATCH",
+      "CHOICE_NOT_PENDING",
+      "A pending choice is required before selecting an option.",
+    );
+  }
+  if (state.activeSeatId !== actorSeatId) {
+    return reject("ILLEGAL_ACTION", "OUT_OF_TURN", "Only the active seat may choose an option.");
+  }
+  if (state.pendingChoice.choiceId !== choiceId) {
+    return reject("ILLEGAL_ACTION", "CHOICE_MISMATCH", "The selected choice is no longer pending.");
+  }
+
+  const resumed = resolveEffectQueue(
+    freezeState({
+      ...state,
+      phase: "ResolveMove",
+      effectQueue: state.pendingChoice.continuation,
+      pendingChoice: undefined,
+    }),
+    actorSeatId,
+    rules,
+    state.pendingChoice.continuation,
+  );
+  const events: EngineEvent[] = [
+    freezeEvent({
+      type: "PendingChoiceResolved",
+      eventVersion: 1,
+      actorSeatId,
+      payload: {
+        choiceId,
+        optionId,
+        remainingEffects: resumed.state.effectQueue,
+      },
+    }),
+    ...resumed.events,
+  ];
+  return { ok: true, state: resumed.state, events: Object.freeze(events) };
+}
+
 function resolveRollDice(state: GameState, actorSeatId: SeatId, rules: RuleSet): Resolution {
   const actorRejection = requireActiveActor(state, actorSeatId);
   if (actorRejection !== undefined) return actorRejection;
@@ -437,6 +870,8 @@ function resolveRollDice(state: GameState, actorSeatId: SeatId, rules: RuleSet):
     phase: "ResolveMove",
     consecutiveMatchingRolls: matchingRolls,
     lastRoll: dice,
+    effectQueue: [],
+    pendingChoice: undefined,
     prng: second.next,
   });
   const events: EngineEvent[] = [diceEvent];
@@ -457,6 +892,8 @@ function resolveRollDice(state: GameState, actorSeatId: SeatId, rules: RuleSet):
     nextState = freezeState({
       ...nextState,
       phase: "TurnEnd",
+      effectQueue: [],
+      pendingChoice: undefined,
       seats: nextState.seats.map((candidate) =>
         candidate.seatId === actorSeatId
           ? {
@@ -480,8 +917,34 @@ function resolveRollDice(state: GameState, actorSeatId: SeatId, rules: RuleSet):
         },
       }),
     );
+    return { ok: true, state: nextState, events: Object.freeze(events) };
   }
-  return { ok: true, state: nextState, events: Object.freeze(events) };
+
+  const seat = findSeat(nextState, actorSeatId);
+  if (seat === undefined) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "UNKNOWN_ACTIVE_SEAT",
+      "The active seat disappeared during roll.",
+    );
+  }
+  const movement = walkRoute(rules, seat.position, dice[0] + dice[1], true);
+  if (!("toPosition" in movement)) return movement;
+  const destination = findSpaceAtPosition(rules, movement.toPosition);
+  if (destination === undefined) {
+    return reject("INVALID_PAYLOAD", "INVALID_DESTINATION", "The roll reached no authored space.");
+  }
+  nextState = applyMovement(
+    nextState,
+    actorSeatId,
+    movement,
+    rules,
+    events,
+    "normalDice",
+    destination.spaceId === rules.content.startSpaceId,
+  );
+  const queued = resolveEffectQueue(nextState, actorSeatId, rules, queuedEffects(destination));
+  return { ok: true, state: queued.state, events: Object.freeze([...events, ...queued.events]) };
 }
 
 /**
@@ -495,6 +958,14 @@ export function resolve(state: GameState, command: ActorScopedCommand, rules: Ru
       return resolveStartGame(state, command.actorSeatId, rules);
     case "RollDice":
       return resolveRollDice(state, command.actorSeatId, rules);
+    case "ChoosePendingOption":
+      return resolvePendingChoice(
+        state,
+        command.actorSeatId,
+        command.command.choiceId,
+        command.command.optionId,
+        rules,
+      );
     default:
       return unimplemented(command.command.type);
   }
