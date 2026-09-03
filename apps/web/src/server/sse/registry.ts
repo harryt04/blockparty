@@ -1,5 +1,12 @@
 import "server-only";
 
+import {
+  PROTOCOL_VERSION,
+  type GameSnapshotProjection,
+  type PresenceEnvelope,
+} from "@blockparty/contracts";
+import { env } from "../env";
+
 /**
  * Process-local SSE subscriber registry. See PROTO-003.
  *
@@ -20,8 +27,18 @@ export interface Subscriber {
   readonly close: () => void;
 }
 
+export class SseConnectionLimitError extends Error {
+  constructor() {
+    super("The SSE connection limit has been reached");
+    this.name = "SseConnectionLimitError";
+  }
+}
+
 const globalForSse = globalThis as unknown as {
   __blockpartySubscribers?: Map<string, Set<Subscriber>>;
+  __blockpartyPresence?: Map<string, Map<string, number>>;
+  __blockpartySeenSeats?: Map<string, Set<string>>;
+  __blockpartyLastSequences?: WeakMap<Subscriber, number>;
 };
 
 function registry(): Map<string, Set<Subscriber>> {
@@ -29,39 +46,131 @@ function registry(): Map<string, Set<Subscriber>> {
   return globalForSse.__blockpartySubscribers;
 }
 
-export function subscribe(subscriber: Subscriber): () => void {
-  const byGame = registry();
-  const set = byGame.get(subscriber.gameId) ?? new Set<Subscriber>();
-  set.add(subscriber);
-  byGame.set(subscriber.gameId, set);
+function presence(): Map<string, Map<string, number>> {
+  globalForSse.__blockpartyPresence ??= new Map();
+  return globalForSse.__blockpartyPresence;
+}
 
-  return () => {
-    set.delete(subscriber);
-    if (set.size === 0) byGame.delete(subscriber.gameId);
+function seenSeats(): Map<string, Set<string>> {
+  globalForSse.__blockpartySeenSeats ??= new Map();
+  return globalForSse.__blockpartySeenSeats;
+}
+
+function lastSequences(): WeakMap<Subscriber, number> {
+  globalForSse.__blockpartyLastSequences ??= new WeakMap();
+  return globalForSse.__blockpartyLastSequences;
+}
+
+function sendPresence(
+  gameId: string,
+  seatId: string,
+  state: "connected" | "disconnected" | "reconnected",
+) {
+  const envelope: PresenceEnvelope = {
+    protocolVersion: PROTOCOL_VERSION,
+    type: "room.presence",
+    gameId,
+    serverTime: new Date().toISOString(),
+    presence: [{ seatId, state }],
   };
-}
-
-export function subscriberCount(gameId: string): number {
-  return registry().get(gameId)?.size ?? 0;
-}
-
-/**
- * Publishes a committed event range to this process's subscribers.
- *
- * Called ONLY after the MongoDB transaction commits. A failure here is not a
- * correctness problem; clients recover through /sync. See ENG-015 step 7.
- *
- * TODO(PROTO-003): build a per-seat authorized projection instead of one
- * shared frame. A subscriber receives only what its seat may see.
- */
-export function publish(gameId: string, frame: string): void {
-  const subscribers = registry().get(gameId);
-  if (subscribers === undefined) return;
-  for (const subscriber of subscribers) {
+  const frame = formatFrame("room.presence", envelope);
+  for (const subscriber of registry().get(gameId) ?? []) {
     try {
       subscriber.send(frame);
     } catch {
-      // A broken stream is dropped silently. The client resyncs.
+      subscriber.close();
+    }
+  }
+}
+
+export function subscribe(subscriber: Subscriber): () => void {
+  const byGame = registry();
+  const set = byGame.get(subscriber.gameId) ?? new Set<Subscriber>();
+  const seatConnections = [...set].filter((candidate) => candidate.seatId === subscriber.seatId);
+  if (seatConnections.length >= env.RATE_LIMIT_SSE_CONNECTIONS) {
+    throw new SseConnectionLimitError();
+  }
+  set.add(subscriber);
+  byGame.set(subscriber.gameId, set);
+
+  const bySeat = presence();
+  const counts = bySeat.get(subscriber.gameId) ?? new Map<string, number>();
+  const priorCount = counts.get(subscriber.seatId) ?? 0;
+  counts.set(subscriber.seatId, priorCount + 1);
+  bySeat.set(subscriber.gameId, counts);
+
+  const knownSeats = seenSeats();
+  const known = knownSeats.get(subscriber.gameId) ?? new Set<string>();
+  const presenceState = known.has(subscriber.seatId) ? "reconnected" : "connected";
+  known.add(subscriber.seatId);
+  knownSeats.set(subscriber.gameId, known);
+  sendPresence(subscriber.gameId, subscriber.seatId, presenceState);
+
+  let active = true;
+
+  return () => {
+    if (!active) return;
+    active = false;
+    set.delete(subscriber);
+    if (set.size === 0) byGame.delete(subscriber.gameId);
+
+    const currentCount = counts.get(subscriber.seatId) ?? 1;
+    if (currentCount <= 1) {
+      counts.delete(subscriber.seatId);
+      sendPresence(subscriber.gameId, subscriber.seatId, "disconnected");
+    } else {
+      counts.set(subscriber.seatId, currentCount - 1);
+    }
+    if (counts.size === 0) bySeat.delete(subscriber.gameId);
+  };
+}
+
+/** Checks the configured per-seat cap before a stream body is created. */
+export function canSubscribe(gameId: string, seatId: string): boolean {
+  return subscriberCount(gameId, seatId) < env.RATE_LIMIT_SSE_CONNECTIONS;
+}
+
+export function subscriberCount(gameId: string, seatId?: string): number {
+  const subscribers = registry().get(gameId);
+  if (seatId === undefined) return subscribers?.size ?? 0;
+  return [...(subscribers ?? [])].filter((subscriber) => subscriber.seatId === seatId).length;
+}
+
+/** Seat IDs currently subscribed in this process. Presence is never durable. */
+export function subscribedSeatIds(gameId: string): readonly string[] {
+  return [...new Set([...(registry().get(gameId) ?? [])].map((subscriber) => subscriber.seatId))];
+}
+
+/**
+ * Sends an allowlisted snapshot only to the seat it was built for. A snapshot
+ * sequence is durable, so an older or duplicate change-stream delivery is
+ * ignored by the subscriber. See PROTO-003, PROTO-004, and SEC-002.
+ */
+export function publishSnapshot(
+  gameId: string,
+  seatId: string,
+  snapshot: GameSnapshotProjection,
+): void {
+  const subscribers = registry().get(gameId);
+  if (subscribers === undefined || snapshot.viewerSeatId !== seatId) return;
+  const frame = formatFrame("game.snapshot", {
+    protocolVersion: PROTOCOL_VERSION,
+    type: "game.snapshot",
+    gameId,
+    serverTime: new Date().toISOString(),
+    aggregateVersion: snapshot.aggregateVersion,
+    sequence: snapshot.sequence,
+    snapshot,
+  });
+  for (const subscriber of subscribers) {
+    if (subscriber.seatId !== seatId) continue;
+    const priorSequence = lastSequences().get(subscriber) ?? -1;
+    if (snapshot.sequence <= priorSequence) continue;
+    lastSequences().set(subscriber, snapshot.sequence);
+    try {
+      subscriber.send(frame);
+    } catch {
+      subscriber.close();
     }
   }
 }

@@ -177,6 +177,10 @@ export async function closeMongoClient(): Promise<void> {
     while (state.activeSessions > 0) {
       await new Promise<void>((resolve) => setTimeout(resolve, 10));
     }
+    // The change-stream owner is process-local and must release its cursor
+    // before the shared MongoDB client closes. See ENG-007 and PROTO-003.
+    const { stopChangeStream } = await import("../sse/change-stream");
+    await stopChangeStream();
     await client.close();
     state.client = undefined;
     state.closing = false;

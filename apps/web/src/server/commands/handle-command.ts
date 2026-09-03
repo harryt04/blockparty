@@ -35,7 +35,7 @@ import { getDb, withMongoTransaction } from "../db/client";
 import { COLLECTIONS } from "../db/collections";
 import type { GameDocument } from "../games/create-game";
 import type { AuthenticatedSeat } from "../auth/session";
-import { formatFrame, publish } from "../sse/registry";
+import { ensureChangeStream } from "../sse/change-stream";
 
 export interface CommandAccepted {
   readonly ok: true;
@@ -328,20 +328,11 @@ export async function handleCommand(
       const safeEvents = committed.events.map(publicEvent);
       await (
         options.publish ??
-        ((gameId, events) =>
-          publish(
-            gameId,
-            formatFrame("game.events", {
-              protocolVersion: 1,
-              type: "game.events",
-              gameId,
-              serverTime: now.toISOString(),
-              aggregateVersion: outcome.aggregateVersion,
-              firstSequence: outcome.firstSequence,
-              lastSequence: outcome.lastSequence,
-              events,
-            }),
-          ))
+        (() => {
+          // The MongoDB change stream observes only committed inserts and
+          // rebuilds an allowlisted snapshot per subscriber. See B6/PROTO-003.
+          ensureChangeStream();
+        })
       )(parsed.data.gameId, safeEvents);
     }
     return outcome;

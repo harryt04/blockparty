@@ -376,12 +376,14 @@ seat. Each ticket removes the corresponding builder from
       Proves: per-seat projection integration tests use sentinel secret fields and fail on any extra key; TEST-002 protocol/security layer.
       Implemented field-by-field lobby, game, and summary projection builders and wired bootstrap to authenticated persisted game state with seat-scoped legal actions. `apps/web/test/projection.test.ts` and `apps/web/test/bootstrap-route.test.ts` prove projection schemas, authority, and secret/private-state exclusion.
 
-- [ ] **B6 — Authenticated SSE, the change stream, and presence**
+- [x] **B6 — Authenticated SSE, the change stream, and presence**
       Blocked by: B5
       Requirements: ENG-007, PROTO-002, PROTO-003, PROTO-004, PRD-FUN-014
       Read: docs/engineering/realtime-and-data.md, docs/product/prd.md
       Acceptance: authenticated SSE streams committed per-seat projections from MongoDB change streams with keep-alives, bounded connections, monotonic durable frames, ephemeral presence, and no cross-seat leakage.
       Proves: multi-client integration tests cover auth, filtering, ordering, keep-alive, reconnect token, presence non-durability, and post-commit delivery; TEST-002 protocol-integration layer.
+      Implemented cookie-authenticated SSE admission, per-seat allowlisted snapshot fan-out from the MongoDB change stream, bounded subscriptions, monotonic sequence filtering, and ephemeral presence in `apps/web/src/server/sse/`.
+      Proven by `apps/web/test/events-route.test.ts` and `apps/web/test/sse.test.ts`; `pnpm run ci` and `pnpm build` pass (build retains the existing Next.js ESLint-plugin warning).
 
 - [ ] **B7 — Catch-up and resync**
       Blocked by: B6
