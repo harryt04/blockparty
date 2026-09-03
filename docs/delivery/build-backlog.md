@@ -231,19 +231,20 @@ print the seed on failure.
       Implemented immutable deed/bank ledgers, purchase offers, atomic acquisition, and decline-to-auction handoff; `packages/game-engine/test/acquisition-ledger.test.ts` proves affordability, authority, atomicity, cash bounds, variants, and replay.
 
 - [x] **A5 — Rent: district, transit, and utility**
-  Blocked by: A4
-  Requirements: RULE-004, RULE-005, CONTENT-004
-  Read: docs/product/rules.md, docs/product/game-content.md
-  Acceptance: owned unmortgaged deeds charge exact data-defined category rent, including complete-district and dice-dependent rules, through the ledgered obligation path.
-  Proves: rent tables cover all categories, mortgage/owner landings, complete districts, and utility rolls; TEST-002 pure-engine table layer.
-  Implemented content-backed district, transit, and utility rent calculation with self/mortgage exclusions, atomic `RentPaid`, and immutable insufficient-funds obligations; `packages/game-engine/test/rent.test.ts` covers the category table and replay cases.
+      Blocked by: A4
+      Requirements: RULE-004, RULE-005, CONTENT-004
+      Read: docs/product/rules.md, docs/product/game-content.md
+      Acceptance: owned unmortgaged deeds charge exact data-defined category rent, including complete-district and dice-dependent rules, through the ledgered obligation path.
+      Proves: rent tables cover all categories, mortgage/owner landings, complete districts, and utility rolls; TEST-002 pure-engine table layer.
+      Implemented content-backed district, transit, and utility rent calculation with self/mortgage exclusions, atomic `RentPaid`, and immutable insufficient-funds obligations; `packages/game-engine/test/rent.test.ts` covers the category table and replay cases.
 
-- [ ] **A6 — Deed auction**
+- [x] **A6 — Deed auction**
       Blocked by: A5
       Requirements: RULE-004, RULE-006
       Read: docs/product/rules.md
       Acceptance: declined/unaffordable deeds enter a no-timer auction with deterministic order, bounded bids, irrevocable passes, exact settlement, and no-sale return.
       Proves: auction scenarios cover invalid bids, pause, pass/win/no-sale, and conservation; TEST-002 pure-engine scenario layer.
+      Implemented pure no-timer auction bidding, irrevocable passes, ordered priority, exact bank settlement, no-sale return, and replay events; `packages/game-engine/test/auction.test.ts` covers invalid bids, pause, pass/win/no-sale, conservation, and replay.
 
 - [ ] **A7 — Improvements, even building, inventory conservation**
       Blocked by: A5

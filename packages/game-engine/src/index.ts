@@ -82,8 +82,8 @@ export interface PendingObligation {
  * `seed` and `prng` are secret server data. They are excluded from every
  * projection, analytics event, URL, and log. See ENG-022 and PROTO-004.
  *
- * Auctions, trades, and card resolution are added by their rule tickets. A4
- * owns deed ownership and the bank ledger; A5 owns rent obligations.
+ * A4 owns deed ownership and the bank ledger; A5 owns rent obligations; A6
+ * owns deed auctions.
  */
 export interface DeedState {
   readonly deedId: string;
@@ -155,6 +155,11 @@ function payloadSeatId(event: EngineEvent, key: string): SeatId | undefined {
 function payloadNumber(event: EngineEvent, key: string): number | undefined {
   const value = event.payload[key];
   return typeof value === "number" && Number.isSafeInteger(value) ? value : undefined;
+}
+
+function payloadBoolean(event: EngineEvent, key: string): boolean | undefined {
+  const value = event.payload[key];
+  return typeof value === "boolean" ? value : undefined;
 }
 
 function payloadSeatOrder(event: EngineEvent): readonly SeatId[] | undefined {
@@ -263,6 +268,13 @@ function freezeState(state: GameState): GameState {
           ...state.obligation,
           continuation: freezeQueue(state.obligation.continuation),
         });
+  const pendingAuction =
+    state.pendingAuction === undefined
+      ? undefined
+      : Object.freeze({
+          ...state.pendingAuction,
+          passedSeatIds: Object.freeze([...state.pendingAuction.passedSeatIds]),
+        });
   return Object.freeze({
     ...state,
     seats: Object.freeze(seats),
@@ -272,6 +284,7 @@ function freezeState(state: GameState): GameState {
     effectQueue,
     pendingChoice,
     obligation,
+    pendingAuction,
   });
 }
 
@@ -465,12 +478,119 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
       return freezeState({
         ...state,
         phase: "AwaitAuction",
+        prioritySeatId,
         pendingAcquisitionDeedId: undefined,
         pendingAuction: {
           deedId,
           highBid: payloadNumber(event, "highBid") ?? 0,
+          highBidderSeatId: payloadSeatId(event, "highBidderSeatId"),
           prioritySeatId,
-          passedSeatIds: [],
+          passedSeatIds: payloadStringArray(event, "passedSeatIds") ?? [],
+        },
+      });
+    }
+    case "AuctionBidPlaced": {
+      const deedId = payloadSeatId(event, "deedId");
+      const bidderSeatId = payloadSeatId(event, "bidderSeatId");
+      const amount = payloadNumber(event, "amount");
+      if (
+        deedId === undefined ||
+        bidderSeatId === undefined ||
+        amount === undefined ||
+        state.pendingAuction?.deedId !== deedId
+      ) {
+        return state;
+      }
+      return freezeState({
+        ...state,
+        phase: "AwaitAuction",
+        prioritySeatId:
+          payloadSeatId(event, "nextPrioritySeatId") ?? state.pendingAuction.prioritySeatId,
+        pendingAuction: {
+          ...state.pendingAuction,
+          highBid: amount,
+          highBidderSeatId: bidderSeatId,
+          prioritySeatId:
+            payloadSeatId(event, "nextPrioritySeatId") ?? state.pendingAuction.prioritySeatId,
+        },
+      });
+    }
+    case "AuctionPassed": {
+      const deedId = payloadSeatId(event, "deedId");
+      const passerSeatId = payloadSeatId(event, "passerSeatId");
+      if (
+        deedId === undefined ||
+        passerSeatId === undefined ||
+        state.pendingAuction?.deedId !== deedId
+      ) {
+        return state;
+      }
+      return freezeState({
+        ...state,
+        phase: "AwaitAuction",
+        prioritySeatId:
+          payloadSeatId(event, "nextPrioritySeatId") ?? state.pendingAuction.prioritySeatId,
+        pendingAuction: {
+          ...state.pendingAuction,
+          prioritySeatId:
+            payloadSeatId(event, "nextPrioritySeatId") ?? state.pendingAuction.prioritySeatId,
+          passedSeatIds: state.pendingAuction.passedSeatIds.includes(passerSeatId)
+            ? state.pendingAuction.passedSeatIds
+            : [...state.pendingAuction.passedSeatIds, passerSeatId],
+        },
+      });
+    }
+    case "AuctionClosed": {
+      const deedId = payloadSeatId(event, "deedId");
+      const sold = payloadBoolean(event, "sold");
+      const winningBid = payloadNumber(event, "winningBid");
+      const winnerSeatId = payloadSeatId(event, "winnerSeatId");
+      if (
+        deedId === undefined ||
+        sold === undefined ||
+        winningBid === undefined ||
+        winningBid < 0 ||
+        state.pendingAuction?.deedId !== deedId
+      ) {
+        return state;
+      }
+      if (!sold) {
+        return freezeState({
+          ...state,
+          phase: "ResolveMove",
+          pendingAcquisitionDeedId: undefined,
+          pendingAuction: undefined,
+        });
+      }
+      if (winnerSeatId === undefined) return state;
+      const winner = findSeat(state, winnerSeatId);
+      const deed = state.deeds.find((candidate) => candidate.deedId === deedId);
+      if (
+        winner === undefined ||
+        deed === undefined ||
+        deed.ownerSeatId !== undefined ||
+        !Number.isSafeInteger(winner.balance - winningBid) ||
+        !Number.isSafeInteger(state.bank.cash + winningBid)
+      ) {
+        return state;
+      }
+      return freezeState({
+        ...state,
+        phase: "ResolveMove",
+        pendingAcquisitionDeedId: undefined,
+        pendingAuction: undefined,
+        seats: state.seats.map((seat) =>
+          seat.seatId === winnerSeatId
+            ? { ...seat, balance: seat.balance - winningBid, deedIds: [...seat.deedIds, deedId] }
+            : seat,
+        ),
+        deeds: state.deeds.map((candidate) =>
+          candidate.deedId === deedId ? { ...candidate, ownerSeatId: winnerSeatId } : candidate,
+        ),
+        bank: {
+          ...state.bank,
+          cash: state.bank.cash + winningBid,
+          deedIds: state.bank.deedIds.filter((candidate) => candidate !== deedId),
         },
       });
     }
@@ -608,6 +728,203 @@ function nextActiveSeatId(state: GameState, afterSeatId: SeatId): SeatId | undef
     if (candidate?.status === "active") return candidate.seatId;
   }
   return undefined;
+}
+
+function nextAuctionSeatId(
+  state: GameState,
+  afterSeatId: SeatId,
+  passedSeatIds: readonly SeatId[],
+): SeatId | undefined {
+  const startIndex = state.seats.findIndex((seat) => seat.seatId === afterSeatId);
+  if (startIndex < 0) return undefined;
+  for (let offset = 1; offset <= state.seats.length; offset += 1) {
+    const candidate = state.seats[(startIndex + offset) % state.seats.length];
+    if (candidate?.status === "active" && !passedSeatIds.includes(candidate.seatId)) {
+      return candidate.seatId;
+    }
+  }
+  return undefined;
+}
+
+type AuctionOutcome =
+  | { readonly kind: "open" }
+  | { readonly kind: "noSale" }
+  | { readonly kind: "sale"; readonly winnerSeatId: SeatId };
+
+function auctionOutcome(state: GameState, auction: PendingAuction): AuctionOutcome {
+  const activeSeatIds = state.seats
+    .filter((seat) => seat.status === "active")
+    .map((seat) => seat.seatId);
+  const nonPassedSeatIds = activeSeatIds.filter(
+    (seatId) => !auction.passedSeatIds.includes(seatId),
+  );
+  if (auction.highBidderSeatId !== undefined && nonPassedSeatIds.length === 1) {
+    return nonPassedSeatIds[0] === auction.highBidderSeatId
+      ? { kind: "sale", winnerSeatId: auction.highBidderSeatId }
+      : { kind: "open" };
+  }
+  if (auction.highBidderSeatId === undefined && nonPassedSeatIds.length === 0) {
+    return { kind: "noSale" };
+  }
+  return { kind: "open" };
+}
+
+function validateAuctionTurn(
+  state: GameState,
+  actorSeatId: SeatId,
+  rules: RuleSet,
+): Rejection | PendingAuction {
+  const actorRejection = requireActiveActor(state, actorSeatId);
+  if (actorRejection !== undefined) return actorRejection;
+  if (state.phase !== "AwaitAuction" || state.pendingAuction === undefined) {
+    return reject(
+      "PHASE_MISMATCH",
+      "AUCTION_NOT_PENDING",
+      "An auction command requires an active auction.",
+    );
+  }
+  const auction = state.pendingAuction;
+  if (auction.prioritySeatId !== actorSeatId) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "AUCTION_PRIORITY_REQUIRED",
+      "Only the current auction priority seat may act.",
+    );
+  }
+  if (auction.passedSeatIds.includes(actorSeatId)) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "AUCTION_ALREADY_PASSED",
+      "A seat that passed cannot act again in this auction.",
+    );
+  }
+  const deed = rules.content.deeds.find((candidate) => candidate.deedId === auction.deedId);
+  const deedState = state.deeds.find((candidate) => candidate.deedId === auction.deedId);
+  if (
+    deed === undefined ||
+    deedState === undefined ||
+    deedState.ownerSeatId !== undefined ||
+    !state.bank.deedIds.includes(auction.deedId)
+  ) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "AUCTION_DEED_NOT_BANK_OWNED",
+      "The auction deed must remain bank-owned until settlement.",
+    );
+  }
+  if (
+    !Number.isSafeInteger(auction.highBid) ||
+    auction.highBid < 0 ||
+    (auction.highBidderSeatId !== undefined &&
+      !state.seats.some(
+        (seat) => seat.seatId === auction.highBidderSeatId && seat.status === "active",
+      ))
+  ) {
+    return reject("INVALID_PAYLOAD", "INVALID_AUCTION_STATE", "The auction high bid is not valid.");
+  }
+  return auction;
+}
+
+/** RULE-004, RULE-006: resolve one no-timer auction command atomically. */
+function resolveAuction(
+  state: GameState,
+  actorSeatId: SeatId,
+  command: "bid" | "pass",
+  amount: number | undefined,
+  rules: RuleSet,
+): Resolution {
+  const validated = validateAuctionTurn(state, actorSeatId, rules);
+  if ("ok" in validated) return validated;
+  const auction = validated;
+  const actor = findSeat(state, actorSeatId);
+  if (actor === undefined) {
+    return reject("INVALID_PAYLOAD", "UNKNOWN_SEAT", "The auction seat is not in the game.");
+  }
+
+  if (command === "bid") {
+    if (amount === undefined || !Number.isSafeInteger(amount) || amount < 0) {
+      return reject(
+        "INVALID_PAYLOAD",
+        "INVALID_BID_AMOUNT",
+        "Auction bids must be non-negative integer minor units.",
+      );
+    }
+    if (amount <= auction.highBid) {
+      return reject(
+        "ILLEGAL_ACTION",
+        "BID_MUST_INCREASE",
+        "A bid must be greater than the current high bid.",
+      );
+    }
+    if (amount > actor.balance) {
+      return reject(
+        "ILLEGAL_ACTION",
+        "BID_EXCEEDS_BALANCE",
+        "A bid cannot exceed the bidder's current balance.",
+      );
+    }
+  }
+
+  const nextAuction: PendingAuction =
+    command === "bid"
+      ? {
+          ...auction,
+          highBid: amount as number,
+          highBidderSeatId: actorSeatId,
+          prioritySeatId:
+            nextAuctionSeatId(state, actorSeatId, auction.passedSeatIds) ?? actorSeatId,
+        }
+      : {
+          ...auction,
+          passedSeatIds: [...auction.passedSeatIds, actorSeatId],
+          prioritySeatId:
+            nextAuctionSeatId(state, actorSeatId, [...auction.passedSeatIds, actorSeatId]) ??
+            actorSeatId,
+        };
+  const outcome = auctionOutcome(state, nextAuction);
+  const actionEvent = freezeEvent({
+    type: command === "bid" ? "AuctionBidPlaced" : "AuctionPassed",
+    eventVersion: 1,
+    actorSeatId,
+    payload:
+      command === "bid"
+        ? {
+            deedId: auction.deedId,
+            bidderSeatId: actorSeatId,
+            amount,
+            previousBid: auction.highBid,
+            nextPrioritySeatId: outcome.kind === "open" ? nextAuction.prioritySeatId : undefined,
+          }
+        : {
+            deedId: auction.deedId,
+            passerSeatId: actorSeatId,
+            nextPrioritySeatId: outcome.kind === "open" ? nextAuction.prioritySeatId : undefined,
+          },
+  } satisfies EngineEvent);
+  const events: EngineEvent[] = [actionEvent];
+  if (outcome.kind !== "open") {
+    events.push(
+      freezeEvent({
+        type: "AuctionClosed",
+        eventVersion: 1,
+        actorSeatId,
+        payload:
+          outcome.kind === "sale"
+            ? {
+                deedId: auction.deedId,
+                sold: true,
+                winnerSeatId: outcome.winnerSeatId,
+                winningBid: nextAuction.highBid,
+              }
+            : { deedId: auction.deedId, sold: false, winningBid: 0 },
+      }),
+    );
+  }
+  return {
+    ok: true,
+    state: freezeState(events.reduce(applyEvent, state)),
+    events: Object.freeze(events),
+  };
 }
 
 interface Movement {
@@ -1139,6 +1456,7 @@ function resolveDeedLanding(
   const auction = {
     deedId: deed.deedId,
     highBid: 0,
+    highBidderSeatId: undefined,
     prioritySeatId,
     passedSeatIds: [],
   } satisfies PendingAuction;
@@ -1146,6 +1464,7 @@ function resolveDeedLanding(
     state: freezeState({
       ...state,
       phase: "AwaitAuction",
+      prioritySeatId,
       effectQueue: [],
       pendingAcquisitionDeedId: undefined,
       pendingAuction: auction,
@@ -1525,6 +1844,7 @@ function declineAcquisition(
   const auction = {
     deedId,
     highBid: 0,
+    highBidderSeatId: undefined,
     prioritySeatId,
     passedSeatIds: [],
   } satisfies PendingAuction;
@@ -1533,6 +1853,7 @@ function declineAcquisition(
     state: freezeState({
       ...state,
       phase: "AwaitAuction",
+      prioritySeatId,
       pendingAcquisitionDeedId: undefined,
       pendingAuction: auction,
     }),
@@ -1687,6 +2008,10 @@ export function resolve(state: GameState, command: ActorScopedCommand, rules: Ru
       return resolveAcquireDeed(state, command.actorSeatId, command.command.deedId, rules);
     case "DeclineAcquisition":
       return declineAcquisition(state, command.actorSeatId, command.command.deedId, rules);
+    case "PlaceAuctionBid":
+      return resolveAuction(state, command.actorSeatId, "bid", command.command.amount, rules);
+    case "PassAuction":
+      return resolveAuction(state, command.actorSeatId, "pass", undefined, rules);
     default:
       return unimplemented(command.command.type);
   }
