@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   ),
   recover: vi.fn(),
   recoveryStore: vi.fn(),
+  installPresenceRecovery: vi.fn(),
 }));
 
 vi.mock("@/server/http/guards", () => ({ checkRateLimit: mocks.checkRateLimit }));
@@ -23,6 +24,9 @@ vi.mock("@/server/sse/change-stream", () => ({ ensureChangeStream: mocks.ensureC
 vi.mock("@/server/sync/recovery", () => ({
   recover: mocks.recover,
   recoveryStore: mocks.recoveryStore,
+}));
+vi.mock("@/server/recovery/presence-recovery", () => ({
+  installPresenceRecovery: mocks.installPresenceRecovery,
 }));
 vi.mock("@/server/sse/registry", () => ({
   KEEP_ALIVE_FRAME: ": keep-alive\n\n",

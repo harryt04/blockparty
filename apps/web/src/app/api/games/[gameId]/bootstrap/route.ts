@@ -16,6 +16,7 @@ import { jsonOk } from "@/server/http/responses";
 import type { GameDocument } from "@/server/games/create-game";
 import { buildSeatProjection } from "@/server/projections/authorize";
 import { jsonError } from "@/server/http/responses";
+import { subscriberCount } from "@/server/sse/registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -64,9 +65,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ gam
         token: seat.token,
         isHost: seat.seatId === game.hostSeatId,
         connected:
-          game.lobby.seats.find((candidate) => candidate.seatId === seat.seatId)?.connected ??
-          false,
+          seat.kind === "bot" ||
+          subscriberCount(gameId, seat.seatId) > 0 ||
+          (game.lobby.seats.find((candidate) => candidate.seatId === seat.seatId)?.connected ??
+            false),
       })),
+      paused: game.paused ?? false,
     });
     const response: BootstrapResponse = {
       snapshot,

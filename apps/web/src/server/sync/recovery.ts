@@ -24,6 +24,7 @@ import type { GameDocument } from "../games/create-game";
 import { buildSeatProjection, type ProjectionSeatSource } from "../projections/authorize";
 import { canonicalHashBundle, getBundle } from "@blockparty/game-content";
 import { isProduction } from "../env";
+import { subscriberCount } from "../sse/registry";
 
 /** The transport schema and the recovery contract both cap one range at 256. */
 export const MAX_RECOVERY_EVENTS = 256;
@@ -49,9 +50,10 @@ export function projectionSeats(game: GameDocument): ProjectionSeatSource[] {
     ...(seat.name === undefined ? {} : { name: seat.name }),
     token: seat.token,
     isHost: seat.seatId === game.hostSeatId,
-    connected: game.lobby.seats.some(
-      (candidate) => candidate.seatId === seat.seatId && candidate.connected,
-    ),
+    connected:
+      seat.kind === "bot" ||
+      subscriberCount(game._id, seat.seatId) > 0 ||
+      game.lobby.seats.some((candidate) => candidate.seatId === seat.seatId && candidate.connected),
   }));
 }
 
@@ -79,6 +81,7 @@ export function authorizedSnapshot(
     sequence: game.lastSequence,
     hostSeatId: game.hostSeatId,
     seats: projectionSeats(game),
+    paused: game.paused ?? false,
   });
 }
 

@@ -48,7 +48,7 @@ An SSE request authenticates the secure game-seat cookie before subscribing. A s
 
 The server registers a local subscriber, sends keep-alives, and publishes committed events after the MongoDB transaction commits. A MongoDB change stream feeds the local subscriber registry in production. A dropped stream or process restart does not lose state: the client reconnects and calls `game.sync`.
 
-Presence is ephemeral and emitted as `connected`, `disconnected`, or `reconnected` seat IDs. It is not a game-rule event unless the recovery policy causes an authenticated command. Multiple tabs with one capability may subscribe; commands remain idempotent and versioned.
+Presence is ephemeral and emitted as `connected`, `disconnected`, or `reconnected` seat IDs. Multiple tabs with one capability share the seat's earliest connected tenure. A required-seat pause/resume or deterministic host transfer is recorded as a safe-boundary journal transition; it never fabricates a pass, bid, trade response, or bankruptcy. The selected human claims a separate host capability after transfer through the authenticated host-claim route. Commands remain idempotent and versioned.
 
 Host transfer, disconnected-seat pause, bot replacement, reclaim, and `EndNoContest` follow the safe command boundary defined by the [architecture](architecture.md#authoritative-command-and-event-flow). Replacement revokes the seat command capability but preserves a separate reclaim claim. Returning players authenticate the claim, request reclaim, and receive a new command capability only after host approval and safe-boundary transfer.
 

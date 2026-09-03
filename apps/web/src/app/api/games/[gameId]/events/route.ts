@@ -20,6 +20,7 @@ import { readSeatCapability } from "@/server/auth/session";
 import { checkRateLimit } from "@/server/http/guards";
 import { jsonError } from "@/server/http/responses";
 import { SseConnectionLimitError } from "@/server/sse/registry";
+import { installPresenceRecovery } from "@/server/recovery/presence-recovery";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,6 +59,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ game
     if (!canSubscribe(gameId, actor.seatId)) {
       return jsonError("RATE_LIMITED", { gameId, reason: "SSE_CONNECTION_LIMIT" });
     }
+    installPresenceRecovery();
     ensureChangeStream();
 
     let recovery: RecoveryEnvelope | undefined;

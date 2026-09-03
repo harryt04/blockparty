@@ -64,6 +64,11 @@ export interface GameDocument {
   readonly createdAt: Date;
   readonly lastAuthoritativeActionAt: Date;
   readonly expiresAt: Date;
+  /** Recovery state is server-authoritative but does not belong in GameState. */
+  readonly paused?: boolean;
+  readonly pausedSeatId?: SeatId;
+  /** The selected replacement host claims a host cookie on its next request. */
+  readonly pendingHostClaimSeatId?: SeatId;
 }
 
 export interface InvitationDocument {
@@ -91,7 +96,7 @@ export interface HostCapabilityDocument {
   readonly tokenHash: string;
   readonly gameId: GameId;
   readonly seatId: SeatId;
-  readonly status: "active";
+  readonly status: "active" | "revoked";
   readonly createdAt: Date;
   readonly expiresAt: Date;
 }
@@ -100,8 +105,20 @@ export interface AuditDocument {
   readonly _id?: string;
   readonly gameId: GameId;
   readonly seatId: SeatId;
-  readonly action: "game_created" | "game_joined";
-  readonly reasonCode: "CREATE" | "JOIN";
+  readonly action:
+    | "game_created"
+    | "game_joined"
+    | "play_paused"
+    | "play_resumed"
+    | "host_transferred"
+    | "host_transfer_claimed";
+  readonly reasonCode:
+    | "CREATE"
+    | "JOIN"
+    | "DISCONNECTED_REQUIRED_SEAT"
+    | "REQUIRED_SEAT_RECONNECTED"
+    | "HOST_DISCONNECTED"
+    | "HOST_TRANSFER_CLAIMED";
   readonly occurredAt: Date;
 }
 
@@ -306,6 +323,7 @@ export async function createGameInTransaction(
     createdAt,
     lastAuthoritativeActionAt: createdAt,
     expiresAt,
+    paused: false,
   };
 
   await store.games.insertOne(game, { session });

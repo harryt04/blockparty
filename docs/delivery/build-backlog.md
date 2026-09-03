@@ -393,12 +393,13 @@ seat. Each ticket removes the corresponding builder from
       Proves: restart/gap/duplicate/out-of-order integration matrix proves catch-up, snapshot fallback, and per-seat filtering; TEST-002 protocol-integration layer.
       Implemented bounded durable recovery in `apps/web/src/server/sync/recovery.ts`, authenticated `/sync`, and reconnect catch-up frames on `/events`; `apps/web/test/sync-route.test.ts` and `apps/web/test/events-route.test.ts` prove contiguous-range, gap, duplicate, ordering, boundedness, snapshot-fallback, and seat-filtering behavior.
 
-- [ ] **B8 — Disconnect pause and host transfer**
+- [x] **B8 — Disconnect pause and host transfer**
       Blocked by: B7
       Requirements: PRD-FUN-014, RULE-009, PROTO-003
       Read: docs/product/prd.md, docs/product/rules.md, docs/engineering/realtime-and-data.md
       Acceptance: a disconnected required human pauses without fabricated actions, and safe-boundary host transfer chooses the longest-tenured connected human with seat-order tie-break while no connected human leaves play paused.
       Proves: presence/command integration scenarios cover each required phase, reconnect, deterministic transfer, and zero-connected-human state; TEST-002 protocol-integration layer.
+      Implemented phase-aware journaled pause/resume recovery, deterministic connection-tenure host transfer, and a separate authenticated host-capability claim; `apps/web/test/presence-recovery.test.ts` proves required phases, reconnect, tie-break, zero-connected-human, and multi-tab presence behavior.
 
 - [ ] **B9 — Bot replacement and reclaim**
       Blocked by: B8

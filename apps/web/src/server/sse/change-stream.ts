@@ -15,7 +15,7 @@ import { isDatabaseConfigured, isProduction } from "../env";
 import type { GameEventDocument } from "../commands/handle-command";
 import type { GameDocument } from "../games/create-game";
 import { buildSeatProjection, type ProjectionSeatSource } from "../projections/authorize";
-import { publishSnapshot, subscribedSeatIds } from "./registry";
+import { publishSnapshot, subscriberCount, subscribedSeatIds } from "./registry";
 
 interface ChangeDocument {
   readonly operationType?: string;
@@ -59,9 +59,10 @@ function projectionSeats(game: GameDocument): ProjectionSeatSource[] {
     ...(seat.name === undefined ? {} : { name: seat.name }),
     token: seat.token,
     isHost: seat.seatId === game.hostSeatId,
-    connected: game.lobby.seats.some(
-      (candidate) => candidate.seatId === seat.seatId && candidate.connected,
-    ),
+    connected:
+      seat.kind === "bot" ||
+      subscriberCount(game._id, seat.seatId) > 0 ||
+      game.lobby.seats.some((candidate) => candidate.seatId === seat.seatId && candidate.connected),
   }));
 }
 
@@ -98,6 +99,7 @@ export async function publishCommittedProjection(
       sequence: Math.max(game.lastSequence, event.sequence),
       hostSeatId: game.hostSeatId,
       seats: projectionSeats(game),
+      paused: game.paused ?? false,
     });
     publishSnapshot(game._id, seatId, snapshot);
   }

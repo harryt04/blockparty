@@ -25,6 +25,8 @@ export interface Subscriber {
   /** Writes one already-serialized SSE frame. */
   readonly send: (frame: string) => void;
   readonly close: () => void;
+  /** Testable process-local connection tenure; never serialized. */
+  readonly connectedAt?: number;
 }
 
 export class SseConnectionLimitError extends Error {
@@ -37,9 +39,17 @@ export class SseConnectionLimitError extends Error {
 const globalForSse = globalThis as unknown as {
   __blockpartySubscribers?: Map<string, Set<Subscriber>>;
   __blockpartyPresence?: Map<string, Map<string, number>>;
+  __blockpartyPresenceTenure?: Map<string, Map<string, number>>;
   __blockpartySeenSeats?: Map<string, Set<string>>;
   __blockpartyLastSequences?: WeakMap<Subscriber, number>;
+  __blockpartyPresenceRecovery?: (event: PresenceChange) => void | Promise<void>;
 };
+
+export interface PresenceChange {
+  readonly gameId: string;
+  readonly seatId: string;
+  readonly state: "connected" | "disconnected";
+}
 
 function registry(): Map<string, Set<Subscriber>> {
   globalForSse.__blockpartySubscribers ??= new Map();
@@ -51,6 +61,11 @@ function presence(): Map<string, Map<string, number>> {
   return globalForSse.__blockpartyPresence;
 }
 
+function presenceTenure(): Map<string, Map<string, number>> {
+  globalForSse.__blockpartyPresenceTenure ??= new Map();
+  return globalForSse.__blockpartyPresenceTenure;
+}
+
 function seenSeats(): Map<string, Set<string>> {
   globalForSse.__blockpartySeenSeats ??= new Map();
   return globalForSse.__blockpartySeenSeats;
@@ -59,6 +74,19 @@ function seenSeats(): Map<string, Set<string>> {
 function lastSequences(): WeakMap<Subscriber, number> {
   globalForSse.__blockpartyLastSequences ??= new WeakMap();
   return globalForSse.__blockpartyLastSequences;
+}
+
+/** Installs the process-local hook that reconciles presence at a safe boundary. */
+export function setPresenceRecoveryHandler(
+  handler: (event: PresenceChange) => void | Promise<void>,
+): void {
+  globalForSse.__blockpartyPresenceRecovery = handler;
+}
+
+function notifyPresenceRecovery(event: PresenceChange): void {
+  const handler = globalForSse.__blockpartyPresenceRecovery;
+  if (handler === undefined) return;
+  void Promise.resolve(handler(event)).catch(() => undefined);
 }
 
 function sendPresence(
@@ -99,12 +127,25 @@ export function subscribe(subscriber: Subscriber): () => void {
   counts.set(subscriber.seatId, priorCount + 1);
   bySeat.set(subscriber.gameId, counts);
 
+  const tenures = presenceTenure().get(subscriber.gameId) ?? new Map<string, number>();
+  if (!tenures.has(subscriber.seatId)) {
+    tenures.set(subscriber.seatId, subscriber.connectedAt ?? Date.now());
+  }
+  presenceTenure().set(subscriber.gameId, tenures);
+
   const knownSeats = seenSeats();
   const known = knownSeats.get(subscriber.gameId) ?? new Set<string>();
   const presenceState = known.has(subscriber.seatId) ? "reconnected" : "connected";
   known.add(subscriber.seatId);
   knownSeats.set(subscriber.gameId, known);
   sendPresence(subscriber.gameId, subscriber.seatId, presenceState);
+  if (priorCount === 0) {
+    notifyPresenceRecovery({
+      gameId: subscriber.gameId,
+      seatId: subscriber.seatId,
+      state: "connected",
+    });
+  }
 
   let active = true;
 
@@ -117,11 +158,20 @@ export function subscribe(subscriber: Subscriber): () => void {
     const currentCount = counts.get(subscriber.seatId) ?? 1;
     if (currentCount <= 1) {
       counts.delete(subscriber.seatId);
+      tenures.delete(subscriber.seatId);
       sendPresence(subscriber.gameId, subscriber.seatId, "disconnected");
+      notifyPresenceRecovery({
+        gameId: subscriber.gameId,
+        seatId: subscriber.seatId,
+        state: "disconnected",
+      });
     } else {
       counts.set(subscriber.seatId, currentCount - 1);
     }
-    if (counts.size === 0) bySeat.delete(subscriber.gameId);
+    if (counts.size === 0) {
+      bySeat.delete(subscriber.gameId);
+      presenceTenure().delete(subscriber.gameId);
+    }
   };
 }
 
@@ -139,6 +189,16 @@ export function subscriberCount(gameId: string, seatId?: string): number {
 /** Seat IDs currently subscribed in this process. Presence is never durable. */
 export function subscribedSeatIds(gameId: string): readonly string[] {
   return [...new Set([...(registry().get(gameId) ?? [])].map((subscriber) => subscriber.seatId))];
+}
+
+/** Connected seat tenure used by deterministic host transfer. */
+export function connectedSeatTenures(
+  gameId: string,
+): readonly { readonly seatId: string; readonly connectedAt: number }[] {
+  return [...(presenceTenure().get(gameId) ?? new Map())].map(([seatId, connectedAt]) => ({
+    seatId,
+    connectedAt,
+  }));
 }
 
 /**
