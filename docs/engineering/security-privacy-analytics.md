@@ -10,7 +10,7 @@
 | Private game access: guessed/shared invite | High-entropy opaque invite ID, rate limits, expiry/use limits; invite is not a reconnect or host credential. |
 | Seat takeover: stolen cookie/token | Secure HttpOnly reconnect cookie, token hash at rest, rotation/revocation on reclaim/replacement, TLS, short retention. |
 | RNG/deck manipulation | CSPRNG seed generated server-side; deterministic engine; secret seed/deck order never serialized to clients. |
-| Cross-site socket/HTTP abuse | Strict Origin allowlist, cookie protections, CSRF on cookie-authenticated HTTP mutation, Socket.IO handshake Origin verification. |
+| Cross-site HTTP/SSE abuse | Strict Origin allowlist, cookie protections, CSRF on cookie-authenticated HTTP mutation, and authenticated SSE requests. |
 | Availability: spam sockets/commands/invites | IP and identity limits, connection caps, payload limits, timeouts, bounded DB transactions, backpressure. |
 | XSS/data leakage | CSP, output escaping, no unsafe HTML, secret redaction, content security review. |
 | Dependency/supply-chain or operator compromise | Lockfile, CI audit/update process, least-privileged secrets, image scanning, patch cadence. |
@@ -19,19 +19,19 @@ There is no chat. Do not add chat, user-uploaded content, public profiles, or di
 
 ## SEC-002: Identity, authorization, and entropy
 
-On seat claim, issue a random command token scoped to that game and seat using Node `crypto.randomBytes` (minimum 32 bytes). Send it only as a cookie; store its cryptographic hash at rest and compare in constant time. Keep host authority and non-command reclaim claims in separate random capabilities. Cookies use the `__Host-` prefix where possible with `Secure; HttpOnly; Path=/; SameSite=Lax; Max-Age` bounded by game retention. Never place capabilities in URLs, localStorage, analytics, logs, or WebSocket query strings.
+On seat claim, issue a random command token scoped to that game and seat using Node `crypto.randomBytes` (minimum 32 bytes). Send it only as a cookie; store its cryptographic hash at rest and compare in constant time. Keep host authority and non-command reclaim claims in separate random capabilities. Cookies use the `__Host-` prefix where possible with `Secure; HttpOnly; Path=/; SameSite=Lax; Max-Age` bounded by game retention. Never place capabilities in URLs, localStorage, analytics, logs, or SSE query strings.
 
 Create invitation IDs from at least 128 bits of CSPRNG entropy, encode URL-safely, and store only their identifier/state unless invitation secrecy needs a separate verifier. An invite authorizes joining according to its policy, never operating an existing seat. Use opaque UUID game IDs; never rely on sequential IDs.
 
-Every HTTP/socket action maps an authenticated game-seat capability to one current seat and checks game status and action ownership server-side. Client-provided seat, game, phase, expected version, and host flag are untrusted. Replacement revokes the command capability but preserves only the separate reclaim claim; approved reclaim issues a new command capability. Gameplay identity never spans games. Lobby host actions additionally require the separate host capability.
+Every HTTP/SSE action maps an authenticated game-seat capability to one current seat and checks game status and action ownership server-side. Client-provided seat, game, phase, expected version, and host flag are untrusted. Replacement revokes the command capability but preserves only the separate reclaim claim; approved reclaim issues a new command capability. Gameplay identity never spans games. Lobby host actions additionally require the separate host capability.
 
 ## SEC-003: Browser and transport controls
 
-- Force HTTPS/WSS and HSTS at the proxy; redirect HTTP. Configure secure headers in Next.js/proxy: CSP, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and frame protection (`frame-ancestors 'none'`).
-- CSP starts deny-by-default: `default-src 'self'`; allow only necessary hashed/nonced scripts/styles, WSS game origin, and consented PostHog endpoints. Avoid `unsafe-inline`; document any unavoidable framework exception and test it.
-- Cookie-authenticated mutating HTTP endpoints require Origin validation plus a synchronizer/double-submit CSRF token. Socket handshake and every CORS response allow only configured first-party origins; never `*` with credentials.
-- Set request payload limits (HTTP and Socket.IO), max nesting/string lengths in Zod schemas, command timeouts, allowed event names, and bounded room/socket counts. Reject binary payloads unless explicitly needed.
-- Rate-limit create/join, invalid invite lookups, socket handshakes, commands, resyncs, and analytics proxy calls by IP plus seat/game where available. Use generic responses for invite existence and exponential backoff for repeated failures.
+- Force HTTPS and HSTS at the proxy; redirect HTTP. Configure secure headers in Next.js/proxy: CSP, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and frame protection (`frame-ancestors 'none'`).
+- CSP starts deny-by-default: `default-src 'self'`; allow only necessary hashed/nonced scripts/styles, same-origin API/SSE, and consented PostHog endpoints. Avoid `unsafe-inline`; document any unavoidable framework exception and test it.
+- Cookie-authenticated mutating HTTP endpoints require Origin validation plus a synchronizer/double-submit CSRF token. SSE requests and every CORS response allow only configured first-party origins; never `*` with credentials.
+- Set request payload limits, max nesting/string lengths in Zod schemas, command timeouts, allowed event names, and bounded SSE connection counts. Reject binary payloads unless explicitly needed.
+- Rate-limit create/join, invalid invite lookups, commands, sync requests, SSE connections, and analytics proxy calls by IP plus seat/game where available. Use generic responses for invite existence and exponential backoff for repeated failures.
 
 ## SEC-004: Abuse, operations, and secure development
 

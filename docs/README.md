@@ -50,8 +50,8 @@ When documents disagree, use this order and correct the lower-level document:
 - Required disconnected humans pause play. Host-approved bot replacement and reclaim occur only at safe command boundaries.
 - Standard preset, short-game preset, and exactly eight start-locked toggles.
 - Server-authoritative deterministic engine with snapshots, append-only events, optimistic versions, and idempotent command IDs.
-- Next.js PWA plus dedicated Fastify/Socket.IO game server, PostgreSQL/Drizzle, Tailwind/shadcn, PostHog opt-in, and Coolify.
-- Redis is deferred until horizontal realtime scaling.
+- One Next.js App Router/PWA application with Route Handlers for commands and authenticated SSE for realtime delivery, MongoDB transactions/change streams, Tailwind/shadcn including the shadcn Sidebar, PostHog opt-in, and Coolify.
+- The pure engine, contracts, and game-content packages remain internal build dependencies; there is one deployable application. Redis is deferred until measured horizontal coordination need.
 - Public release is blocked on approved original content, licenses, brand clearance, privacy review, and attorney sign-off.
 
 ## Pre-implementation gates

@@ -13,7 +13,7 @@ This strategy verifies a private-link browser game with 2–6 total human/bot se
 | Vitest unit/engine | `RULE`, `VAR`, `CONTENT`, `ENG` | Pure state transitions, money, ownership, phases, bot decisions | JUnit/results plus coverage report |
 | Table and scenario tests | `RULE`, `VAR`, `CONTENT` | Human-readable edge cases and complete rules sequences | Named scenario output keyed to requirement IDs |
 | Property-based tests | `RULE`, `CONTENT`, `ENG` | Explore legal command sequences and invariant preservation | Seed, counterexample, shrink output |
-| Protocol/integration | `PROTO`, `SEC`, `ENG` | Validate authorization, persistence, idempotency, reconnect | Ephemeral Postgres-backed test report |
+| Protocol/integration | `PROTO`, `SEC`, `ENG` | Validate authorization, persistence, idempotency, reconnect | Ephemeral replica-set MongoDB-backed test report |
 | Playwright multi-browser/client | `UX`, `DS`, `PROTO`, `SEC` | Validate 2–6 independent players on supported browsers | Trace, screenshots/video on failure |
 | Accessibility | `UX`, `DS`, `PRD-NFR` | Automated axe and manual assistive-technology behavior | axe report and manual checklist sign-off |
 | Resilience, migration, load | `OPS`, `ENG`, `PROTO` | Verify restart, recovery, restoration, and capacity/latency | Runbook output and timestamped metrics |
@@ -42,7 +42,7 @@ Fixtures are versioned, small, and named by behavior: canonical board/ruleset, p
 
 ## TEST-004 — Realtime, browser, and accessibility tests
 
-Protocol tests start the realtime boundary against ephemeral Postgres and verify invite admission; game-seat/host/reclaim capability separation; server command validation; monotonic sequences; ordered broadcast; duplicate handling; disconnect/reconnect/catch-up; replacement/reclaim; host transfer; stale client resync; completion; expiry; and restart persistence. Test malformed payloads, expired/revoked capabilities, cross-game access, and rate limits adversarially.
+Protocol tests start the Next.js Route Handlers and authenticated SSE boundary against an ephemeral replica-set MongoDB and verify invite admission; game-seat/host/reclaim capability separation; server command validation; monotonic sequences; ordered delivery; duplicate handling; disconnect/reconnect/catch-up; replacement/reclaim; host transfer; stale client resync; completion; expiry; and restart persistence. Test malformed payloads, expired/revoked capabilities, cross-game access, and rate limits adversarially.
 
 Playwright runs Chromium, Firefox, and WebKit. Separate browser contexts never share cookies. The suite covers a 2-seat turn and 6-seat lifecycle with human/bot mixes, reconnect/reclaim, and mobile/tablet/desktop layouts. Use deterministic seeds and semantic locators; do not depend on animations, wall-clock sleeps, or CSS classes. Keep a smoke path PR-blocking and run the full matrix on merge/release candidates.
 
@@ -52,9 +52,9 @@ Run axe on every major page/state: landing, create/join, lobby, active turn, mod
 
 PWA tests verify manifest fields/icons, installability, HTTPS-only service-worker registration, offline shell behavior, update prompt/activation, cache-version rollback safety, and no caching of private game state or authenticated responses unless explicitly designed and reviewed. Test an installed app reopening into an expired/revoked session.
 
-Security tests include dependency and container-image vulnerability scans, secret scanning, authenticated and unauthenticated authorization tests, CSP/security-header assertions, CSRF/session fixation cases where applicable, invite-token entropy/non-enumerability, input-size/schema limits, WebSocket origin/auth checks, rate-limit behavior, and analytics redaction checks. Treat game links as credentials: do not place them in logs, analytics, referrers, screenshots, or public error reports.
+Security tests include dependency and container-image vulnerability scans, secret scanning, authenticated and unauthenticated authorization tests, CSP/security-header assertions, CSRF/session fixation cases where applicable, invite-token entropy/non-enumerability, input-size/schema limits, SSE origin/auth checks, rate-limit behavior, and analytics redaction checks. Treat game links as credentials: do not place them in logs, analytics, referrers, screenshots, or public error reports.
 
-Resilience tests deliberately terminate the application during commands and broadcasts, restart it, and verify durable replay without duplicated effects. Exercise network loss, delayed/out-of-order messages, reconnect after a missed turn, database reconnect, and deploy overlap. Migration tests upgrade a production-shaped anonymized fixture through every pending migration, then restore it into a fresh database and run read/write/replay smoke checks. A restore drill is also required by `OPS-009`.
+Resilience tests deliberately terminate the application during commands and broadcasts, restart it, and verify durable replay without duplicated effects. Exercise network loss, delayed/out-of-order messages, reconnect after a missed turn, database reconnect, and deploy overlap. Document-version and index tests upgrade a production-shaped anonymized fixture through every pending compatibility step, then restore it into a fresh replica-set database and run read/write/replay smoke checks. A restore drill is also required by `OPS-009`.
 
 ## TEST-006 — Soak, performance, and capacity
 

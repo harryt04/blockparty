@@ -68,7 +68,7 @@ find easier work.**
      `packages/game-engine`. No browser, no clock, no network, no database. Use a
      fixed seed and record it on failure.
    - `PROTO`, `SEC`, persistence → protocol tests against an ephemeral
-     PostgreSQL.
+     replica-set MongoDB.
    - `UX`, `DS` → Playwright with a separate browser context per player, and axe
      for accessibility states.
    Assert the acceptance line's measurable condition — an event stream, a

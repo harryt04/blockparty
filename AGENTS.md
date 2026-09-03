@@ -20,25 +20,24 @@ When two documents disagree, the higher level wins. Correct the lower-level docu
 
 `docs/mvp-prd-prompt.md` is superseded historical input. It is never authority.
 
-## Planned architecture
+## Final architecture
 
-A pnpm workspace with two apps and three packages. Dependency direction is enforced, not advisory:
+A pnpm workspace with one deployable Next.js App Router application and three internal packages. Dependency direction is enforced, not advisory:
 
 | Package                                                          | May depend on                                       | Must not depend on                                 |
 | ---------------------------------------------------------------- | --------------------------------------------------- | -------------------------------------------------- |
-| `apps/web` (Next.js App Router, Tailwind, shadcn/ui, PWA)        | `contracts`                                         | game-server internals, Drizzle, DB credentials     |
-| `apps/game-server` (Fastify + Socket.IO)                         | `contracts`, `game-engine`, `game-content`, Drizzle | Next.js runtime, browser globals                   |
-| `packages/game-engine` (pure reducer)                            | `contracts`, `game-content`                         | Node APIs, clock, `Math.random`, IO, DB, Socket.IO |
-| `packages/contracts` (Zod schemas + `z.infer` types)             | Zod                                                 | React, Fastify, DB, engine                         |
+| `apps/web` (Next.js App Router, Tailwind, shadcn/ui, PWA, API Route Handlers) | `contracts`, `game-engine`, `game-content`, MongoDB driver | browser modules importing server modules; raw capabilities |
+| `packages/game-engine` (pure reducer)                            | `contracts`, `game-content`                         | Node APIs, clock, `Math.random`, IO, DB, transport |
+| `packages/contracts` (Zod schemas + `z.infer` types)             | Zod                                                 | React, Next.js, DB, engine                         |
 | `packages/game-content` (versioned original board/decks/economy) | data and validation helpers                         | infrastructure, third-party content                |
 
-Storage is PostgreSQL with Drizzle. Redis is deliberately absent until horizontal realtime scale is proven necessary. Deployment is Coolify: `web`, `game-server`, `postgres`, a one-shot `migrate` job, and a scheduled `cleanup` job.
+Storage is MongoDB with the official driver and replica-set transactions. Realtime uses authenticated SSE and MongoDB change streams inside the Next.js runtime. Redis is deliberately absent until measured horizontal coordination need is proven. Deployment is Coolify: one `web` service and private MongoDB; maintenance and cleanup use the same web image.
 
 ## Cross-cutting invariants
 
 These constraints span many documents. Break one and the change is wrong, even if it compiles.
 
-- **Server authority.** The browser may render a projection or preview a legal action. Only `apps/game-server` calls the engine to accept a command. See [ENG-002](docs/engineering/architecture.md).
+- **Server authority.** The browser may render a projection or preview a legal action. Only server-side modules in `apps/web` call the engine to accept a command. See [ENG-002](docs/engineering/architecture.md).
 - **Pure engine.** `packages/game-engine` performs no IO, no clock read, no randomness, no logging, no mutation, and no token checks. The server authorizes; the engine then independently rejects illegal seat/phase actions. See [ENG-020](docs/engineering/game-engine.md).
 - **One transactional command path.** Authenticate, lock the game, check the command ID, load snapshot, verify `expectedVersion`, resolve, append events, update snapshot, insert receipt, commit, _then_ broadcast. See [ENG-015](docs/engineering/realtime-and-data.md).
 - **Four separate capabilities.** Invite, game-seat command token, host capability, and reclaim claim are distinct. An invite admits; it never operates an occupied seat. Store token hashes, never raw tokens. Never place a capability in a URL, localStorage, log, or analytics event. See [SEC-002](docs/engineering/security-privacy-analytics.md).
@@ -70,7 +69,7 @@ Cite the IDs you implement, and update [traceability](docs/traceability.md) in t
 Not yet runnable. When the workspace exists, the intended toolchain is:
 
 - Vitest for engine, table, scenario, and property tests (`fast-check`). No browser, clock, network, or DB in engine tests.
-- Protocol/integration tests against ephemeral PostgreSQL.
+- Protocol/integration tests against an ephemeral replica-set MongoDB.
 - Playwright across Chromium, Firefox, and WebKit with separate browser contexts per player.
 - axe for automated accessibility, plus a manual VoiceOver and NVDA checklist per release.
 

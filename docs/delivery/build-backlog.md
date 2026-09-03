@@ -122,8 +122,8 @@ the change wrong even when it compiles and the tests pass.
   bid, a trade response, or a bankruptcy.
 - **The engine is pure.** No clock, no `Math.random`, no IO, no logging, no
   mutation, no token checks in `packages/game-engine`.
-- **Server authority.** The browser renders a projection. Only `apps/game-server`
-  calls the engine to accept a command.
+- **Server authority.** The browser renders a projection. Only server-side modules
+  in `apps/web` call the engine to accept a command.
 - **Capabilities never travel in the open.** Not in a URL, not in `localStorage`,
   not in a log line, not in an analytics event. Store hashes, never raw tokens.
 - **Money is integer minor units.** Never float.
@@ -185,10 +185,10 @@ content bundle to read.
   Acceptance: `pnpm install` and `pnpm ci` both succeed on a clean checkout.
   `pnpm ci` runs format check, typecheck, lint, and Vitest in that order and fails
   the run on any error or warning. The workspace declares `apps/web`,
-  `apps/game-server`, `packages/contracts`, `packages/game-engine`, and
-  `packages/game-content` as empty but buildable packages with TypeScript project
+  `packages/contracts`, `packages/game-engine`, and `packages/game-content` as
+  empty but buildable packages with TypeScript project
   references. A lint rule enforces the ENG-002 dependency table: adding an import
-  of `packages/game-engine` into `apps/web`, or of `node:fs` into
+  of `mongodb` into a browser module, or of `node:fs` into
   `packages/game-engine`, fails `pnpm ci`. Prove that rule with a fixture the
   linter rejects, not with a comment.
 
@@ -484,24 +484,25 @@ from A2 and their own named predecessors, so several become available at once.
 
 ---
 
-## Loop B — Server and protocol
+## Loop B — Next.js server and protocol
 
-`apps/game-server` is the only caller of the engine. B5 is the spine of this
-loop: one transactional command path that every later ticket goes through. Tests
-here run against an ephemeral PostgreSQL, never a shared database.
+Server-side modules in `apps/web` are the only callers of the engine. B5 is the
+spine of this loop: one transactional command path that every later ticket goes
+through. Tests here run against an ephemeral replica-set MongoDB, never a shared
+database.
 
-- [ ] **B1 — Fastify service, health endpoints, schema, and migrations**
+- [ ] **B1 — Next.js Route Handlers, health endpoints, schema, and document maintenance**
   Blocked by: A1
   Requirements: ENG-004, ENG-015, ENG-016, OPS-005
   Read: docs/engineering/realtime-and-data.md, docs/engineering/architecture.md
-  Acceptance: the service starts, serves `/health/live` for process liveness and
-  `/health/ready` for database reachability and migration compatibility, and shuts
-  down gracefully by refusing new connections, waiting for in-flight command
-  transactions, then closing the pool. Neither endpoint returns a secret, game
-  data, or a verbose error. Drizzle migrations create every table and index in the
-  ENG-016 table, with `jsonb` event payloads carrying type and version columns. A
-  migration smoke test runs every migration against an ephemeral database and
-  asserts the resulting schema.
+  Acceptance: the Next.js Node runtime serves `/api/health/live` for process
+  liveness and `/api/health/ready` for MongoDB replica-set reachability,
+  transaction support, and document compatibility, and shuts down gracefully by
+  refusing new commands, closing SSE streams, waiting for in-flight transactions,
+  then closing the database client/change stream. Neither endpoint returns a
+  secret, game data, or a verbose error. An explicit maintenance command creates
+  every required MongoDB index and validates document versions against ENG-016.
+  A maintenance smoke test runs against an ephemeral replica-set database.
 
 - [ ] **B2 — Create game and capability issuance**
   Blocked by: B1
@@ -533,32 +534,32 @@ here run against an ephemeral PostgreSQL, never a shared database.
   cannot take or command a claimed seat. Expired, invalid, full, and ended states
   return a safe response that does not reveal private room details.
 
-- [ ] **B4 — Socket.IO handshake, rooms, and envelope validation**
+- [ ] **B4 — Authenticated SSE, subscriptions, and envelope validation**
   Blocked by: B3
   Requirements: PROTO-001, PROTO-003, SEC-003
   Read: docs/engineering/realtime-and-data.md, docs/engineering/security-privacy-analytics.md
-  Acceptance: a socket joins `game:{gameId}` only after its game-seat capability
-  authenticates and authorizes, and may join `seat:{gameId}:{seatId}` for private
-  notifications. A room name grants no authority. Every payload is Zod-validated
-  from `packages/contracts` before use and unknown fields are rejected. The
-  handshake verifies Origin against a configured allowlist, never `*` with
-  credentials. Payload size, nesting depth, string length, and allowed event names
-  are all bounded. Multiple tabs sharing one capability share one seat. A test
-  drives a malformed envelope, an oversized payload, a foreign Origin, and a
-  cross-game socket, and asserts each is refused without state change.
+  Acceptance: an SSE request authenticates a game-seat capability before it
+  subscribes to authorized events. A subscription grants no authority. Every
+  payload is Zod-validated from `packages/contracts` before use and unknown fields
+  are rejected. Origin is checked against a configured allowlist, never `*` with
+  credentials. Payload size, nesting depth, string length, event names, and SSE
+  connection counts are bounded. Multiple tabs sharing one capability share one
+  seat. A test drives a malformed envelope, an oversized payload, a foreign
+  Origin, and a cross-game stream, and asserts each is refused without state
+  change.
 
 - [ ] **B5 — The transactional command path**
   Blocked by: B4
   Requirements: ENG-015, PROTO-002, PRD-NFR-004, PRD-FUN-006, PRD-FUN-008
   Read: docs/engineering/realtime-and-data.md, docs/engineering/architecture.md
-  Acceptance: one command handler does, in this order and in one PostgreSQL
-  transaction: authenticate and authorize; take the per-game advisory lock; look up
-  `(game_id, command_id)`; load the snapshot; verify `expectedVersion`; call the
-  engine; append events with sequential numbers; update the snapshot and version;
+  Acceptance: one Next.js Route Handler does, in this order and in one MongoDB
+  session transaction: authenticate and authorize; look up `(gameId, commandId)`;
+  load the snapshot; verify `expectedVersion`; call the engine; append events with
+  sequential numbers; update the snapshot and version;
   insert the command receipt; commit; **then** broadcast. `aggregateVersion`
   increments once per accepted command. `sequence` is strictly increasing per game
   and one command may emit several contiguous values. `game.commandAck` is durable
-  acceptance, not socket receipt. Repeating a committed `commandId` returns the
+  acceptance, not HTTP receipt. Repeating a committed `commandId` returns the
   stored ACK and does not re-run the engine. A stale `expectedVersion` returns
   `STALE_VERSION` with no state change and no silent retry. Every PROTO-002 error
   code is reachable and tested. A concurrency test fires two commands at the same
@@ -568,7 +569,7 @@ here run against an ephemeral PostgreSQL, never a shared database.
   Blocked by: B5
   Requirements: PROTO-004, ENG-007
   Read: docs/engineering/realtime-and-data.md
-  Acceptance: `game.sync` carries `{lastSequence, aggregateVersion}`. When the
+  Acceptance: `/api/games/[gameId]/sync` carries `{lastSequence, aggregateVersion}`. When the
   retained journal forms a contiguous range the server returns `game.events`;
   otherwise, or on an incompatible protocol or content version, it returns a full
   authorized `game.snapshot` with its terminal sequence and version. **The
@@ -624,8 +625,8 @@ here run against an ephemeral PostgreSQL, never a shared database.
   Blocked by: B5
   Requirements: SEC-001, SEC-003, SEC-004, SEC-006, PRD-NFR-003
   Read: docs/engineering/security-privacy-analytics.md
-  Acceptance: create, join, invalid invite lookup, socket handshake, command,
-  resync, and analytics proxy calls are rate limited by IP plus seat or game where
+  Acceptance: create, join, invalid invite lookup, SSE connection, command, sync,
+  and analytics proxy calls are rate limited by IP plus seat or game where
   available, with generic responses for invite existence and exponential backoff
   on repeated failure. Cookie-authenticated mutating HTTP endpoints require Origin
   validation plus a CSRF token. Responses carry a deny-by-default CSP,
@@ -1044,18 +1045,17 @@ every change at 375 px and 1440 px unless the acceptance line names other widths
   raw error string, or game-state detail. A test proves a consent-denied session
   makes zero PostHog network requests, and that withdrawal stops an opted-in one.
 
-- [ ] **F3 — Coolify images, migrate job, and cleanup job**
+- [ ] **F3 — Coolify image, document maintenance, and cleanup job**
   Blocked by: F1
   Requirements: OPS-002, OPS-003, OPS-004, ENG-004, PRD-NFR-001
   Read: docs/delivery/operations.md, docs/engineering/architecture.md
-  Acceptance: two independently built Docker images exist for `web` and
-  `game-server`, both non-root and minimal, with pinned base digests and **no
-  `latest` tag**. A one-shot `migrate` job runs migrations under an advisory or
-  lease lock — the application **never migrates implicitly at startup**. A
-  scheduled `cleanup` job runs the B9 expiry work. The deployment documents its
-  required environment variables by name and category per the OPS-003 inventory,
-  with no values committed. `NEXT_PUBLIC_GAME_SERVER_URL` points at the public WSS
-  origin, and no server key carries a `NEXT_PUBLIC_` prefix. A smoke script
+  Acceptance: one non-root, minimal Docker image exists for the Next.js `web`
+  application with a pinned base digest and **no `latest` tag**. An explicit
+  document/index maintenance command runs under a lease lock — the application
+  **never performs an opaque destructive migration at startup**. A scheduled
+  cleanup request runs the B9 expiry work. The deployment documents its required
+  environment variables by name and category per the OPS-003 inventory, with no
+  values committed. No server key carries a `NEXT_PUBLIC_` prefix. A smoke script
   creates, joins, acts, reconnects, and reads back.
 
 - [ ] **F4 — Structured logs, metrics, and alerts**
@@ -1078,9 +1078,9 @@ every change at 375 px and 1440 px unless the acceptance line names other widths
   Blocked by: F4
   Requirements: OPS-006, OPS-009, ENG-017, TEST-005
   Read: docs/delivery/operations.md
-  Acceptance: encrypted PostgreSQL backups run at least daily. A repeatable drill
-  script restores a chosen backup into an isolated database with no production
-  outbound integrations, runs migrations, verifies row counts and a sampled
+  Acceptance: encrypted MongoDB backups run at least daily. A repeatable drill
+  script restores a chosen backup into an isolated replica-set database with no
+  production outbound integrations, runs document/index compatibility checks, verifies document counts and a sampled
   snapshot-plus-event replay against the invariants, runs an authorized read and
   write smoke, and destroys the test environment. It records recovery time,
   recovery-point age, operator, backup identifier, failures, and corrective

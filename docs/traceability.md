@@ -9,17 +9,17 @@ This register maps every normative requirement family to its owning component, v
 
 | Requirement IDs | Source | Implementation owner | Required evidence | Milestone | Status |
 |---|---|---|---|---|---|
-| PRD-FUN-001–005 | [Entry/lobby/seats](product/prd.md#entry-lobby-and-seats) | `apps/web`, `apps/game-server`, `packages/contracts` | TEST-004 join/lobby multi-context; TEST-005 capability/privacy cases | MILE-004 | Planned |
-| PRD-FUN-006–010 | [Authoritative play](product/prd.md#authoritative-play) | `packages/game-engine`, `apps/game-server`, `apps/web` | TEST-003 engine/scenarios; TEST-004 protocol/browser | MILE-004–005 | Planned |
-| PRD-FUN-011 | [Bots](product/prd.md#bots-reconnect-and-lifecycle) | bot policy in `apps/game-server`, engine legal-action contract | TEST-003 fixed-seed decisions; TEST-006 5,000-game soak | MILE-006 | Planned |
+| PRD-FUN-001–005 | [Entry/lobby/seats](product/prd.md#entry-lobby-and-seats) | `apps/web`, `packages/contracts` | TEST-004 join/lobby multi-context; TEST-005 capability/privacy cases | MILE-004 | Planned |
+| PRD-FUN-006–010 | [Authoritative play](product/prd.md#authoritative-play) | `packages/game-engine`, `apps/web` Route Handlers, `apps/web` client | TEST-003 engine/scenarios; TEST-004 protocol/browser | MILE-004–005 | Planned |
+| PRD-FUN-011 | [Bots](product/prd.md#bots-reconnect-and-lifecycle) | bot policy in `apps/web` server modules, engine legal-action contract | TEST-003 fixed-seed decisions; TEST-006 5,000-game soak | MILE-006 | Planned |
 | PRD-FUN-012–015 | [Lifecycle](product/prd.md#bots-reconnect-and-lifecycle) | capabilities/presence/persistence plus UX recovery surfaces | TEST-004 reconnect/replacement/reclaim/host transfer; TEST-005 expiry | MILE-004, MILE-006 | Planned |
 | PRD-FUN-016 | [Responsive experience](product/prd.md#experience-and-instrumentation) | `apps/web` | TEST-004 mobile/tablet/desktop, keyboard, assistive tech | MILE-007 | Planned |
 | PRD-FUN-017 | [PWA](product/prd.md#experience-and-instrumentation) | `apps/web` manifest/service worker/update UX | TEST-005 PWA/cache/privacy matrix | MILE-008 | Planned |
 | PRD-FUN-018 | [Instrumentation](product/prd.md#experience-and-instrumentation) | consent UI and PostHog adapter | TEST-005 denied/withdrawn/masking/event-schema cases | MILE-008 | Planned |
-| PRD-FUN-019 | [No-contest termination](product/prd.md#experience-and-instrumentation) | host UX, game-server command handler, engine terminal state | TEST-003 no-contest state; TEST-004 host authorization/confirmation | MILE-005, MILE-007 | Planned |
+| PRD-FUN-019 | [No-contest termination](product/prd.md#experience-and-instrumentation) | host UX, Next.js command Route Handler, engine terminal state | TEST-003 no-contest state; TEST-004 host authorization/confirmation | MILE-005, MILE-007 | Planned |
 | PRD-NFR-001–004 | [Platform/integrity](product/prd.md#non-functional-requirements) | workspace, Coolify services, capabilities, transactional command path | TEST-004–005; OPS-002–005 | MILE-003–004, MILE-008 | Planned |
 | PRD-NFR-005–006 | [Accessibility/motion](product/prd.md#non-functional-requirements) | `apps/web`, design tokens/components | TEST-004 axe, keyboard, VoiceOver/NVDA, zoom, reduced motion | MILE-007 | Planned |
-| PRD-NFR-007 | [Performance](product/prd.md#non-functional-requirements) | web/game-server observability and performance budgets | TEST-006 load report plus web-vitals evidence | MILE-008–010 | Planned |
+| PRD-NFR-007 | [Performance](product/prd.md#non-functional-requirements) | Next.js observability and performance budgets | TEST-006 load report plus web-vitals evidence | MILE-008–010 | Planned |
 | PRD-NFR-008–010 | [Versioning/data/licenses](product/prd.md#non-functional-requirements) | contracts/content/migrations, operations, legal/brand owners | TEST-003 compatibility; TEST-005 migration; LEGAL-006–007 | MILE-002–003, MILE-008 | Planned |
 | RULE-001–012 | [Canonical rules](product/rules.md#rule-requirements) | `packages/game-engine` | TEST-003 table/property/golden/scenario; TEST-004 command integration | MILE-005 | Planned |
 | VAR-001–008 | [Eight toggles](product/rule-variants.md#exactly-eight-mvp-toggles) | `packages/game-content`, `packages/game-engine`, settings UI | TEST-003 each toggle alone and interactions | MILE-006 | Planned |
@@ -32,7 +32,7 @@ This register maps every normative requirement family to its owning component, v
 | Requirement IDs | Source | Implementation owner | Required evidence | Milestone | Status |
 |---|---|---|---|---|---|
 | UX-001–006 | [Principles](design/ux-spec.md#1-product-principles) | all `apps/web` surfaces and projections | TEST-004 cross-route accessibility/authority review | MILE-004, MILE-007 | Planned |
-| UX-010–012 | [Create/join/lobby](design/ux-spec.md#3-end-to-end-flows) | Next.js routes, game-server admission/lobby handlers | TEST-004 separate-context create/join/start | MILE-004 | Planned |
+| UX-010–012 | [Create/join/lobby](design/ux-spec.md#3-end-to-end-flows) | Next.js routes and API Route Handlers | TEST-004 separate-context create/join/start | MILE-004 | Planned |
 | UX-013–017 | [Gameplay flows](design/ux-spec.md#3-end-to-end-flows) | board/action UI plus engine/protocol commands | TEST-003 scenarios; TEST-004 browser state matrix | MILE-005, MILE-007 | Planned |
 | UX-018–019 | [Recovery/completion](design/ux-spec.md#3-end-to-end-flows) | connection shell, capability flows, summary route | TEST-004 reconnect/reclaim/host transfer/completion | MILE-004, MILE-007 | Planned |
 | UX-030, UX-031, UX-032, UX-033 | [Responsive shell](design/ux-spec.md#4-responsive-game-shell) | responsive board and panels | TEST-004 phone/tablet/desktop/landscape screenshots and interactions | MILE-007 | Planned |
@@ -46,15 +46,15 @@ Brand and naming requirements are intentionally not assigned here while `docs/br
 
 | Requirement IDs | Source | Implementation owner | Required evidence | Milestone | Status |
 |---|---|---|---|---|---|
-| ENG-001–004 | [Architecture](engineering/architecture.md) | workspace, web/game-server services, Coolify topology | architecture boundary tests; deployment smoke; OPS-002–005 | MILE-003–004, MILE-008 | Planned |
-| ENG-005–010 | [Architecture decisions](engineering/architecture.md#decisions) | package/service owners | ADR conformance in review; compatibility fixtures | MILE-003–004 | Planned |
-| ENG-012–014 | [Alternatives/acceptance/references](engineering/architecture.md#eng-012-rejected-alternatives) | engineering lead | implementation review checklist and source-version record | MILE-003, MILE-008 | Planned |
-| ENG-015–017 | [Persistence/data/retention](engineering/realtime-and-data.md#eng-015-transactional-persistence) | `apps/game-server`, Drizzle/PostgreSQL, cleanup/backup jobs | TEST-004 idempotency/restart; TEST-005 migration/expiry; OPS-009 restore | MILE-004, MILE-008 | Planned |
+| ENG-001–004 | [Architecture](engineering/architecture.md) | workspace, Next.js application, MongoDB, Coolify topology | architecture boundary tests; deployment smoke; OPS-002–005 | MILE-003–004, MILE-008 | Planned |
+| ENG-005–010 | [Final architecture decisions](engineering/architecture.md#decisions-and-rejected-alternatives) | Next.js server modules, MongoDB adapter, web client, and platform owners | architecture boundary tests; protocol/recovery tests; deployment and compatibility evidence | MILE-003–008 | Planned |
+| ENG-018–019 | [Acceptance and references](engineering/architecture.md#eng-018-implementation-acceptance-checklist) | engineering lead | implementation review checklist and source-version record | MILE-003, MILE-008 | Planned |
+| ENG-015–017 | [Persistence/data/retention](engineering/realtime-and-data.md#eng-015-transactional-persistence) | Next.js server modules, MongoDB, cleanup/backup jobs | TEST-004 idempotency/restart; TEST-005 document compatibility/expiry; OPS-009 restore | MILE-004, MILE-008 | Planned |
 | ENG-020–025 | [Engine contract/workflows](engineering/game-engine.md) | `packages/game-engine`, contracts/content | TEST-003 unit/property/golden/scenarios | MILE-003, MILE-005 | Planned |
 | ENG-026 | [Bots](engineering/game-engine.md#eng-026-bots) | bot policy and engine command boundary | TEST-003 decision/explanation tests; TEST-006 soak | MILE-006 | Planned |
 | ENG-027–028 | [Migration/tests](engineering/game-engine.md#eng-027-schema-and-state-migration) | engine/contracts/content maintainers | archived migration/upcaster fixtures and test matrix | MILE-003–008 | Planned |
-| PROTO-001–004 | [Realtime protocol](engineering/realtime-and-data.md) | `packages/contracts`, `apps/game-server`, web sync client | TEST-004 schema/order/idempotency/resync/reconnect suite | MILE-004 | Planned |
-| SEC-001–004 | [Security controls](engineering/security-privacy-analytics.md) | web/game-server/platform owners | TEST-005 threat cases, headers, origin/CSRF, scans, redaction | MILE-004, MILE-008 | Planned |
+| PROTO-001–004 | [Realtime protocol](engineering/realtime-and-data.md) | `packages/contracts`, Next.js Route Handlers/SSE, web sync client | TEST-004 schema/order/idempotency/resync/reconnect suite | MILE-004 | Planned |
+| SEC-001–004 | [Security controls](engineering/security-privacy-analytics.md) | Next.js app/platform owners | TEST-005 threat cases, headers, origin/CSRF, scans, redaction | MILE-004, MILE-008 | Planned |
 | SEC-005–006 | [Retention/acceptance](engineering/security-privacy-analytics.md#sec-005-retention-deletion-and-age-boundary) | platform/privacy owners | expiry/deletion/restore evidence and security checklist | MILE-008–010 | Planned |
 | ANA-001–002 | [PostHog](engineering/security-privacy-analytics.md#ana-001-consent-gated-posthog) | web analytics adapter and privacy owner | denied/withdrawn network tests, event schema, replay masking review | MILE-008 | Planned |
 | LEGAL-001–010 | [IP safety](legal/ip-safety.md#legal-requirements) | project owner, brand/content owners, qualified counsel | provenance register, search records, license packet, written gate approval | MILE-002, MILE-009–010 | Planned |
