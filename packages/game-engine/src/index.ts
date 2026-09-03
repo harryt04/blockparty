@@ -594,6 +594,70 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         },
       });
     }
+    // Improvement events carry the complete transition delta so replay does
+    // not consult content or a random source. RULE-008, CONTENT-005, ENG-023.
+    case "ImprovementBought":
+    case "ImprovementSold": {
+      const deedId = payloadSeatId(event, "deedId");
+      const seatId = payloadSeatId(event, "seatId");
+      const toLevel = payloadNumber(event, "toLevel");
+      const amount = payloadNumber(event, "amount");
+      const inventoryDelta = payloadNumber(event, "inventoryDelta");
+      const inventoryKind = payloadSeatId(event, "inventoryKind");
+      if (
+        deedId === undefined ||
+        seatId === undefined ||
+        toLevel === undefined ||
+        toLevel < 0 ||
+        amount === undefined ||
+        amount < 0 ||
+        inventoryDelta === undefined ||
+        inventoryKind === undefined
+      ) {
+        return state;
+      }
+      const deed = state.deeds.find((candidate) => candidate.deedId === deedId);
+      const seat = findSeat(state, seatId);
+      const inventory = state.bank.improvementInventory[inventoryKind];
+      if (
+        deed === undefined ||
+        seat === undefined ||
+        inventory === undefined ||
+        !Number.isSafeInteger(inventory + inventoryDelta)
+      ) {
+        return state;
+      }
+      const buying = event.type === "ImprovementBought";
+      const nextBalance = buying ? seat.balance - amount : seat.balance + amount;
+      const nextBankCash = buying ? state.bank.cash + amount : state.bank.cash - amount;
+      const nextInventory = inventory + (buying ? -inventoryDelta : inventoryDelta);
+      if (
+        !Number.isSafeInteger(nextBalance) ||
+        !Number.isSafeInteger(nextBankCash) ||
+        !Number.isSafeInteger(nextInventory) ||
+        nextInventory < 0
+      ) {
+        return state;
+      }
+      return freezeState({
+        ...state,
+        phase: state.phase,
+        seats: state.seats.map((candidate) =>
+          candidate.seatId === seatId ? { ...candidate, balance: nextBalance } : candidate,
+        ),
+        deeds: state.deeds.map((candidate) =>
+          candidate.deedId === deedId ? { ...candidate, improvementLevel: toLevel } : candidate,
+        ),
+        bank: {
+          ...state.bank,
+          cash: nextBankCash,
+          improvementInventory: {
+            ...state.bank.improvementInventory,
+            [inventoryKind]: nextInventory,
+          },
+        },
+      });
+    }
     case "PendingChoiceCreated": {
       const choiceId = payloadSeatId(event, "choiceId");
       const continuation = payloadQueuedEffects(event) ?? [];
@@ -1874,6 +1938,306 @@ function declineAcquisition(
   };
 }
 
+interface ImprovementContext {
+  readonly deed: Deed;
+  readonly deedState: DeedState;
+  readonly districtDeedStates: readonly DeedState[];
+  readonly inventoryKind: string;
+}
+
+function improvementContext(
+  state: GameState,
+  rules: RuleSet,
+  deedId: string,
+): ImprovementContext | Rejection {
+  const deed = rules.content.deeds.find((candidate) => candidate.deedId === deedId);
+  const deedState = state.deeds.find((candidate) => candidate.deedId === deedId);
+  if (deed === undefined || deedState === undefined) {
+    return reject("INVALID_PAYLOAD", "UNKNOWN_DEED", "The improvement deed is not in the ledger.");
+  }
+  if (deed.category !== "district" || deed.districtId === undefined) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "IMPROVEMENT_REQUIRES_DISTRICT",
+      "Only district deeds can carry improvements.",
+    );
+  }
+  const district = rules.content.districts.find(
+    (candidate) => candidate.districtId === deed.districtId,
+  );
+  if (district === undefined) {
+    return reject("INVALID_PAYLOAD", "INVALID_DISTRICT", "The deed's district is not in content.");
+  }
+  const districtDeedStates = district.deedIds.map((districtDeedId) =>
+    state.deeds.find((candidate) => candidate.deedId === districtDeedId),
+  );
+  if (districtDeedStates.some((candidate) => candidate === undefined)) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "INCOMPLETE_DEED_LEDGER",
+      "Every district deed must be present in the ledger.",
+    );
+  }
+  const inventoryKind = Object.keys(rules.content.economy.improvementInventory)[0];
+  if (inventoryKind === undefined) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "INVALID_IMPROVEMENT_INVENTORY",
+      "Improvement content must declare an inventory pool.",
+    );
+  }
+  return {
+    deed,
+    deedState,
+    districtDeedStates: districtDeedStates as readonly DeedState[],
+    inventoryKind,
+  };
+}
+
+/** RULE-005, RULE-008: enforce ownership, complete districts, and even building. */
+function resolveBuyImprovement(
+  state: GameState,
+  actorSeatId: SeatId,
+  deedId: string,
+  rules: RuleSet,
+): Resolution {
+  const actorRejection = requireActiveActor(state, actorSeatId);
+  if (actorRejection !== undefined) return actorRejection;
+  if (state.phase !== "ResolveMove" && state.phase !== "TurnStart") {
+    return reject(
+      "PHASE_MISMATCH",
+      "IMPROVEMENT_REQUIRES_MANAGE_PHASE",
+      "Improvements may only be bought after movement resolution.",
+    );
+  }
+  if (state.activeSeatId !== actorSeatId) {
+    return reject("ILLEGAL_ACTION", "OUT_OF_TURN", "Only the active seat may buy improvements.");
+  }
+  const context = improvementContext(state, rules, deedId);
+  if ("ok" in context) return context;
+  const actor = findSeat(state, actorSeatId);
+  if (actor === undefined || context.deedState.ownerSeatId !== actorSeatId) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "IMPROVEMENT_NOT_OWNED",
+      "A seat may only improve its own deed.",
+    );
+  }
+  if (
+    context.deedState.mortgaged ||
+    context.districtDeedStates.some((deed) => deed.mortgaged) ||
+    context.districtDeedStates.some((deed) => deed.ownerSeatId !== actorSeatId)
+  ) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "DISTRICT_NOT_COMPLETE",
+      "A district must be complete and unmortgaged before building.",
+    );
+  }
+  const currentLevel = context.deedState.improvementLevel;
+  const nextLevel = context.deed.improvementLevels?.find(
+    (level) => level.level === currentLevel + 1,
+  );
+  if (nextLevel === undefined) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "IMPROVEMENT_AT_MAX_LEVEL",
+      "The deed is already fully improved.",
+    );
+  }
+  const lowestLevel = Math.min(...context.districtDeedStates.map((deed) => deed.improvementLevel));
+  if (currentLevel > lowestLevel) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "EVEN_BUILDING_REQUIRED",
+      "A deed cannot be improved ahead of the lowest deed in its district.",
+    );
+  }
+  const cost = context.deed.improvementCost;
+  if (cost === undefined || !Number.isSafeInteger(cost) || cost < 0) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "INVALID_IMPROVEMENT_COST",
+      "The deed has no valid improvement cost.",
+    );
+  }
+  const inventory = state.bank.improvementInventory[context.inventoryKind];
+  const inventoryDelta = nextLevel.inventoryDelta;
+  if (inventory === undefined || !Number.isSafeInteger(inventoryDelta)) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "IMPROVEMENT_INVENTORY_EXHAUSTED",
+      "The bank has no available improvement pieces for this level.",
+    );
+  }
+  const nextInventory = inventory - inventoryDelta;
+  if (!Number.isSafeInteger(nextInventory) || nextInventory < 0) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "IMPROVEMENT_INVENTORY_EXHAUSTED",
+      "The bank has no available improvement pieces for this level.",
+    );
+  }
+  if (actor.balance < cost) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "INSUFFICIENT_FUNDS",
+      "The active seat cannot afford this improvement.",
+    );
+  }
+  if (!Number.isSafeInteger(state.bank.cash + cost)) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "BANK_CASH_OVERFLOW",
+      "The bank ledger cannot represent this payment.",
+    );
+  }
+  const event = freezeEvent({
+    type: "ImprovementBought",
+    eventVersion: 1,
+    actorSeatId,
+    payload: {
+      deedId,
+      seatId: actorSeatId,
+      fromLevel: currentLevel,
+      toLevel: nextLevel.level,
+      amount: cost,
+      inventoryKind: context.inventoryKind,
+      inventoryDelta,
+    },
+  } satisfies EngineEvent);
+  return { ok: true, state: freezeState(applyEvent(state, event)), events: Object.freeze([event]) };
+}
+
+/** RULE-005, RULE-008: return one level to bank with content-defined rounding. */
+function resolveSellImprovement(
+  state: GameState,
+  actorSeatId: SeatId,
+  deedId: string,
+  rules: RuleSet,
+): Resolution {
+  const actorRejection = requireActiveActor(state, actorSeatId);
+  if (actorRejection !== undefined) return actorRejection;
+  if (state.phase !== "ResolveMove" && state.phase !== "TurnStart") {
+    return reject(
+      "PHASE_MISMATCH",
+      "IMPROVEMENT_REQUIRES_MANAGE_PHASE",
+      "Improvements may only be sold after movement resolution.",
+    );
+  }
+  if (state.activeSeatId !== actorSeatId) {
+    return reject("ILLEGAL_ACTION", "OUT_OF_TURN", "Only the active seat may sell improvements.");
+  }
+  const context = improvementContext(state, rules, deedId);
+  if ("ok" in context) return context;
+  const actor = findSeat(state, actorSeatId);
+  if (actor === undefined || context.deedState.ownerSeatId !== actorSeatId) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "IMPROVEMENT_NOT_OWNED",
+      "A seat may only sell its own improvements.",
+    );
+  }
+  const currentLevel = context.deedState.improvementLevel;
+  const previousLevel = context.deed.improvementLevels?.find(
+    (level) => level.level === currentLevel,
+  );
+  if (previousLevel === undefined || currentLevel <= 0) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "NO_IMPROVEMENT_TO_SELL",
+      "The deed has no improvement to sell.",
+    );
+  }
+  const highestLevel = Math.max(...context.districtDeedStates.map((deed) => deed.improvementLevel));
+  if (currentLevel !== highestLevel) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "EVEN_BUILDING_REQUIRED",
+      "Improvements must be sold from a currently highest-level deed.",
+    );
+  }
+  const nextLevels = context.districtDeedStates.map((deed) =>
+    deed.deedId === deedId ? deed.improvementLevel - 1 : deed.improvementLevel,
+  );
+  if (Math.max(...nextLevels) - Math.min(...nextLevels) > 1) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "EVEN_BUILDING_REQUIRED",
+      "Selling this improvement would violate even building.",
+    );
+  }
+  const ratio = rules.content.economy.improvementResaleRatio;
+  const cost = context.deed.improvementCost;
+  if (cost === undefined) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "INVALID_RESALE_RATIO",
+      "Improvement resale rounding is invalid.",
+    );
+  }
+  if (
+    !Number.isSafeInteger(ratio.numerator) ||
+    !Number.isSafeInteger(ratio.denominator) ||
+    ratio.numerator < 0 ||
+    ratio.denominator <= 0 ||
+    !Number.isSafeInteger(cost) ||
+    cost < 0
+  ) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "INVALID_RESALE_RATIO",
+      "Improvement resale rounding is invalid.",
+    );
+  }
+  if (ratio.numerator > 0 && cost > Math.floor(Number.MAX_SAFE_INTEGER / ratio.numerator)) {
+    return reject("INVALID_PAYLOAD", "RESALE_OVERFLOW", "The improvement resale amount overflows.");
+  }
+  const amount = Math.floor((cost * ratio.numerator) / ratio.denominator);
+  const inventory = state.bank.improvementInventory[context.inventoryKind];
+  const inventoryDelta = previousLevel.inventoryDelta;
+  if (inventory === undefined || !Number.isSafeInteger(inventoryDelta)) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "IMPROVEMENT_INVENTORY_INVALID",
+      "The returned improvement pieces cannot fit in bank inventory.",
+    );
+  }
+  const nextInventory = inventory + inventoryDelta;
+  if (!Number.isSafeInteger(nextInventory) || nextInventory < 0) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "IMPROVEMENT_INVENTORY_INVALID",
+      "The returned improvement pieces cannot fit in bank inventory.",
+    );
+  }
+  if (
+    !Number.isSafeInteger(actor.balance + amount) ||
+    !Number.isSafeInteger(state.bank.cash - amount)
+  ) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "IMPROVEMENT_PAYMENT_OVERFLOW",
+      "The improvement payment overflows.",
+    );
+  }
+  const event = freezeEvent({
+    type: "ImprovementSold",
+    eventVersion: 1,
+    actorSeatId,
+    payload: {
+      deedId,
+      seatId: actorSeatId,
+      fromLevel: currentLevel,
+      toLevel: currentLevel - 1,
+      amount,
+      inventoryKind: context.inventoryKind,
+      inventoryDelta,
+    },
+  } satisfies EngineEvent);
+  return { ok: true, state: freezeState(applyEvent(state, event)), events: Object.freeze([event]) };
+}
+
 function resolveRollDice(state: GameState, actorSeatId: SeatId, rules: RuleSet): Resolution {
   const actorRejection = requireActiveActor(state, actorSeatId);
   if (actorRejection !== undefined) return actorRejection;
@@ -2012,6 +2376,10 @@ export function resolve(state: GameState, command: ActorScopedCommand, rules: Ru
       return resolveAuction(state, command.actorSeatId, "bid", command.command.amount, rules);
     case "PassAuction":
       return resolveAuction(state, command.actorSeatId, "pass", undefined, rules);
+    case "BuyImprovement":
+      return resolveBuyImprovement(state, command.actorSeatId, command.command.deedId, rules);
+    case "SellImprovement":
+      return resolveSellImprovement(state, command.actorSeatId, command.command.deedId, rules);
     default:
       return unimplemented(command.command.type);
   }

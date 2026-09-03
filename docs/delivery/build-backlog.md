@@ -246,12 +246,13 @@ print the seed on failure.
       Proves: auction scenarios cover invalid bids, pause, pass/win/no-sale, and conservation; TEST-002 pure-engine scenario layer.
       Implemented pure no-timer auction bidding, irrevocable passes, ordered priority, exact bank settlement, no-sale return, and replay events; `packages/game-engine/test/auction.test.ts` covers invalid bids, pause, pass/win/no-sale, conservation, and replay.
 
-- [ ] **A7 — Improvements, even building, inventory conservation**
+- [x] **A7 — Improvements, even building, inventory conservation**
       Blocked by: A5
       Requirements: RULE-005, RULE-008, CONTENT-005, ENG-023
       Read: docs/product/rules.md, docs/product/game-content.md, docs/engineering/game-engine.md
       Acceptance: eligible districts buy/sell improvements with rounding, even-building, atomic payment, and finite inventory conserved across levels.
       Proves: decision tables and generated legal sequences preserve cash, level, and inventory invariants; TEST-002 pure-engine table/property layer.
+      Implemented atomic `BuyImprovement`/`SellImprovement` transitions with complete-district and even-building guards, content-defined resale rounding, finite inventory deltas, and event-only replay; `packages/game-engine/test/improvements.test.ts` covers decision tables, generated legal sequences, mutation-sensitive guards, rounding, atomic rejection, and replay.
 
 - [ ] **A8 — Scarce improvement auction**
       Blocked by: A7
@@ -640,3 +641,5 @@ recorded draws.
 
 Agents append discoveries here in one or two lines. This is an observation log,
 not permission to expand the closed queue during a gnhf run.
+
+- `ImprovementLevel.inventoryDelta` is currently scalar while economy inventory is keyed; A7 applies it to the first declared pool, so multi-kind transitions would require a future schema revision.
