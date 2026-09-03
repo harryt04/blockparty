@@ -73,9 +73,32 @@ export interface PendingChoice {
  * `seed` and `prng` are secret server data. They are excluded from every
  * projection, analytics event, URL, and log. See ENG-022 and PROTO-004.
  *
- * Ownership, decks, auctions, trades, obligations, and card resolution are
- * added by their rule tickets; A3 owns movement and the serialized queue seam.
+ * Auctions, trades, obligations, and card resolution are added by their rule
+ * tickets. A4 owns deed ownership and the bank ledger seam.
  */
+export interface DeedState {
+  readonly deedId: string;
+  readonly ownerSeatId?: SeatId;
+  readonly mortgaged: boolean;
+  readonly improvementLevel: number;
+}
+
+export interface BankState {
+  /** The bank may create or retire currency and is therefore always solvent. */
+  readonly cash: Money;
+  readonly deedIds: readonly string[];
+  readonly improvementInventory: Readonly<Record<string, number>>;
+}
+
+/** The minimum auction state needed to hand A4's decline path to A6. */
+export interface PendingAuction {
+  readonly deedId: string;
+  readonly highBid: Money;
+  readonly highBidderSeatId?: SeatId;
+  readonly prioritySeatId: SeatId;
+  readonly passedSeatIds: readonly SeatId[];
+}
+
 export interface GameState {
   readonly stateSchemaVersion: string;
   readonly contentVersion: string;
@@ -83,6 +106,10 @@ export interface GameState {
   readonly aggregateVersion: number;
   readonly phase: Phase;
   readonly seats: readonly SeatState[];
+  /** Ownership and mortgage state for every content deed. RULE-004. */
+  readonly deeds: readonly DeedState[];
+  /** The bank's currency, deeds, and finite improvement inventory are separate. */
+  readonly bank: BankState;
   readonly activeSeatId?: SeatId;
   readonly prioritySeatId?: SeatId;
   /** Number of consecutive matching rolls by the active seat. See RULE-002. */
@@ -93,6 +120,10 @@ export interface GameState {
   readonly effectQueue: readonly QueuedEffect[];
   /** The currently blocking choice, if any. Its continuation mirrors effectQueue. */
   readonly pendingChoice?: PendingChoice;
+  /** A deed landing that is waiting for the active seat's buy/decline choice. */
+  readonly pendingAcquisitionDeedId?: string;
+  /** Serialized handoff to the ordered auction reducer in A6. */
+  readonly pendingAuction?: PendingAuction;
   /** Server-only. Never projected. */
   readonly prng: PrngState;
 }
@@ -156,6 +187,32 @@ function payloadQueuedEffects(event: EngineEvent): readonly QueuedEffect[] | und
   return value;
 }
 
+function payloadStringArray(event: EngineEvent, key: string): readonly string[] | undefined {
+  const value = event.payload[key];
+  if (
+    !Array.isArray(value) ||
+    !value.every((entry): entry is string => typeof entry === "string")
+  ) {
+    return undefined;
+  }
+  return value;
+}
+
+function payloadInventory(
+  event: EngineEvent,
+  key: string,
+): Readonly<Record<string, number>> | undefined {
+  const value = event.payload[key];
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const entries = Object.entries(value);
+  if (
+    !entries.every(([, quantity]) => typeof quantity === "number" && Number.isSafeInteger(quantity))
+  ) {
+    return undefined;
+  }
+  return Object.fromEntries(entries) as Readonly<Record<string, number>>;
+}
+
 function freezeState(state: GameState): GameState {
   const seats = state.seats.map((seat) =>
     Object.freeze({
@@ -174,6 +231,12 @@ function freezeState(state: GameState): GameState {
         Object.freeze({ sourceId: entry.sourceId, effect: Object.freeze({ ...entry.effect }) }),
       ),
     );
+  const deeds = Object.freeze(state.deeds.map((deed) => Object.freeze({ ...deed })));
+  const bank = Object.freeze({
+    ...state.bank,
+    deedIds: Object.freeze([...state.bank.deedIds]),
+    improvementInventory: Object.freeze({ ...state.bank.improvementInventory }),
+  });
   const effectQueue = freezeQueue(state.effectQueue);
   const pendingChoice =
     state.pendingChoice === undefined
@@ -185,6 +248,8 @@ function freezeState(state: GameState): GameState {
   return Object.freeze({
     ...state,
     seats: Object.freeze(seats),
+    deeds,
+    bank,
     lastRoll,
     effectQueue,
     pendingChoice,
@@ -227,9 +292,23 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
               detentionReleaseCardIds: [],
             }))
           : state.seats;
+      const deedIds = payloadStringArray(event, "deedIds");
+      const improvementInventory = payloadInventory(event, "improvementInventory");
       return freezeState({
         ...state,
         seats,
+        deeds:
+          deedIds === undefined
+            ? state.deeds
+            : deedIds.map((deedId) => ({ deedId, mortgaged: false, improvementLevel: 0 })),
+        bank:
+          deedIds === undefined && improvementInventory === undefined
+            ? state.bank
+            : {
+                cash: payloadNumber(event, "bankCash") ?? state.bank.cash,
+                deedIds: deedIds ?? state.bank.deedIds,
+                improvementInventory: improvementInventory ?? state.bank.improvementInventory,
+              },
         phase: "AwaitRoll",
         activeSeatId: payloadSeatId(event, "firstSeatId") ?? state.activeSeatId,
         prioritySeatId: payloadSeatId(event, "firstSeatId") ?? state.prioritySeatId,
@@ -237,6 +316,8 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         lastRoll: undefined,
         effectQueue: [],
         pendingChoice: undefined,
+        pendingAcquisitionDeedId: undefined,
+        pendingAuction: undefined,
       });
     }
     case "TurnStarted":
@@ -247,6 +328,8 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         prioritySeatId: payloadSeatId(event, "seatId") ?? state.prioritySeatId,
         effectQueue: [],
         pendingChoice: undefined,
+        pendingAcquisitionDeedId: undefined,
+        pendingAuction: undefined,
       });
     case "DiceRolled": {
       // Dice values are event data. Replay changes no PRNG state and never
@@ -281,6 +364,53 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         seats: state.seats.map((seat) =>
           seat.seatId === seatId ? { ...seat, balance: seat.balance + amount } : seat,
         ),
+      });
+    }
+    case "DeedAcquired": {
+      const deedId = payloadSeatId(event, "deedId");
+      const buyerSeatId = payloadSeatId(event, "buyerSeatId");
+      const price = payloadNumber(event, "price");
+      if (deedId === undefined || buyerSeatId === undefined || price === undefined) return state;
+      return freezeState({
+        ...state,
+        phase: "ResolveMove",
+        pendingAcquisitionDeedId: undefined,
+        pendingAuction: undefined,
+        seats: state.seats.map((seat) =>
+          seat.seatId === buyerSeatId
+            ? { ...seat, balance: seat.balance - price, deedIds: [...seat.deedIds, deedId] }
+            : seat,
+        ),
+        deeds: state.deeds.map((deed) =>
+          deed.deedId === deedId ? { ...deed, ownerSeatId: buyerSeatId } : deed,
+        ),
+        bank: {
+          ...state.bank,
+          cash: state.bank.cash + price,
+          deedIds: state.bank.deedIds.filter((candidate) => candidate !== deedId),
+        },
+      });
+    }
+    case "AcquisitionDeclined":
+      return freezeState({
+        ...state,
+        phase: "ResolveMove",
+        pendingAcquisitionDeedId: undefined,
+      });
+    case "AuctionOpened": {
+      const deedId = payloadSeatId(event, "deedId");
+      const prioritySeatId = payloadSeatId(event, "prioritySeatId");
+      if (deedId === undefined || prioritySeatId === undefined) return state;
+      return freezeState({
+        ...state,
+        phase: "AwaitAuction",
+        pendingAcquisitionDeedId: undefined,
+        pendingAuction: {
+          deedId,
+          highBid: payloadNumber(event, "highBid") ?? 0,
+          prioritySeatId,
+          passedSeatIds: [],
+        },
       });
     }
     case "PendingChoiceCreated": {
@@ -391,6 +521,32 @@ function findSpaceAtPosition(rules: RuleSet, position: number): BoardSpace | und
 
 function findSpace(rules: RuleSet, spaceId: string): BoardSpace | undefined {
   return rules.content.spaces.find((space) => space.spaceId === spaceId);
+}
+
+function initialDeedStates(rules: RuleSet): readonly DeedState[] {
+  return rules.content.deeds.map((deed) => ({
+    deedId: deed.deedId,
+    mortgaged: false,
+    improvementLevel: 0,
+  }));
+}
+
+function initialBankState(rules: RuleSet): BankState {
+  return {
+    cash: 0,
+    deedIds: rules.content.deeds.map((deed) => deed.deedId),
+    improvementInventory: { ...rules.content.economy.improvementInventory },
+  };
+}
+
+function nextActiveSeatId(state: GameState, afterSeatId: SeatId): SeatId | undefined {
+  const startIndex = state.seats.findIndex((seat) => seat.seatId === afterSeatId);
+  if (startIndex < 0) return undefined;
+  for (let offset = 1; offset <= state.seats.length; offset += 1) {
+    const candidate = state.seats[(startIndex + offset) % state.seats.length];
+    if (candidate?.status === "active") return candidate.seatId;
+  }
+  return undefined;
 }
 
 interface Movement {
@@ -615,11 +771,15 @@ function resolveStartGame(state: GameState, actorSeatId: SeatId, rules: RuleSet)
   const nextState = freezeState({
     ...state,
     seats: orderedSeats,
+    deeds: initialDeedStates(rules),
+    bank: initialBankState(rules),
     phase: "AwaitRoll",
     activeSeatId: firstSeatId,
     prioritySeatId: firstSeatId,
     consecutiveMatchingRolls: 0,
     lastRoll: undefined,
+    pendingAcquisitionDeedId: undefined,
+    pendingAuction: undefined,
     prng,
   });
   const events = [
@@ -633,6 +793,9 @@ function resolveStartGame(state: GameState, actorSeatId: SeatId, rules: RuleSet)
         firstSeatId,
         startingCash: rules.content.economy.startingCash,
         startingPosition: startPosition,
+        deedIds: rules.content.deeds.map((deed) => deed.deedId),
+        bankCash: 0,
+        improvementInventory: rules.content.economy.improvementInventory,
       },
     }),
     freezeEvent({
@@ -648,6 +811,99 @@ function resolveStartGame(state: GameState, actorSeatId: SeatId, rules: RuleSet)
 interface QueueResolution {
   readonly state: GameState;
   readonly events: readonly EngineEvent[];
+}
+
+function resolveDeedLanding(
+  state: GameState,
+  actorSeatId: SeatId,
+  rules: RuleSet,
+): QueueResolution {
+  const seat = findSeat(state, actorSeatId);
+  const space = seat === undefined ? undefined : findSpaceAtPosition(rules, seat.position);
+  const deedId = space?.type === "deed" ? space.deedId : undefined;
+  const deed =
+    deedId === undefined
+      ? undefined
+      : rules.content.deeds.find((candidate) => candidate.deedId === deedId);
+  const deedState =
+    deedId === undefined ? undefined : state.deeds.find((candidate) => candidate.deedId === deedId);
+  if (
+    seat === undefined ||
+    deed === undefined ||
+    deedState === undefined ||
+    !state.bank.deedIds.includes(deed.deedId)
+  ) {
+    return { state: freezeState({ ...state, effectQueue: [] }), events: Object.freeze([]) };
+  }
+
+  if (seat.balance >= deed.price) {
+    return {
+      state: freezeState({
+        ...state,
+        phase: "AwaitPurchase",
+        effectQueue: [],
+        pendingAcquisitionDeedId: deed.deedId,
+        pendingAuction: undefined,
+      }),
+      events: Object.freeze([]),
+    };
+  }
+
+  const declineEvent = freezeEvent({
+    type: "AcquisitionDeclined",
+    eventVersion: 1,
+    actorSeatId,
+    payload: { deedId: deed.deedId, reason: "UNAFFORDABLE" },
+  });
+  if (rules.configuration.noAuctionAfterDeclinedAcquisition) {
+    return {
+      state: freezeState({
+        ...state,
+        phase: "ResolveMove",
+        effectQueue: [],
+        pendingAcquisitionDeedId: undefined,
+        pendingAuction: undefined,
+      }),
+      events: Object.freeze([declineEvent]),
+    };
+  }
+
+  const prioritySeatId = nextActiveSeatId(state, actorSeatId);
+  if (prioritySeatId === undefined) {
+    return {
+      state: freezeState({ ...state, effectQueue: [] }),
+      events: Object.freeze([declineEvent]),
+    };
+  }
+  const auction = {
+    deedId: deed.deedId,
+    highBid: 0,
+    prioritySeatId,
+    passedSeatIds: [],
+  } satisfies PendingAuction;
+  return {
+    state: freezeState({
+      ...state,
+      phase: "AwaitAuction",
+      effectQueue: [],
+      pendingAcquisitionDeedId: undefined,
+      pendingAuction: auction,
+    }),
+    events: Object.freeze([
+      declineEvent,
+      freezeEvent({
+        type: "AuctionOpened",
+        eventVersion: 1,
+        actorSeatId,
+        payload: {
+          deedId: deed.deedId,
+          highBid: 0,
+          prioritySeatId,
+          reason: "ACQUISITION_DECLINED_OR_UNAFFORDABLE",
+        },
+      }),
+    ]),
+  };
 }
 
 /**
@@ -783,7 +1039,15 @@ function resolveEffectQueue(
     };
   }
 
-  return { state: freezeState({ ...nextState, effectQueue: [] }), events: Object.freeze(events) };
+  const deedLanding = resolveDeedLanding(
+    freezeState({ ...nextState, effectQueue: [] }),
+    actorSeatId,
+    rules,
+  );
+  return {
+    state: deedLanding.state,
+    events: Object.freeze([...events, ...deedLanding.events]),
+  };
 }
 
 function resolvePendingChoice(
@@ -834,6 +1098,198 @@ function resolvePendingChoice(
     ...resumed.events,
   ];
   return { ok: true, state: resumed.state, events: Object.freeze(events) };
+}
+
+function resolveAcquireDeed(
+  state: GameState,
+  actorSeatId: SeatId,
+  deedId: string,
+  rules: RuleSet,
+): Resolution {
+  const actorRejection = requireActiveActor(state, actorSeatId);
+  if (actorRejection !== undefined) return actorRejection;
+  if (state.phase !== "AwaitPurchase") {
+    return reject(
+      "PHASE_MISMATCH",
+      "ACQUIRE_REQUIRES_PURCHASE_CHOICE",
+      "A deed may only be acquired after an eligible landing offer.",
+    );
+  }
+  if (state.activeSeatId !== actorSeatId) {
+    return reject("ILLEGAL_ACTION", "OUT_OF_TURN", "Only the active seat may acquire a deed.");
+  }
+  if (state.pendingAcquisitionDeedId !== deedId) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "ACQUISITION_MISMATCH",
+      "The selected deed is not the pending offer.",
+    );
+  }
+
+  const deed = rules.content.deeds.find((candidate) => candidate.deedId === deedId);
+  const deedState = state.deeds.find((candidate) => candidate.deedId === deedId);
+  const seat = findSeat(state, actorSeatId);
+  if (deed === undefined || deedState === undefined || seat === undefined) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "UNKNOWN_DEED",
+      "The selected deed is not in the content ledger.",
+    );
+  }
+  if (!state.bank.deedIds.includes(deedId) || deedState.ownerSeatId !== undefined) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "DEED_NOT_BANK_OWNED",
+      "Only a bank-owned deed can be acquired.",
+    );
+  }
+  if (!Number.isSafeInteger(deed.price) || deed.price < 0) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "INVALID_DEED_PRICE",
+      "The deed price is not a valid minor-unit amount.",
+    );
+  }
+  if (seat.balance < deed.price) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "INSUFFICIENT_FUNDS",
+      "The active seat cannot afford this deed.",
+    );
+  }
+  if (!Number.isSafeInteger(state.bank.cash + deed.price)) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "BANK_CASH_OVERFLOW",
+      "The bank ledger cannot represent this payment.",
+    );
+  }
+
+  const nextState = freezeState({
+    ...state,
+    phase: "ResolveMove",
+    pendingAcquisitionDeedId: undefined,
+    pendingAuction: undefined,
+    seats: state.seats.map((candidate) =>
+      candidate.seatId === actorSeatId
+        ? {
+            ...candidate,
+            balance: candidate.balance - deed.price,
+            deedIds: [...candidate.deedIds, deedId],
+          }
+        : candidate,
+    ),
+    deeds: state.deeds.map((candidate) =>
+      candidate.deedId === deedId ? { ...candidate, ownerSeatId: actorSeatId } : candidate,
+    ),
+    bank: {
+      ...state.bank,
+      cash: state.bank.cash + deed.price,
+      deedIds: state.bank.deedIds.filter((candidate) => candidate !== deedId),
+    },
+  });
+  return {
+    ok: true,
+    state: nextState,
+    events: Object.freeze([
+      freezeEvent({
+        type: "DeedAcquired",
+        eventVersion: 1,
+        actorSeatId,
+        payload: { deedId, buyerSeatId: actorSeatId, price: deed.price },
+      }),
+    ]),
+  };
+}
+
+function declineAcquisition(
+  state: GameState,
+  actorSeatId: SeatId,
+  deedId: string,
+  rules: RuleSet,
+): Resolution {
+  const actorRejection = requireActiveActor(state, actorSeatId);
+  if (actorRejection !== undefined) return actorRejection;
+  if (state.phase !== "AwaitPurchase") {
+    return reject(
+      "PHASE_MISMATCH",
+      "DECLINE_REQUIRES_PURCHASE_CHOICE",
+      "A deed may only be declined after an eligible landing offer.",
+    );
+  }
+  if (state.activeSeatId !== actorSeatId) {
+    return reject("ILLEGAL_ACTION", "OUT_OF_TURN", "Only the active seat may decline a deed.");
+  }
+  if (state.pendingAcquisitionDeedId !== deedId) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "ACQUISITION_MISMATCH",
+      "The selected deed is not the pending offer.",
+    );
+  }
+  if (!state.bank.deedIds.includes(deedId)) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "DEED_NOT_BANK_OWNED",
+      "Only a bank-owned deed can be declined.",
+    );
+  }
+
+  const declined = freezeEvent({
+    type: "AcquisitionDeclined",
+    eventVersion: 1,
+    actorSeatId,
+    payload: { deedId, reason: "PLAYER_DECLINED" },
+  });
+  if (rules.configuration.noAuctionAfterDeclinedAcquisition) {
+    return {
+      ok: true,
+      state: freezeState({
+        ...state,
+        phase: "ResolveMove",
+        pendingAcquisitionDeedId: undefined,
+        pendingAuction: undefined,
+      }),
+      events: Object.freeze([declined]),
+    };
+  }
+  const prioritySeatId = nextActiveSeatId(state, actorSeatId);
+  if (prioritySeatId === undefined) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "NO_AUCTION_PRIORITY",
+      "No active seat is available to start the auction.",
+    );
+  }
+  const auction = {
+    deedId,
+    highBid: 0,
+    prioritySeatId,
+    passedSeatIds: [],
+  } satisfies PendingAuction;
+  return {
+    ok: true,
+    state: freezeState({
+      ...state,
+      phase: "AwaitAuction",
+      pendingAcquisitionDeedId: undefined,
+      pendingAuction: auction,
+    }),
+    events: Object.freeze([
+      declined,
+      freezeEvent({
+        type: "AuctionOpened",
+        eventVersion: 1,
+        actorSeatId,
+        payload: {
+          deedId,
+          highBid: 0,
+          prioritySeatId,
+          reason: "ACQUISITION_DECLINED",
+        },
+      }),
+    ]),
+  };
 }
 
 function resolveRollDice(state: GameState, actorSeatId: SeatId, rules: RuleSet): Resolution {
@@ -966,6 +1422,10 @@ export function resolve(state: GameState, command: ActorScopedCommand, rules: Ru
         command.command.optionId,
         rules,
       );
+    case "AcquireDeed":
+      return resolveAcquireDeed(state, command.actorSeatId, command.command.deedId, rules);
+    case "DeclineAcquisition":
+      return declineAcquisition(state, command.actorSeatId, command.command.deedId, rules);
     default:
       return unimplemented(command.command.type);
   }

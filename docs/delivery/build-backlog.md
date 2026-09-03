@@ -222,12 +222,13 @@ print the seed on failure.
       Proves: multi-effect movement scenarios assert order, crossing, continuation, and third-match detention; TEST-002 pure-engine scenario layer.
       Implemented route-edge dice/forced movement, Start payment events, and immutable pending-choice continuations; `packages/game-engine/test/movement-queue.test.ts` proves crossing, exact-landing variant, queue insertion/resume, replay, and third-match Detention.
 
-- [ ] **A4 — Acquisition and the bank ledger**
+- [x] **A4 — Acquisition and the bank ledger**
       Blocked by: A3
       Requirements: RULE-001, RULE-004, PRD-FUN-007, CONTENT-004
       Read: docs/product/rules.md, docs/product/game-content.md
       Acceptance: eligible landings offer acquire/decline, affordable acquisition atomically moves cash/ownership, and the always-solvent bank separately tracks deeds, currency, and inventory.
       Proves: acquisition and ledger tables cover affordability, authority, atomicity, and cash bounds; TEST-002 pure-engine table/scenario layer.
+      Implemented immutable deed/bank ledgers, purchase offers, atomic acquisition, and decline-to-auction handoff; `packages/game-engine/test/acquisition-ledger.test.ts` proves affordability, authority, atomicity, cash bounds, variants, and replay.
 
 - [ ] **A5 — Rent: district, transit, and utility**
       Blocked by: A4

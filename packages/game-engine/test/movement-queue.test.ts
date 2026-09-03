@@ -37,6 +37,8 @@ const awaitRoll = (position = 0): GameState => ({
   aggregateVersion: 0,
   phase: "AwaitRoll",
   seats: [seat("seat-a", position), seat("seat-b")],
+  deeds: [],
+  bank: { cash: 0, deedIds: [], improvementInventory: {} },
   activeSeatId: "seat-a",
   prioritySeatId: "seat-a",
   consecutiveMatchingRolls: 0,

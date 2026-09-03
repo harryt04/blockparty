@@ -12,6 +12,8 @@ const initialState: GameState = {
   aggregateVersion: 0,
   phase: "Lobby",
   seats: [],
+  deeds: [],
+  bank: { cash: 0, deedIds: [], improvementInventory: {} },
   consecutiveMatchingRolls: 0,
   effectQueue: [],
   prng: deriveInitialState(SEED),

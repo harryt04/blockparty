@@ -29,6 +29,8 @@ const lobby = (): GameState => ({
   aggregateVersion: 0,
   phase: "Lobby",
   seats: [seat("seat-a"), seat("seat-b"), seat("seat-c")],
+  deeds: [],
+  bank: { cash: 0, deedIds: [], improvementInventory: {} },
   consecutiveMatchingRolls: 0,
   effectQueue: [],
   prng: deriveInitialState(SEED),
