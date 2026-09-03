@@ -5,25 +5,25 @@ This specification overlays [canonical Rules](rules.md) and independently author
 
 ## Presets
 
-| Preset | Defaults | Intended effect / warning |
-|---|---|---|
-| `standard` (default) | All eight toggles false | Closest to canonical rules; still uses independently authored board data, not another game's data. |
-| `short-game` | `startingAssetsDealt=true`; `relaxedEvenBuilding=true`; all other toggles false | Faster early ownership/development and materially different strategy. Expect a shorter but higher-variance game; do not describe it as an official commercial short-game format. |
+| Preset               | Defaults                                                                        | Intended effect / warning                                                                                                                                                        |
+| -------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `standard` (default) | All eight toggles false                                                         | Closest to canonical rules; still uses independently authored board data, not another game's data.                                                                               |
+| `short-game`         | `startingAssetsDealt=true`; `relaxedEvenBuilding=true`; all other toggles false | Faster early ownership/development and materially different strategy. Expect a shorter but higher-variance game; do not describe it as an official commercial short-game format. |
 
 Selecting a preset writes its resolved values into the lobby. The host may then change individual toggles before start; the UI labels the configuration `custom` when it no longer equals a preset.
 
 ## Exactly eight MVP toggles
 
-| ID | Key | Default | Effect | Duration/balance warning |
-|---|---|---:|---|---|
-| VAR-001 | `restSpaceJackpot` | false | On Rest, pay the accumulated jackpot to the landing player, then reset it. Selected bank fees fund the jackpot. | Transfers fees from bank to chance-based payout; can create cash spikes. |
-| VAR-002 | `doubleStartOnExactLanding` | false | A normal exact landing on Start pays one additional Start amount, for two total Start amounts for that landing. | Increases cash injection and benefits exact rolls. |
-| VAR-003 | `noAuctionAfterDeclinedAcquisition` | false | An unowned deed stays bank-owned after decline/unaffordability instead of entering auction. | Reduces early liquidity pressure and can lengthen games. |
-| VAR-004 | `noIncomeWhileDetained` | false | A detained player collects no rent or card-directed income; bank payments still occur. | Makes Detention much harsher and can accelerate elimination. |
-| VAR-005 | `bonusForMatchingOnes` | false | Rolling double ones awards the configured Start amount from bank in addition to normal matching-dice behavior. | Adds a rare cash injection; stacks with exact Start if both occur. |
-| VAR-006 | `startingAssetsDealt` | false | After starting cash/order, deal the data-defined number of bank-owned deeds fairly to each player without payment; remaining deeds stay bank-owned. | Speeds ownership and can produce uneven district opportunities; deal algorithm must be auditable. |
-| VAR-007 | `relaxedEvenBuilding` | false | A player may buy/sell improvements on any eligible deed without the within-district one-level spread rule. | Enables concentrated rent spikes and shorter, swingier games. |
-| VAR-008 | `unlimitedImprovementInventory` | false | Ignore finite bank improvement inventory for purchases/sales. | Removes a strategic scarcity lever and may shorten endgame. |
+| ID      | Key                                 | Default | Effect                                                                                                                                              | Duration/balance warning                                                                          |
+| ------- | ----------------------------------- | ------: | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| VAR-001 | `restSpaceJackpot`                  |   false | On Rest, pay the accumulated jackpot to the landing player, then reset it. Selected bank fees fund the jackpot.                                     | Transfers fees from bank to chance-based payout; can create cash spikes.                          |
+| VAR-002 | `doubleStartOnExactLanding`         |   false | A normal exact landing on Start pays one additional Start amount, for two total Start amounts for that landing.                                     | Increases cash injection and benefits exact rolls.                                                |
+| VAR-003 | `noAuctionAfterDeclinedAcquisition` |   false | An unowned deed stays bank-owned after decline/unaffordability instead of entering auction.                                                         | Reduces early liquidity pressure and can lengthen games.                                          |
+| VAR-004 | `noIncomeWhileDetained`             |   false | A detained player collects no rent or card-directed income; bank payments still occur.                                                              | Makes Detention much harsher and can accelerate elimination.                                      |
+| VAR-005 | `bonusForMatchingOnes`              |   false | Rolling double ones awards the configured Start amount from bank in addition to normal matching-dice behavior.                                      | Adds a rare cash injection; stacks with exact Start if both occur.                                |
+| VAR-006 | `startingAssetsDealt`               |   false | After starting cash/order, deal the data-defined number of bank-owned deeds fairly to each player without payment; remaining deeds stay bank-owned. | Speeds ownership and can produce uneven district opportunities; deal algorithm must be auditable. |
+| VAR-007 | `relaxedEvenBuilding`               |   false | A player may buy/sell improvements on any eligible deed without the within-district one-level spread rule.                                          | Enables concentrated rent spikes and shorter, swingier games.                                     |
+| VAR-008 | `unlimitedImprovementInventory`     |   false | Ignore finite bank improvement inventory for purchases/sales.                                                                                       | Removes a strategic scarcity lever and may shorten endgame.                                       |
 
 ## Canonical configuration details and interactions
 
@@ -38,14 +38,14 @@ Selecting a preset writes its resolved values into the lobby. The host may then 
 
 ## Validation and persistence
 
-| ID | Requirement |
-|---|---|
+| ID      | Requirement                                                                                                                                                                                                                                                  |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | VAR-009 | A configuration is an object with `schemaVersion`, `preset`, and exactly the eight boolean keys in the table. Unknown keys, missing keys, non-booleans, unsupported schema versions, and inconsistent resolved preset values are rejected before game start. |
-| VAR-010 | A host may select/modify a configuration only in `LOBBY`; start atomically validates it, resolves the effective values, stores a content hash, and emits a `RulesConfigured` domain event. |
-| VAR-011 | The game snapshot/event stream stores the resolved configuration, schema version, and board/rules versions. Reconnect/replay never reads current deployment defaults for an existing game. |
-| VAR-012 | A schema migration must be additive or provide a deterministic migrator plus regression fixtures for every unexpired configuration. A major semantic change requires a new schema version and cannot reinterpret existing games. |
-| VAR-013 | The lobby and in-game rules panel show enabled toggles, their warnings, and interaction notes in plain language. |
-| VAR-014 | Engine tests cover default behavior, each toggle independently, every documented interaction, configuration rejection, and lock-after-start enforcement. |
+| VAR-010 | A host may select/modify a configuration only in `LOBBY`; start atomically validates it, resolves the effective values, stores a content hash, and emits a `RulesConfigured` domain event.                                                                   |
+| VAR-011 | The game snapshot/event stream stores the resolved configuration, schema version, and board/rules versions. Reconnect/replay never reads current deployment defaults for an existing game.                                                                   |
+| VAR-012 | A schema migration must be additive or provide a deterministic migrator plus regression fixtures for every unexpired configuration. A major semantic change requires a new schema version and cannot reinterpret existing games.                             |
+| VAR-013 | The lobby and in-game rules panel show enabled toggles, their warnings, and interaction notes in plain language.                                                                                                                                             |
+| VAR-014 | Engine tests cover default behavior, each toggle independently, every documented interaction, configuration rejection, and lock-after-start enforcement.                                                                                                     |
 
 ### Example resolved configuration
 

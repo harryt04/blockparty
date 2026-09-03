@@ -27,14 +27,11 @@ export default function LandingPage() {
         <section className="flex flex-col gap-4">
           <h1 className="font-serif text-3xl">A private game, one link away.</h1>
           <p className="max-w-prose text-muted-ink">
-            Start a property board game for two to six players. No account, no
-            sign-up, no matchmaking. Share one link and play.
+            Start a property board game for two to six players. No account, no sign-up, no
+            matchmaking. Share one link and play.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Link
-              href="/create"
-              className={buttonVariants({ variant: "primary", size: "lg" })}
-            >
+            <Link href="/create" className={buttonVariants({ variant: "primary", size: "lg" })}>
               Create a game
             </Link>
           </div>
@@ -44,8 +41,8 @@ export default function LandingPage() {
           <CardHeader>
             <CardTitle>Join with a link</CardTitle>
             <CardDescription>
-              Paste the invite someone sent you. The link admits you to the
-              lobby; it never takes over a seat someone is already using.
+              Paste the invite someone sent you. The link admits you to the lobby; it never takes
+              over a seat someone is already using.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -81,16 +78,15 @@ export default function LandingPage() {
 
         <Alert variant="info">
           <AlertDescription>
-            For players aged 13 and over. Anyone with the invite link can join
-            until the game starts. Games are removed 30 days after the last
-            action.
+            For players aged 13 and over. Anyone with the invite link can join until the game
+            starts. Games are removed 30 days after the last action.
           </AlertDescription>
         </Alert>
 
         <Alert variant="warning">
           <AlertDescription>
-            Scaffolding build. Pages and routes exist, but no game rules,
-            saving, or realtime updates run yet.
+            Scaffolding build. Pages and routes exist, but no game rules, saving, or realtime
+            updates run yet.
           </AlertDescription>
         </Alert>
       </div>

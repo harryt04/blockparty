@@ -21,10 +21,8 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary: "bg-brand text-brand-ink hover:bg-brand/90 border border-transparent",
-        secondary:
-          "bg-surface-raised text-ink border border-line hover:bg-selection",
-        destructive:
-          "bg-danger text-brand-ink border-2 border-danger hover:bg-danger/90",
+        secondary: "bg-surface-raised text-ink border border-line hover:bg-selection",
+        destructive: "bg-danger text-brand-ink border-2 border-danger hover:bg-danger/90",
         ghost: "bg-transparent text-ink border border-transparent hover:bg-selection",
         link: "bg-transparent text-brand underline underline-offset-4 hover:no-underline",
       },
@@ -41,8 +39,7 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {}
+  extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {}
 
 export function Button({ className, variant, size, type, ...props }: ButtonProps) {
   return (

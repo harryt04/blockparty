@@ -25,11 +25,7 @@ const OUTCOME_COPY = {
   EXPIRED: "The game expired before it finished.",
 } as const;
 
-export default async function SummaryPage({
-  params,
-}: {
-  params: Promise<{ gameId: string }>;
-}) {
+export default async function SummaryPage({ params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = await params;
   const summary = stubSummary(gameId);
   const winner = summary.standings.find((seat) => seat.seatId === summary.winnerSeatId);
@@ -78,9 +74,8 @@ export default async function SummaryPage({
 
       <Alert variant="info">
         <AlertDescription>
-          The event history stays readable until this game is removed, 30 days
-          after it finished. A rematch is a new room with a new link; it carries
-          nothing over.
+          The event history stays readable until this game is removed, 30 days after it finished. A
+          rematch is a new room with a new link; it carries nothing over.
         </AlertDescription>
       </Alert>
     </div>

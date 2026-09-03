@@ -7,21 +7,27 @@
     "node": ">=22.0.0 <23"
   },
   "scripts": {
+    "ci": "pnpm run format:check && pnpm run typecheck && pnpm run lint && pnpm run test",
     "dev": "pnpm --filter @blockparty/web dev",
     "start": "pnpm --filter @blockparty/web start",
     "lint": "eslint .",
     "typecheck": "tsc -p packages/contracts && tsc -p packages/game-content && tsc -p packages/game-engine && tsc -p apps/web",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run --coverage",
     "build": "pnpm --filter @blockparty/web build"
   },
   "devDependencies": {
     "@eslint/js": "^9.37.0",
+    "@next/eslint-plugin-next": "^15.5.4",
+    "@vitest/coverage-v8": "^5.0.0",
     "eslint": "^9.37.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "fast-check": "^4.9.0",
+    "globals": "^16.4.0",
     "prettier": "^3.6.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.0",
-    "@next/eslint-plugin-next": "^15.5.4",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "globals": "^16.4.0"
+    "vitest": "^5.0.0"
   }
 }

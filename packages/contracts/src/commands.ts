@@ -24,9 +24,7 @@ export const ConfigureRules = z
 
 export const AddBotSeat = z.object({ type: z.literal("AddBotSeat") }).strict();
 
-export const RemoveSeat = z
-  .object({ type: z.literal("RemoveSeat"), seatId: SeatId })
-  .strict();
+export const RemoveSeat = z.object({ type: z.literal("RemoveSeat"), seatId: SeatId }).strict();
 
 export const StartGame = z.object({ type: z.literal("StartGame") }).strict();
 
@@ -34,9 +32,7 @@ export const StartGame = z.object({ type: z.literal("StartGame") }).strict();
 
 export const RollDice = z.object({ type: z.literal("RollDice") }).strict();
 
-export const AcquireDeed = z
-  .object({ type: z.literal("AcquireDeed"), deedId: DeedId })
-  .strict();
+export const AcquireDeed = z.object({ type: z.literal("AcquireDeed"), deedId: DeedId }).strict();
 
 export const DeclineAcquisition = z
   .object({ type: z.literal("DeclineAcquisition"), deedId: DeedId })
@@ -54,9 +50,7 @@ export const PassAuction = z.object({ type: z.literal("PassAuction") }).strict()
 
 // --- Asset management ------------------------------------------------------
 
-export const MortgageDeed = z
-  .object({ type: z.literal("MortgageDeed"), deedId: DeedId })
-  .strict();
+export const MortgageDeed = z.object({ type: z.literal("MortgageDeed"), deedId: DeedId }).strict();
 
 export const RedeemMortgage = z
   .object({ type: z.literal("RedeemMortgage"), deedId: DeedId })
@@ -79,9 +73,7 @@ export const RequestScarceImprovement = z
 
 export const PayObligation = z.object({ type: z.literal("PayObligation") }).strict();
 
-export const DeclareBankruptcy = z
-  .object({ type: z.literal("DeclareBankruptcy") })
-  .strict();
+export const DeclareBankruptcy = z.object({ type: z.literal("DeclareBankruptcy") }).strict();
 
 // --- Trade -----------------------------------------------------------------
 
@@ -106,22 +98,20 @@ export const ProposeTrade = z
   })
   .strict();
 
-export const AcceptTrade = z
-  .object({ type: z.literal("AcceptTrade"), tradeId: TradeId })
-  .strict();
+export const AcceptTrade = z.object({ type: z.literal("AcceptTrade"), tradeId: TradeId }).strict();
 
-export const RejectTrade = z
-  .object({ type: z.literal("RejectTrade"), tradeId: TradeId })
-  .strict();
+export const RejectTrade = z.object({ type: z.literal("RejectTrade"), tradeId: TradeId }).strict();
 
-export const CancelTrade = z
-  .object({ type: z.literal("CancelTrade"), tradeId: TradeId })
-  .strict();
+export const CancelTrade = z.object({ type: z.literal("CancelTrade"), tradeId: TradeId }).strict();
 
 // --- Pending choices -------------------------------------------------------
 
 export const ChoosePendingOption = z
-  .object({ type: z.literal("ChoosePendingOption"), choiceId: ChoiceId, optionId: z.string().min(1).max(64) })
+  .object({
+    type: z.literal("ChoosePendingOption"),
+    choiceId: ChoiceId,
+    optionId: z.string().min(1).max(64),
+  })
   .strict();
 
 // --- Recovery and termination ----------------------------------------------

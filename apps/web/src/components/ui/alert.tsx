@@ -23,22 +23,16 @@ const alertVariants = cva(
 );
 
 export interface AlertProps
-  extends HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof alertVariants> {}
+  extends HTMLAttributes<HTMLDivElement>, VariantProps<typeof alertVariants> {}
 
 export function Alert({ className, variant, ...props }: AlertProps) {
-  return (
-    <div role="note" className={cn(alertVariants({ variant }), className)} {...props} />
-  );
+  return <div role="note" className={cn(alertVariants({ variant }), className)} {...props} />;
 }
 
 export function AlertTitle({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) {
   return <p className={cn("font-medium", className)} {...props} />;
 }
 
-export function AlertDescription({
-  className,
-  ...props
-}: HTMLAttributes<HTMLParagraphElement>) {
+export function AlertDescription({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) {
   return <p className={cn("text-muted-ink", className)} {...props} />;
 }

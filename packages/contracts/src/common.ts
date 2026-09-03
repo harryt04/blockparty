@@ -89,8 +89,7 @@ function hasUnsafeCharacter(value: string): boolean {
     const isC0 = codePoint <= 0x1f;
     const isC1 = codePoint >= 0x7f && codePoint <= 0x9f;
     const isBidi =
-      (codePoint >= 0x202a && codePoint <= 0x202e) ||
-      (codePoint >= 0x2066 && codePoint <= 0x2069);
+      (codePoint >= 0x202a && codePoint <= 0x202e) || (codePoint >= 0x2066 && codePoint <= 0x2069);
     if (isC0 || isC1 || isBidi) return true;
   }
   return false;

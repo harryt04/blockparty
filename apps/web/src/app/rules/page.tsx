@@ -28,9 +28,8 @@ export default function RulesPage() {
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
         <h1 className="font-serif text-2xl">Rules</h1>
         <p className="text-muted-ink">
-          Content version {PLACEHOLDER_BUNDLE.contentVersion}. A game keeps the
-          rules and content it started with, so an update never changes a game
-          in progress.
+          Content version {PLACEHOLDER_BUNDLE.contentVersion}. A game keeps the rules and content it
+          started with, so an update never changes a game in progress.
         </p>
 
         <Card>
@@ -39,8 +38,8 @@ export default function RulesPage() {
           </CardHeader>
           <CardContent>
             <p className="mb-2 text-sm text-muted-ink">
-              There are exactly eight. The host picks them before the game
-              starts, and they lock at start.
+              There are exactly eight. The host picks them before the game starts, and they lock at
+              start.
             </p>
             <ul className="flex flex-col gap-1 text-sm">
               {VARIANT_KEYS.map((key) => (

@@ -27,11 +27,7 @@ const TOKENS = [
   { shape: "stoop", label: "Stoop" },
 ] as const;
 
-export default async function JoinPage({
-  params,
-}: {
-  params: Promise<{ inviteId: string }>;
-}) {
+export default async function JoinPage({ params }: { params: Promise<{ inviteId: string }> }) {
   const { inviteId } = await params;
 
   // TODO(UX-011): call GET /api/invites/[inviteId] and branch on the status
@@ -47,8 +43,8 @@ export default async function JoinPage({
           <CardHeader>
             <CardTitle>Pick a seat</CardTitle>
             <CardDescription>
-              Choose a name and a token for this game. The name is not an
-              account and does not follow you to another game.
+              Choose a name and a token for this game. The name is not an account and does not
+              follow you to another game.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -85,8 +81,8 @@ export default async function JoinPage({
             <label className="flex min-h-11 items-start gap-3">
               <input type="checkbox" name="acknowledged13Plus" className="mt-1" />
               <span className="text-sm">
-                I am 13 or older and I understand anyone with this link can join
-                until the game starts.
+                I am 13 or older and I understand anyone with this link can join until the game
+                starts.
               </span>
             </label>
           </CardContent>
@@ -98,8 +94,8 @@ export default async function JoinPage({
 
         <Alert variant="warning">
           <AlertDescription>
-            Scaffolding build. Invite <code>{inviteId}</code> is not checked
-            against a database yet, so joining does nothing.
+            Scaffolding build. Invite <code>{inviteId}</code> is not checked against a database yet,
+            so joining does nothing.
           </AlertDescription>
         </Alert>
 

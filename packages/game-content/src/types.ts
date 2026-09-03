@@ -33,13 +33,7 @@ export type ContentEffect =
   | { type: "Choose"; choiceId: ChoiceId };
 
 export type SpaceType =
-  | "start"
-  | "deed"
-  | "eventDraw"
-  | "fee"
-  | "rest"
-  | "detention"
-  | "sendToDetention";
+  "start" | "deed" | "eventDraw" | "fee" | "rest" | "detention" | "sendToDetention";
 
 /**
  * One stop on the route. `routeIndex` orders the route; `next` records the

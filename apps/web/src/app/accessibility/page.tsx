@@ -25,9 +25,7 @@ export default function AccessibilityPage() {
     <AppShell>
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
         <h1 className="font-serif text-2xl">Accessibility</h1>
-        <p className="text-muted-ink">
-          The target is WCAG 2.2 AA for everything this app renders.
-        </p>
+        <p className="text-muted-ink">The target is WCAG 2.2 AA for everything this app renders.</p>
 
         <Card>
           <CardHeader>
@@ -44,8 +42,8 @@ export default function AccessibilityPage() {
 
         <Alert variant="warning">
           <AlertDescription>
-            Scaffolding build. The accessibility test record is not complete,
-            so this is a statement of intent rather than a verified claim.
+            Scaffolding build. The accessibility test record is not complete, so this is a statement
+            of intent rather than a verified claim.
           </AlertDescription>
         </Alert>
       </div>

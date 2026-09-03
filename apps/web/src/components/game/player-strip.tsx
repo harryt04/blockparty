@@ -53,12 +53,8 @@ export function PlayerStrip({
                 {seat.kind === "bot" ? <Badge>Bot</Badge> : null}
                 {seat.isHost ? <Badge>Host</Badge> : null}
                 {!seat.connected ? <Badge variant="warning">Disconnected</Badge> : null}
-                {seat.detained === true ? (
-                  <Badge variant="warning">Noise Complaint</Badge>
-                ) : null}
-                {seat.status === "eliminated" ? (
-                  <Badge variant="danger">Packed Up</Badge>
-                ) : null}
+                {seat.detained === true ? <Badge variant="warning">Noise Complaint</Badge> : null}
+                {seat.status === "eliminated" ? <Badge variant="danger">Packed Up</Badge> : null}
               </div>
             </li>
           );

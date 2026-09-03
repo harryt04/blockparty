@@ -78,10 +78,7 @@ export function BoardView({
                 cx={point.x}
                 cy={point.y}
                 r={selected ? 0.9 : 0.7}
-                className={cn(
-                  selected ? "fill-brand" : "fill-surface-raised",
-                  "stroke-ink",
-                )}
+                className={cn(selected ? "fill-brand" : "fill-surface-raised", "stroke-ink")}
                 strokeWidth="0.12"
               />
               <text

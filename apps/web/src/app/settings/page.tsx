@@ -29,16 +29,14 @@ export default function SettingsPage() {
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
         <h1 className="font-serif text-2xl">Settings</h1>
         <p className="text-muted-ink">
-          These are your preferences on this device. They do not change the
-          rules of any game.
+          These are your preferences on this device. They do not change the rules of any game.
         </p>
 
         <Card>
           <CardHeader>
             <CardTitle>Display and feedback</CardTitle>
             <CardDescription>
-              Sound and haptics are off unless you turn them on, and they are
-              switched separately.
+              Sound and haptics are off unless you turn them on, and they are switched separately.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -65,9 +63,8 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-ink">
-              Use your browser or system text size. The app reflows down to a
-              320 pixel width and up to 400 percent zoom. Nothing here blocks
-              browser zoom.
+              Use your browser or system text size. The app reflows down to a 320 pixel width and up
+              to 400 percent zoom. Nothing here blocks browser zoom.
             </p>
           </CardContent>
         </Card>
@@ -76,23 +73,21 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>Data and analytics</CardTitle>
             <CardDescription>
-              Analytics are off until you turn them on, and you can withdraw at
-              any time.
+              Analytics are off until you turn them on, and you can withdraw at any time.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-ink">
-              We keep the minimum: a name you chose for one game, an opaque seat
-              credential, the game events, and service telemetry. Games are
-              removed 30 days after the last action.
+              We keep the minimum: a name you chose for one game, an opaque seat credential, the
+              game events, and service telemetry. Games are removed 30 days after the last action.
             </p>
           </CardContent>
         </Card>
 
         <Alert variant="warning">
           <AlertDescription>
-            Scaffolding build. These controls do not save yet, and the analytics
-            consent flow is not built.
+            Scaffolding build. These controls do not save yet, and the analytics consent flow is not
+            built.
           </AlertDescription>
         </Alert>
       </div>

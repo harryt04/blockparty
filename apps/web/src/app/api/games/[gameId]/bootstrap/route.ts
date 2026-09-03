@@ -13,10 +13,7 @@ import { stubSnapshot } from "@/server/stub-data";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ gameId: string }> },
-) {
+export async function GET(_request: Request, { params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = await params;
 
   // TODO(SEC-002): authenticate the seat capability and return UNAUTHENTICATED

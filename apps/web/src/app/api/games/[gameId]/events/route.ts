@@ -17,10 +17,7 @@ export const dynamic = "force-dynamic";
 /** Proxy idle timeouts must exceed this. See ENG-004. */
 const KEEP_ALIVE_MS = 15_000;
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ gameId: string }> },
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = await params;
 
   // TODO(PROTO-003): authenticate the seat capability before subscribing and

@@ -32,10 +32,7 @@ export default async function GameLayout({
           {/* TODO(PROTO-003): drive this from the sync client. */}
           <ConnectionStatus state="reconnecting" />
           <nav aria-label="Game">
-            <Link
-              href={`/game/${gameId}/lobby`}
-              className="text-sm underline underline-offset-4"
-            >
+            <Link href={`/game/${gameId}/lobby`} className="text-sm underline underline-offset-4">
               Lobby
             </Link>
           </nav>

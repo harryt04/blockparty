@@ -14,7 +14,7 @@ Reject pun/synonym renames such as **“Walkboard”** and **“Parking Place.�
 
 Reject direct synonyms and near-synonyms of the famous mark itself, such as **Monopolyfill**, **Monorepoly**, **Duopoly**, **Oligopoly**, and **Nopoly**. Naming this product category after that mark’s own meaning aims at the brand rather than away from it. A clever pun does not reduce confusion risk; it increases it. Keep such names as internal jokes only. Never use one in a repository name, package name, domain, handle, or public copy.
 
-Generic economics terms that describe monopoly *behavior* — antitrust, network effects, vendor lock-in — sit in a lower-risk tier. They are still not cleared, and they still run the full workflow below.
+Generic economics terms that describe monopoly _behavior_ — antitrust, network effects, vendor lock-in — sit in a lower-risk tier. They are still not cleared, and they still run the full workflow below.
 
 ### Blocked candidate
 
@@ -24,35 +24,35 @@ Generic economics terms that describe monopoly *behavior* — antitrust, network
 
 These are brainstorming candidates only. They have not received trademark, web, domain, app-store, package-registry, or GitHub clearance.
 
-| Category | Candidates |
-| --- | --- |
-| Suggestive | Civic Exchange; Common Ground; Market Hours; Neighbor’s Ledger; Open Borough; Fair Share; Side Street Society; The Long Bid |
-| Compound | Districtcraft; Tradefold; Townthread; Parcelworks; Guildgrid; Charterhouse; Blockmarket; Cornerstone Exchange |
-| Invented | Virello; Novera; Civora; Talora; Meridia; Bravello; Orbinet; Lendera |
-| Thematic | Lantern District; Harbor Ledger; Market Mosaic; Assembly Square; Foundry Row; Meridian Fair; Copper Quay; Bellwether Town |
+| Category    | Candidates                                                                                                                                                         |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Suggestive  | Civic Exchange; Common Ground; Market Hours; Neighbor’s Ledger; Open Borough; Fair Share; Side Street Society; The Long Bid                                        |
+| Compound    | Districtcraft; Tradefold; Townthread; Parcelworks; Guildgrid; Charterhouse; Blockmarket; Cornerstone Exchange                                                      |
+| Invented    | Virello; Novera; Civora; Talora; Meridia; Bravello; Orbinet; Lendera                                                                                               |
+| Thematic    | Lantern District; Harbor Ledger; Market Mosaic; Assembly Square; Foundry Row; Meridian Fair; Copper Quay; Bellwether Town                                          |
 | Web/dev pun | **Blockparty**; Cache Flow; Property Value; Monolith; Gridlock; Boardroom; Multi-Tenant; Merge Conflict; Corner Case; Vendor Lock-In; Network Effects; Trustbuster |
 
 That is 44 candidates. Do not reserve usernames, register domains, or begin design production based on this list without the workflow below.
 
-The web/dev pun lane works on one mechanism: each name is a web or developer term that is *already* a money or property word. Cache reads as cash. A CSS `property` takes a `value`. A SaaS platform is multi-tenant, and so is a street of rented addresses. The joke lands with a technical audience without referencing any game. That is why this lane is separate from the two rejected patterns above.
+The web/dev pun lane works on one mechanism: each name is a web or developer term that is _already_ a money or property word. Cache reads as cash. A CSS `property` takes a `value`. A SaaS platform is multi-tenant, and so is a street of rented addresses. The joke lands with a technical audience without referencing any game. That is why this lane is separate from the two rejected patterns above.
 
 ## Shortlist scoring
 
-Scoring is an internal comparative exercise: 1 = weak, 5 = strong. **Risk** is the preliminary *name-shape/association* risk only, where 5 = lower apparent risk; it is not a clearance result. Searchability assumes ordinary web search behavior and must be tested empirically.
+Scoring is an internal comparative exercise: 1 = weak, 5 = strong. **Risk** is the preliminary _name-shape/association_ risk only, where 5 = lower apparent risk; it is not a clearance result. Searchability assumes ordinary web search behavior and must be tested empirically.
 
-| Candidate | Memorability | Distinctiveness | Pronunciation | Searchability | Visual fit | Risk (5=lower) | Total / 30 | Notes |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| Civic Exchange | 4 | 3 | 5 | 3 | 5 | 4 | 24 | Strong match to the recommended territory; descriptive elements may weaken distinctiveness. |
-| Districtcraft | 4 | 4 | 5 | 4 | 4 | 4 | 25 | Clear, ownable-feeling compound; check crowded “-craft” field. |
-| Tradefold | 4 | 5 | 4 | 5 | 4 | 5 | 27 | Compact and distinctive; validate spoken comprehension. |
-| Townthread | 4 | 4 | 4 | 4 | 4 | 5 | 25 | Conveys social connections; may imply a social network. |
-| Civora | 4 | 5 | 4 | 5 | 5 | 5 | 28 | Invented, flexible, civic feel; must test spelling recall. |
-| Virello | 4 | 5 | 4 | 5 | 4 | 5 | 27 | Musical, friendly invented name; meaning needs intentional definition. |
-| Lantern District | 4 | 3 | 5 | 3 | 5 | 4 | 24 | Vivid thematic system; potentially crowded descriptive phrase. |
-| Harbor Ledger | 4 | 4 | 5 | 4 | 5 | 4 | 26 | Strategic and warm; test fit if civic setting changes. |
-| Market Mosaic | 4 | 4 | 5 | 4 | 5 | 4 | 26 | Social and visual; could sound arts-oriented. |
-| Meridian Fair | 3 | 4 | 5 | 3 | 4 | 4 | 23 | Pleasant, but generic word components warrant broad searching. |
-| **Blockparty** | 5 | 2 | 5 | 2 | 5 | 2 | 21 | Selected on product fit, not on score. Best-in-pool memorability and visual fit. Weak on distinctiveness, searchability, and apparent risk because the open phrase “block party” is crowded. See the decision record below. |
+| Candidate        | Memorability | Distinctiveness | Pronunciation | Searchability | Visual fit | Risk (5=lower) | Total / 30 | Notes                                                                                                                                                                                                                       |
+| ---------------- | -----------: | --------------: | ------------: | ------------: | ---------: | -------------: | ---------: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Civic Exchange   |            4 |               3 |             5 |             3 |          5 |              4 |         24 | Strong match to the recommended territory; descriptive elements may weaken distinctiveness.                                                                                                                                 |
+| Districtcraft    |            4 |               4 |             5 |             4 |          4 |              4 |         25 | Clear, ownable-feeling compound; check crowded “-craft” field.                                                                                                                                                              |
+| Tradefold        |            4 |               5 |             4 |             5 |          4 |              5 |         27 | Compact and distinctive; validate spoken comprehension.                                                                                                                                                                     |
+| Townthread       |            4 |               4 |             4 |             4 |          4 |              5 |         25 | Conveys social connections; may imply a social network.                                                                                                                                                                     |
+| Civora           |            4 |               5 |             4 |             5 |          5 |              5 |         28 | Invented, flexible, civic feel; must test spelling recall.                                                                                                                                                                  |
+| Virello          |            4 |               5 |             4 |             5 |          4 |              5 |         27 | Musical, friendly invented name; meaning needs intentional definition.                                                                                                                                                      |
+| Lantern District |            4 |               3 |             5 |             3 |          5 |              4 |         24 | Vivid thematic system; potentially crowded descriptive phrase.                                                                                                                                                              |
+| Harbor Ledger    |            4 |               4 |             5 |             4 |          5 |              4 |         26 | Strategic and warm; test fit if civic setting changes.                                                                                                                                                                      |
+| Market Mosaic    |            4 |               4 |             5 |             4 |          5 |              4 |         26 | Social and visual; could sound arts-oriented.                                                                                                                                                                               |
+| Meridian Fair    |            3 |               4 |             5 |             3 |          4 |              4 |         23 | Pleasant, but generic word components warrant broad searching.                                                                                                                                                              |
+| **Blockparty**   |            5 |               2 |             5 |             2 |          5 |              2 |         21 | Selected on product fit, not on score. Best-in-pool memorability and visual fit. Weak on distinctiveness, searchability, and apparent risk because the open phrase “block party” is crowded. See the decision record below. |
 
 ## Current decision
 
@@ -127,33 +127,33 @@ Copy this into the project’s decision system for each contender.
 
 This is the live record. Update it as each clearance stage completes.
 
-- **Date / owner:** 2026-09-02 / *(assign a named owner)*
+- **Date / owner:** 2026-09-02 / _(assign a named owner)_
 - **Exact word mark and proposed stylization:** `Blockparty` — one closed word, title case in product copy, lowercase `blockparty` for identifiers. Not “Block Party”, not “BlockParty”.
 - **Product and goods/services description:** free, open-source browser game (downloadable/installable PWA); online multiplayer game services; community and contributor services. No merchandise planned.
-- **Territories and planned launch date:** *(to be defined)*
+- **Territories and planned launch date:** _(to be defined)_
 - **Brand territory and rationale:** neighborhood street party. Merges Territory A (Civic Exchange) with Territory C (Festival of Fortunes). See [Brand Strategy](brand-strategy.md).
 - **Alternatives considered:** Civora (fallback), Tradefold, Harbor Ledger, Cache Flow, Monolith, Property Value, Gridlock, Boardroom.
-- **Internal collision check:** *(pending)*
-- **USPTO search:** *(pending)*
-- **Web/social search:** *(pending — see known collisions below)*
-- **Domain results:** *(pending — do not register before counsel)*
-- **App-store results:** *(pending)*
-- **Package-registry results:** *(pending)*
-- **GitHub results:** *(pending)*
+- **Internal collision check:** _(pending)_
+- **USPTO search:** _(pending)_
+- **Web/social search:** _(pending — see known collisions below)_
+- **Domain results:** _(pending — do not register before counsel)_
+- **App-store results:** _(pending)_
+- **Package-registry results:** _(pending)_
+- **GitHub results:** _(pending)_
 - **Decision:** **hold pending counsel.** Provisional internal use only.
-- **Decision maker and date:** *(pending)*
+- **Decision maker and date:** _(pending)_
 - **Required follow-ups:** complete steps 2–10 of the clearance workflow above; keep Civora live as fallback.
 
 ### Known collisions to log and assess
 
 Record these during steps 5, 7, 8, and 9. This list is a starting point from ordinary searching, not a clearance result, and it is certainly incomplete.
 
-| Source | Nature | Why it matters |
-| --- | --- | --- |
-| A 2005 concert documentary film titled *Block Party* | Entertainment title | High public recognition of the phrase; different goods/services |
-| A social-media safety and anti-harassment tool named Block Party | Software/services | Closest goods/services overlap found so far |
-| Several crypto/NFT ventures using Blockparty or BlockParty | Software/services | Closest spelling overlap; see the web3 rule below |
-| The generic English phrase “block party” | Common usage | Weakens distinctiveness and makes search noisy |
+| Source                                                           | Nature              | Why it matters                                                  |
+| ---------------------------------------------------------------- | ------------------- | --------------------------------------------------------------- |
+| A 2005 concert documentary film titled _Block Party_             | Entertainment title | High public recognition of the phrase; different goods/services |
+| A social-media safety and anti-harassment tool named Block Party | Software/services   | Closest goods/services overlap found so far                     |
+| Several crypto/NFT ventures using Blockparty or BlockParty       | Software/services   | Closest spelling overlap; see the web3 rule below               |
+| The generic English phrase “block party”                         | Common usage        | Weakens distinctiveness and makes search noisy                  |
 
 ### Elevated-risk notes
 

@@ -14,10 +14,7 @@ import { jsonError, jsonOk } from "@/server/http/responses";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ gameId: string }> },
-) {
+export async function POST(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = await params;
 
   const size = checkPayloadSize(request);

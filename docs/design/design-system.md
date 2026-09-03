@@ -24,10 +24,19 @@ Use open-licensed, self-hosted fonts with system fallbacks: **Atkinson Hyperlegi
 :root {
   --font-ui: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Fraunces", Georgia, serif;
-  --space-1: .25rem; --space-2: .5rem; --space-3: .75rem; --space-4: 1rem;
-  --space-5: 1.5rem; --space-6: 2rem; --space-8: 3rem;
-  --radius-sm: .375rem; --radius-md: .75rem; --radius-lg: 1.125rem; --radius-pill: 999px;
-  --border-thin: 1px; --border-strong: 2px;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-8: 3rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1.125rem;
+  --radius-pill: 999px;
+  --border-thin: 1px;
+  --border-strong: 2px;
 }
 ```
 
@@ -37,14 +46,14 @@ Use a 4 px spacing base. Layout gutters: 16 px mobile, 24 px tablet, 32 px deskt
 
 Define colors as semantic Tailwind CSS variables, with separately tuned light/dark values—not fixed copied palette values:
 
-| Role | Use | Required companion cue |
-|---|---|---|
-| `canvas`, `surface`, `surface-raised`, `ink`, `muted-ink`, `line` | Reading hierarchy and structure | Borders, typography, and elevation retain hierarchy in grayscale. |
-| `brand`, `brand-ink` | Primary action/current route emphasis | Label/icon and focus treatment. |
-| `player-1` … `player-6` | Player association | Unique token silhouette + pattern/initial; never color only. |
-| `asset-district-*` | Original space/district categories | Icon, category label, and patterned edge. |
-| `success`, `warning`, `danger`, `info` | Outcomes/urgency | Text status and icon; warning/danger have strong border. |
-| `focus`, `selection`, `disabled` | Interaction state | Outline/shape/opacity plus `aria-*` state. |
+| Role                                                              | Use                                   | Required companion cue                                            |
+| ----------------------------------------------------------------- | ------------------------------------- | ----------------------------------------------------------------- |
+| `canvas`, `surface`, `surface-raised`, `ink`, `muted-ink`, `line` | Reading hierarchy and structure       | Borders, typography, and elevation retain hierarchy in grayscale. |
+| `brand`, `brand-ink`                                              | Primary action/current route emphasis | Label/icon and focus treatment.                                   |
+| `player-1` … `player-6`                                           | Player association                    | Unique token silhouette + pattern/initial; never color only.      |
+| `asset-district-*`                                                | Original space/district categories    | Icon, category label, and patterned edge.                         |
+| `success`, `warning`, `danger`, `info`                            | Outcomes/urgency                      | Text status and icon; warning/danger have strong border.          |
+| `focus`, `selection`, `disabled`                                  | Interaction state                     | Outline/shape/opacity plus `aria-*` state.                        |
 
 Maintain 4.5:1 normal-text and 3:1 large-text/essential-component contrast. Use `oklch()` semantic variables where supported; test each theme and forced-colors mode. Dark mode is a dim asphalt-and-string-light surface treatment, not inverted light mode: reduce glare, keep borders legible, and preserve player-pattern distinction.
 
@@ -55,14 +64,14 @@ Build from shadcn primitives, styled with Tailwind semantic tokens; preserve the
 The sidebar/navigation is expected to behave and look like the example in shadcn's website:
 https://ui.shadcn.com/docs/components/base/sidebar
 
-| Need | shadcn composition |
-|---|---|
-| Primary/secondary/destructive actions | `Button`, `ButtonGroup`, `Toggle` only for persistent binary state |
-| Forms and validation | `Form`, `Input`, `Select`, `Checkbox`, `RadioGroup`, `Switch`, `Label`, `Textarea` |
-| Decisions and warnings | `Dialog` desktop, `Sheet` mobile, `AlertDialog` for destructive/irreversible confirmation, `Sonner`/toast only for noncritical feedback |
-| Game information | `Card`, `Badge`, `Avatar` (token glyph, not photo), `Progress`, `Separator`, `Table`/semantic lists, `ScrollArea`, `Tooltip` |
-| Navigation and inspection | `Tabs`, `Accordion`, `Popover`, `DropdownMenu`, `Command` for searchable asset list, `NavigationMenu` only outside active play |
-| System states | `Skeleton`, `Alert`, `EmptyState` composition, `Tooltip` plus visible disabled reason |
+| Need                                  | shadcn composition                                                                                                                      |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Primary/secondary/destructive actions | `Button`, `ButtonGroup`, `Toggle` only for persistent binary state                                                                      |
+| Forms and validation                  | `Form`, `Input`, `Select`, `Checkbox`, `RadioGroup`, `Switch`, `Label`, `Textarea`                                                      |
+| Decisions and warnings                | `Dialog` desktop, `Sheet` mobile, `AlertDialog` for destructive/irreversible confirmation, `Sonner`/toast only for noncritical feedback |
+| Game information                      | `Card`, `Badge`, `Avatar` (token glyph, not photo), `Progress`, `Separator`, `Table`/semantic lists, `ScrollArea`, `Tooltip`            |
+| Navigation and inspection             | `Tabs`, `Accordion`, `Popover`, `DropdownMenu`, `Command` for searchable asset list, `NavigationMenu` only outside active play          |
+| System states                         | `Skeleton`, `Alert`, `EmptyState` composition, `Tooltip` plus visible disabled reason                                                   |
 
 Buttons use a verb + object (“Acquire 4 Maple Stoop”), not vague “Confirm.” Primary action appears once per decision. Mobile sheets are bottom-anchored with drag affordance **and** close button; tablet promotes contextual content to split panel; desktop uses persistent panels per [UX-030–UX-033](ux-spec.md#4-responsive-game-shell). Tables collapse to labelled definition/list rows at narrow widths; player strip remains horizontally scrollable with visible clipping affordance.
 
@@ -78,15 +87,15 @@ Map each display category to one icon and hold it stable: Address, Block, Food T
 
 ### DS-041 — State encodings
 
-| State | Visual + nonvisual encoding |
-|---|---|
-| Owned | Owner token glyph, name, patterned edge, `aria-label` ownership text; optional player color. |
-| Available | “Available” text/badge and open-stamp icon; no owner glyph. |
-| Mortgaged/restricted | Slashed ledger stamp, explicit text, muted surface, status icon. |
-| Selected/inspected | 2 px outline, inset marker, active-space heading, programmatic selected state. |
-| Current turn/player | Turn label, token shape, outline, and text in player strip. |
-| Action required | Labelled urgency badge and action-sheet heading; not a pulsing color alone. |
-| Disabled/unaffordable | Reduced emphasis plus lock/constraint icon and specific reason. |
+| State                 | Visual + nonvisual encoding                                                                  |
+| --------------------- | -------------------------------------------------------------------------------------------- |
+| Owned                 | Owner token glyph, name, patterned edge, `aria-label` ownership text; optional player color. |
+| Available             | “Available” text/badge and open-stamp icon; no owner glyph.                                  |
+| Mortgaged/restricted  | Slashed ledger stamp, explicit text, muted surface, status icon.                             |
+| Selected/inspected    | 2 px outline, inset marker, active-space heading, programmatic selected state.               |
+| Current turn/player   | Turn label, token shape, outline, and text in player strip.                                  |
+| Action required       | Labelled urgency badge and action-sheet heading; not a pulsing color alone.                  |
+| Disabled/unaffordable | Reduced emphasis plus lock/constraint icon and specific reason.                              |
 
 ## DS-050 — Icons, illustration, motion, sound, haptics
 

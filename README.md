@@ -33,14 +33,16 @@ reports `degraded` instead of failing.
 
 ## Commands
 
-| Command | Purpose |
-|---|---|
-| `pnpm dev` | Development server |
-| `pnpm build` | Production build |
-| `pnpm start` | Serve the production build |
-| `pnpm typecheck` | Type-check all four packages |
-| `pnpm lint` | ESLint, including the dependency-direction rules |
-| `pnpm format` | Prettier |
+| Command          | Purpose                                          |
+| ---------------- | ------------------------------------------------ |
+| `pnpm dev`       | Development server                               |
+| `pnpm build`     | Production build                                 |
+| `pnpm start`     | Serve the production build                       |
+| `pnpm typecheck` | Type-check all four packages                     |
+| `pnpm lint`      | ESLint, including the dependency-direction rules |
+| `pnpm test`      | Vitest workspace with coverage                   |
+| `pnpm format`    | Prettier                                         |
+| `pnpm run ci`    | Full local and pull-request regression gate      |
 
 ## Layout
 

@@ -5,20 +5,20 @@
 
 ## Terms and data model
 
-| Term | Meaning |
-|---|---|
-| Start | The board space at index zero. Passing it can pay a configured bank amount. |
-| deed | A purchasable asset tied to one board space: a district, transit, or utility. It has price, mortgage value, rent data, and owner/bank state. |
-| district | A color/category set of deeds that supports improvements. A player has a complete district only when they own every deed in it and none is mortgaged. |
-| transit | A non-district deed whose rent depends on how many transit deeds its owner holds. |
-| utility | A deed whose rent depends on a dice roll and how many utilities its owner holds. |
-| improvement | A bank-owned upgrade attached to a district deed. Each deed has a numeric level from 0 through its data-defined maximum; the final level may be represented as a landmark in UI. |
-| landmark | The visual/name for the final improvement level; mechanically it is an improvement level, not a separate deed. |
-| Detention | A constrained location/state. A player is detained, not eliminated, and may leave by the defined routes. |
-| Rest | A neutral board space with no canonical payment or reward. |
-| Send to Detention | A board/card instruction that immediately places a player in Detention without collecting Start payment. |
-| bank | The non-player counterparty that owns unowned deeds/improvements, receives/creates money, holds decks, and applies bank-directed bankruptcy. |
-| obligation | A required payment with a fixed creditor (bank or player) and amount. |
+| Term              | Meaning                                                                                                                                                                          |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Start             | The board space at index zero. Passing it can pay a configured bank amount.                                                                                                      |
+| deed              | A purchasable asset tied to one board space: a district, transit, or utility. It has price, mortgage value, rent data, and owner/bank state.                                     |
+| district          | A color/category set of deeds that supports improvements. A player has a complete district only when they own every deed in it and none is mortgaged.                            |
+| transit           | A non-district deed whose rent depends on how many transit deeds its owner holds.                                                                                                |
+| utility           | A deed whose rent depends on a dice roll and how many utilities its owner holds.                                                                                                 |
+| improvement       | A bank-owned upgrade attached to a district deed. Each deed has a numeric level from 0 through its data-defined maximum; the final level may be represented as a landmark in UI. |
+| landmark          | The visual/name for the final improvement level; mechanically it is an improvement level, not a separate deed.                                                                   |
+| Detention         | A constrained location/state. A player is detained, not eliminated, and may leave by the defined routes.                                                                         |
+| Rest              | A neutral board space with no canonical payment or reward.                                                                                                                       |
+| Send to Detention | A board/card instruction that immediately places a player in Detention without collecting Start payment.                                                                         |
+| bank              | The non-player counterparty that owns unowned deeds/improvements, receives/creates money, holds decks, and applies bank-directed bankruptcy.                                     |
+| obligation        | A required payment with a fixed creditor (bank or player) and amount.                                                                                                            |
 
 The table is a quick reference; [Glossary](glossary.md) resolves conflicts across documents. The immutable game snapshot stores: rules/board/variant versions; player order/status/cash/position; deed ownership/mortgages/improvements; bank cash and improvement inventory; decks/discards/held release cards; current phase; pending choices/obligations; ordered effect queue and serialized continuation; turn/doubles counters; PRNG state; and ordered events. Currency uses integer minor units only.
 
@@ -26,19 +26,19 @@ The table is a quick reference; [Glossary](glossary.md) resolves conflicts acros
 
 The server transitions exactly one active state at a time. A client may show management controls only where listed; an action is legal only when it passes server validation.
 
-| State | Entry | Legal active-player options | Exit / resolution |
-|---|---|---|---|
-| `LOBBY` | Game created | Host configures seats/variants; guests claim open seats; host starts | Start initializes and shuffles game. |
-| `TURN_START` | Next non-eliminated player selected | Inspect public state; manage assets; propose/respond to trade; if detained, choose an available release route; roll when no pending resolution | A valid roll enters `ROLL_RESOLVE`. |
-| `ROLL_RESOLVE` | Dice committed by server | No discretionary action | Apply matching-dice counter; third consecutive matching result goes to `TURN_END` after Send to Detention. Otherwise move then enter `SPACE_RESOLVE`. |
-| `SPACE_RESOLVE` | Player arrives/was moved to a space | Only the explicitly offered choice (buy/decline, card-required selection, release-card handling) | Resolve space effects, recursively resolve forced card movement, then `OBLIGATION` or `MANAGE_OR_END`. |
-| `AUCTION` | Purchasable unowned deed was declined/unaffordable | Every non-eliminated player may bid or pass; passed player cannot bid again | Highest bidder pays bank and receives deed. If all pass, bank retains it. Then continue resolution. |
-| `OBLIGATION` | A payment is due; the exact effect-queue continuation is stored | Pay automatically if cash suffices; otherwise sell improvements, mortgage eligible deeds, and propose/accept an immediate no-promise liquidity trade | On payment, resume the serialized continuation. If no legal liquidation can pay, enter `BANKRUPTCY`. |
-| `MANAGE_OR_END` | No mandatory effect remains | Active player may buy/sell improvements, mortgage/redeem, trade, inspect, or end turn; other active seats may request a scarce-improvement auction | End turn starts extra turn if matching dice earned one; otherwise `TURN_END`. A validated scarcity contest enters `IMPROVEMENT_AUCTION`. |
-| `IMPROVEMENT_AUCTION` | Finite inventory is smaller than simultaneous declared eligible demand from at least two seats | Eligible demanders bid/pass in ordered rounds | Highest bidder pays the winning bid plus any content-defined base cost and applies one legal level transition; repeat for remaining inventory/demand, then resume `MANAGE_OR_END`. |
-| `TURN_END` | Turn is resolved | No player action | Reset consecutive-match counter when appropriate, advance to next non-eliminated player, then `TURN_START`; one survivor enters `GAME_OVER`. |
-| `BANKRUPTCY` | Player cannot satisfy obligation after legal liquidation | Bankrupt player may inspect; no further transfers | Transfer/return assets, eliminate player, then interrupted flow or `GAME_OVER`. |
-| `GAME_OVER` | One active player remains, or none remain | Inspect final state/history | Immutable read-only result until expiry. |
+| State                 | Entry                                                                                          | Legal active-player options                                                                                                                          | Exit / resolution                                                                                                                                                                  |
+| --------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LOBBY`               | Game created                                                                                   | Host configures seats/variants; guests claim open seats; host starts                                                                                 | Start initializes and shuffles game.                                                                                                                                               |
+| `TURN_START`          | Next non-eliminated player selected                                                            | Inspect public state; manage assets; propose/respond to trade; if detained, choose an available release route; roll when no pending resolution       | A valid roll enters `ROLL_RESOLVE`.                                                                                                                                                |
+| `ROLL_RESOLVE`        | Dice committed by server                                                                       | No discretionary action                                                                                                                              | Apply matching-dice counter; third consecutive matching result goes to `TURN_END` after Send to Detention. Otherwise move then enter `SPACE_RESOLVE`.                              |
+| `SPACE_RESOLVE`       | Player arrives/was moved to a space                                                            | Only the explicitly offered choice (buy/decline, card-required selection, release-card handling)                                                     | Resolve space effects, recursively resolve forced card movement, then `OBLIGATION` or `MANAGE_OR_END`.                                                                             |
+| `AUCTION`             | Purchasable unowned deed was declined/unaffordable                                             | Every non-eliminated player may bid or pass; passed player cannot bid again                                                                          | Highest bidder pays bank and receives deed. If all pass, bank retains it. Then continue resolution.                                                                                |
+| `OBLIGATION`          | A payment is due; the exact effect-queue continuation is stored                                | Pay automatically if cash suffices; otherwise sell improvements, mortgage eligible deeds, and propose/accept an immediate no-promise liquidity trade | On payment, resume the serialized continuation. If no legal liquidation can pay, enter `BANKRUPTCY`.                                                                               |
+| `MANAGE_OR_END`       | No mandatory effect remains                                                                    | Active player may buy/sell improvements, mortgage/redeem, trade, inspect, or end turn; other active seats may request a scarce-improvement auction   | End turn starts extra turn if matching dice earned one; otherwise `TURN_END`. A validated scarcity contest enters `IMPROVEMENT_AUCTION`.                                           |
+| `IMPROVEMENT_AUCTION` | Finite inventory is smaller than simultaneous declared eligible demand from at least two seats | Eligible demanders bid/pass in ordered rounds                                                                                                        | Highest bidder pays the winning bid plus any content-defined base cost and applies one legal level transition; repeat for remaining inventory/demand, then resume `MANAGE_OR_END`. |
+| `TURN_END`            | Turn is resolved                                                                               | No player action                                                                                                                                     | Reset consecutive-match counter when appropriate, advance to next non-eliminated player, then `TURN_START`; one survivor enters `GAME_OVER`.                                       |
+| `BANKRUPTCY`          | Player cannot satisfy obligation after legal liquidation                                       | Bankrupt player may inspect; no further transfers                                                                                                    | Transfer/return assets, eliminate player, then interrupted flow or `GAME_OVER`.                                                                                                    |
+| `GAME_OVER`           | One active player remains, or none remain                                                      | Inspect final state/history                                                                                                                          | Immutable read-only result until expiry.                                                                                                                                           |
 
 Out-of-turn players may inspect state and accept/reject a pending trade addressed to them. They may not bid, pay, roll, manage another player's assets, or advance a phase unless the state explicitly grants it. Bot turns call the same legal-action interface and record rationale.
 
@@ -84,19 +84,19 @@ The bank is always solvent for payments and may create/retire currency; only its
 
 ## Rule requirements
 
-| ID | Requirement |
-|---|---|
-| RULE-001 | The server must implement the state machine above and reject every phase-invalid action. |
-| RULE-002 | Random dice, deck order, and random setup must be recorded/replayable and never client-selected. |
-| RULE-003 | All money calculations use integer minor units and data-defined explicit rounding. |
-| RULE-004 | Every forced movement, payment, rent formula input, auction result, and elimination is emitted as an ordered event. |
-| RULE-005 | Canonical rules apply unless a validated, start-locked variant explicitly supersedes one. |
-| RULE-006 | Board/card/deed content must be independently authored and versioned; mechanics never require copied wording or data. |
-| RULE-007 | Blocking choices and obligations must serialize and resume the exact remaining effect queue. |
-| RULE-008 | `legalActions` contains executable commands; `actionAvailability` may additionally describe blocked actions without granting authority. |
+| ID       | Requirement                                                                                                                                                     |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| RULE-001 | The server must implement the state machine above and reject every phase-invalid action.                                                                        |
+| RULE-002 | Random dice, deck order, and random setup must be recorded/replayable and never client-selected.                                                                |
+| RULE-003 | All money calculations use integer minor units and data-defined explicit rounding.                                                                              |
+| RULE-004 | Every forced movement, payment, rent formula input, auction result, and elimination is emitted as an ordered event.                                             |
+| RULE-005 | Canonical rules apply unless a validated, start-locked variant explicitly supersedes one.                                                                       |
+| RULE-006 | Board/card/deed content must be independently authored and versioned; mechanics never require copied wording or data.                                           |
+| RULE-007 | Blocking choices and obligations must serialize and resume the exact remaining effect queue.                                                                    |
+| RULE-008 | `legalActions` contains executable commands; `actionAvailability` may additionally describe blocked actions without granting authority.                         |
 | RULE-009 | Gameplay has no automatic turn, purchase, auction, trade, or debt timers in MVP. Connectivity loss never fabricates a pass, bid, trade response, or bankruptcy. |
-| RULE-010 | Multiple players may occupy the same board space; uniqueness applies to seat IDs and deed ownership, not position. |
-| RULE-011 | Finite improvement inventory, level-transition piece deltas, and multi-seat scarcity auctions are authoritative and preserve inventory conservation. |
-| RULE-012 | A host-confirmed `NO_CONTEST` termination ends commands without declaring a winner and does not alter normal retention. |
+| RULE-010 | Multiple players may occupy the same board space; uniqueness applies to seat IDs and deed ownership, not position.                                              |
+| RULE-011 | Finite improvement inventory, level-transition piece deltas, and multi-seat scarcity auctions are authoritative and preserve inventory conservation.            |
+| RULE-012 | A host-confirmed `NO_CONTEST` termination ends commands without declaring a winner and does not alter normal retention.                                         |
 
 See [mechanical completeness](feature-parity.md), [game content](game-content.md), and [rule variants](rule-variants.md). The complete combination remains subject to the attorney release gate in [IP safety](../legal/ip-safety.md).

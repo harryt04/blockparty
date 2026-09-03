@@ -10,9 +10,9 @@ Making a route real means deleting its builder there, not hunting for it.
 
 `docs/` is the implementation authority. Read the relevant spec before you write code. Do not invent behavior that a document already defines.
 
-Implementation is unblocked. The project owner settled the name — **Blockparty** — and recorded that [MILE-002](docs/delivery/roadmap.md) no longer gates development. The brand documents supersede the earlier "provisional, uncleared" language, and ticket 0.0 in the backlog carries that correction through the remaining documents.
+Implementation is unblocked. The project owner settled the name — **Blockparty** — and the brand documents are the current naming authority.
 
-The work queue is [build-backlog.md](docs/delivery/build-backlog.md): 62 dependency-ordered tickets covering MILE-003 through MILE-008. Take one ticket per session. Do not add a ticket to it.
+The work queue is [build-backlog.md](docs/delivery/build-backlog.md): 64 dependency-ordered tickets across Loops 0–F. Take one ticket per session. Do not add a ticket to it.
 
 ## Normative precedence
 
@@ -22,7 +22,7 @@ When two documents disagree, the higher level wins. Correct the lower-level docu
 2. [Rules](docs/product/rules.md), [variants](docs/product/rule-variants.md), [game content](docs/product/game-content.md), [glossary](docs/product/glossary.md)
 3. [Architecture](docs/engineering/architecture.md), [game engine](docs/engineering/game-engine.md), [realtime and data](docs/engineering/realtime-and-data.md), [security/privacy/analytics](docs/engineering/security-privacy-analytics.md)
 4. [UX spec](docs/design/ux-spec.md), [design system](docs/design/design-system.md)
-5. [Test strategy](docs/delivery/test-strategy.md), [roadmap](docs/delivery/roadmap.md), [operations](docs/delivery/operations.md)
+5. [Test strategy](docs/delivery/test-strategy.md), [build backlog](docs/delivery/build-backlog.md), [operations](docs/delivery/operations.md)
 
 `docs/mvp-prd-prompt.md` is superseded historical input. It is never authority.
 
@@ -30,12 +30,12 @@ When two documents disagree, the higher level wins. Correct the lower-level docu
 
 A pnpm workspace with one deployable Next.js App Router application and three internal packages. Dependency direction is enforced, not advisory:
 
-| Package                                                          | May depend on                                       | Must not depend on                                 |
-| ---------------------------------------------------------------- | --------------------------------------------------- | -------------------------------------------------- |
+| Package                                                                       | May depend on                                              | Must not depend on                                         |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------- |
 | `apps/web` (Next.js App Router, Tailwind, shadcn/ui, PWA, API Route Handlers) | `contracts`, `game-engine`, `game-content`, MongoDB driver | browser modules importing server modules; raw capabilities |
-| `packages/game-engine` (pure reducer)                            | `contracts`, `game-content`                         | Node APIs, clock, `Math.random`, IO, DB, transport |
-| `packages/contracts` (Zod schemas + `z.infer` types)             | Zod                                                 | React, Next.js, DB, engine                         |
-| `packages/game-content` (versioned original board/decks/economy) | data and validation helpers                         | infrastructure, third-party content                |
+| `packages/game-engine` (pure reducer)                                         | `contracts`, `game-content`                                | Node APIs, clock, `Math.random`, IO, DB, transport         |
+| `packages/contracts` (Zod schemas + `z.infer` types)                          | Zod                                                        | React, Next.js, DB, engine                                 |
+| `packages/game-content` (versioned original board/decks/economy)              | data and validation helpers                                | infrastructure, third-party content                        |
 
 Storage is MongoDB with the official driver and replica-set transactions. Realtime uses authenticated SSE and MongoDB change streams inside the Next.js runtime. Redis is deliberately absent until measured horizontal coordination need is proven. Deployment is Coolify: one `web` service and private MongoDB; maintenance and cleanup use the same web image.
 
@@ -66,7 +66,7 @@ Domain commands and events are PascalCase (`AcquireDeed`, `RulesConfigured`). Tr
 
 ## Requirement IDs and traceability
 
-Every normative statement carries a bounded ID: `PRD-FUN`, `PRD-NFR`, `RULE`, `VAR`, `CONTENT`, `UX`, `DS`, `ENG`, `PROTO`, `SEC`, `ANA`, `OPS`, `TEST`, `MILE`, `BRAND`, `LEGAL`.
+Every normative statement carries a bounded ID: `PRD-FUN`, `PRD-NFR`, `RULE`, `VAR`, `CONTENT`, `UX`, `DS`, `ENG`, `PROTO`, `SEC`, `ANA`, `OPS`, `TEST`, `BRAND`, `LEGAL`.
 
 Cite the IDs you implement, and update [traceability](docs/traceability.md) in the same change. New scope gets a new ID; never widen an existing one silently. A requirement is `Verified` only when implementation, evidence, and approvals are all linked — code alone is not enough.
 
@@ -74,24 +74,27 @@ Cite the IDs you implement, and update [traceability](docs/traceability.md) in t
 
 Runnable now:
 
-| Command | Purpose |
-|---|---|
-| `pnpm install` | Resolve the workspace |
-| `pnpm dev` | Development server on port 3000 |
-| `pnpm build` | Production build; must succeed with no `MONGODB_URI` |
-| `pnpm typecheck` | Type-check all four packages |
-| `pnpm lint` | ESLint, including the dependency-direction rules |
+| Command          | Purpose                                              |
+| ---------------- | ---------------------------------------------------- |
+| `pnpm install`   | Resolve the workspace                                |
+| `pnpm dev`       | Development server on port 3000                      |
+| `pnpm build`     | Production build; must succeed with no `MONGODB_URI` |
+| `pnpm typecheck` | Type-check all four packages                         |
+| `pnpm lint`      | ESLint, including the dependency-direction rules     |
+| `pnpm test`      | Run the four-project Vitest workspace with coverage  |
+| `pnpm format`    | Format the workspace with Prettier                   |
+| `pnpm run ci`    | Run format check, typecheck, lint, and tests         |
 
 The boundary rules in `eslint.config.mjs` are enforcement, not documentation.
 Browser code importing `@/server/*`, `mongodb`, or the engine fails lint; the
 engine importing a Node API, `Date`, or `Math.random` fails lint. `src/server/**`
 also imports `server-only`, which turns the same mistake into a build failure.
 
-## Planned test commands
+## Test strategy
 
-Not yet runnable. The intended toolchain is:
+The unit gate is runnable now. Later backlog tickets add:
 
-- Vitest for engine, table, scenario, and property tests (`fast-check`). No browser, clock, network, or DB in engine tests.
+- Engine table, scenario, and property tests (`fast-check`). No browser, clock, network, or DB in engine tests.
 - Protocol/integration tests against an ephemeral replica-set MongoDB.
 - Playwright across Chromium, Firefox, and WebKit with separate browser contexts per player.
 - axe for automated accessibility, plus a manual VoiceOver and NVDA checklist per release.
@@ -104,7 +107,7 @@ This project implements familiar mechanics with independently authored expressio
 
 - Never commit copied or paraphrased rule text, board data, card copy, rent schedules, art, audio, or third-party scans. Synonym substitution is prohibited — start from the original brief.
 - Every creative or numerical asset needs a provenance record (creator, date, inputs, license, AI-tool record, review). Missing provenance blocks release.
-- **Blockparty** is provisional and uncleared; **Civora** is the fallback. No design or content decision may depend on the name. Do not register domains, reserve handles, or publish packages.
+- **Blockparty** is the settled product name. Public release still requires the attorney gate and provenance/license packet.
 - Never place the mark next to blockchain, web3, crypto, NFT, or token language anywhere public.
 - The board is a winding, irregular neighborhood street route. A square grid or a familiar perimeter layout is a **Red** finding, not a style choice.
 - Public release is blocked on the attorney gate. Do not make clone, remake, compatibility, or affiliation claims.

@@ -4,16 +4,16 @@
 
 ## SEC-001: Threat model
 
-| Asset / threat | Required control |
-|---|---|
+| Asset / threat                                      | Required control                                                                                                                        |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | Game integrity: forged/replayed/out-of-turn command | Server authority, capability-to-seat authorization, Zod validation, legal-action checks, aggregate version, unique command ID, journal. |
-| Private game access: guessed/shared invite | High-entropy opaque invite ID, rate limits, expiry/use limits; invite is not a reconnect or host credential. |
-| Seat takeover: stolen cookie/token | Secure HttpOnly reconnect cookie, token hash at rest, rotation/revocation on reclaim/replacement, TLS, short retention. |
-| RNG/deck manipulation | CSPRNG seed generated server-side; deterministic engine; secret seed/deck order never serialized to clients. |
-| Cross-site HTTP/SSE abuse | Strict Origin allowlist, cookie protections, CSRF on cookie-authenticated HTTP mutation, and authenticated SSE requests. |
-| Availability: spam sockets/commands/invites | IP and identity limits, connection caps, payload limits, timeouts, bounded DB transactions, backpressure. |
-| XSS/data leakage | CSP, output escaping, no unsafe HTML, secret redaction, content security review. |
-| Dependency/supply-chain or operator compromise | Lockfile, CI audit/update process, least-privileged secrets, image scanning, patch cadence. |
+| Private game access: guessed/shared invite          | High-entropy opaque invite ID, rate limits, expiry/use limits; invite is not a reconnect or host credential.                            |
+| Seat takeover: stolen cookie/token                  | Secure HttpOnly reconnect cookie, token hash at rest, rotation/revocation on reclaim/replacement, TLS, short retention.                 |
+| RNG/deck manipulation                               | CSPRNG seed generated server-side; deterministic engine; secret seed/deck order never serialized to clients.                            |
+| Cross-site HTTP/SSE abuse                           | Strict Origin allowlist, cookie protections, CSRF on cookie-authenticated HTTP mutation, and authenticated SSE requests.                |
+| Availability: spam sockets/commands/invites         | IP and identity limits, connection caps, payload limits, timeouts, bounded DB transactions, backpressure.                               |
+| XSS/data leakage                                    | CSP, output escaping, no unsafe HTML, secret redaction, content security review.                                                        |
+| Dependency/supply-chain or operator compromise      | Lockfile, CI audit/update process, least-privileged secrets, image scanning, patch cadence.                                             |
 
 There is no chat. Do not add chat, user-uploaded content, public profiles, or direct messaging without a new abuse/privacy design.
 
@@ -49,17 +49,17 @@ Session replay remains globally disabled until a privacy owner approves its conf
 
 Use a pseudonymous PostHog distinct ID derived from a random analytics ID, not a reconnect token, invite ID, IP, or player name. Allowed common properties only: `app_version`, `content_version`, `protocol_version`, `surface` (`web`), coarse `viewport_bucket`, `pwa_display_mode`, `locale`, `consent_version`, `game_player_count_bucket`, and duration/count buckets. Do not send free text, URLs, IDs, raw error strings, financial/game-state details, or identifiers.
 
-| Event | Allowed additional properties | Purpose |
-|---|---|---|
-| `consent_presented` | `consent_version` | Measure notice display. |
-| `consent_updated` | `choice` (`granted`/`denied`/`withdrawn`) | Consent funnel. |
-| `game_create_started` / `game_created` | `player_count_bucket`, `duration_bucket` | Creation funnel. |
-| `rule_configuration_saved` | `preset` (`standard`/`short_game`/`custom`), `enabled_variant_count_bucket` | Rule-selection use without sending exact game identity. |
-| `invite_join_started` / `invite_joined` | `result_category`, `duration_bucket` | Join funnel. |
-| `game_started` / `game_finished` | `player_count_bucket`, `finish_reason_category`, `duration_bucket` | Completion. |
-| `reconnect_result` | `result_category` | Reliability. |
-| `pwa_install_prompted` / `pwa_installed` | `browser_family` | PWA adoption. |
-| `ui_error_shown` | `error_category` (stable enum only) | UX reliability. |
+| Event                                    | Allowed additional properties                                               | Purpose                                                 |
+| ---------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `consent_presented`                      | `consent_version`                                                           | Measure notice display.                                 |
+| `consent_updated`                        | `choice` (`granted`/`denied`/`withdrawn`)                                   | Consent funnel.                                         |
+| `game_create_started` / `game_created`   | `player_count_bucket`, `duration_bucket`                                    | Creation funnel.                                        |
+| `rule_configuration_saved`               | `preset` (`standard`/`short_game`/`custom`), `enabled_variant_count_bucket` | Rule-selection use without sending exact game identity. |
+| `invite_join_started` / `invite_joined`  | `result_category`, `duration_bucket`                                        | Join funnel.                                            |
+| `game_started` / `game_finished`         | `player_count_bucket`, `finish_reason_category`, `duration_bucket`          | Completion.                                             |
+| `reconnect_result`                       | `result_category`                                                           | Reliability.                                            |
+| `pwa_install_prompted` / `pwa_installed` | `browser_family`                                                            | PWA adoption.                                           |
+| `ui_error_shown`                         | `error_category` (stable enum only)                                         | UX reliability.                                         |
 
 Operational telemetry is separate from product analytics and can collect aggregate counters/histograms such as active sockets, command latency, DB transaction failures, reconnect rate, rate-limit blocks, snapshot/resync rate, and engine invariant failures. It must use no player names, invite IDs, cookie/token values, or raw payloads.
 

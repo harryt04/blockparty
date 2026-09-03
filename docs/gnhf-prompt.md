@@ -71,9 +71,9 @@ find easier work.**
      replica-set MongoDB.
    - `UX`, `DS` → Playwright with a separate browser context per player, and axe
      for accessibility states.
-   Assert the acceptance line's measurable condition — an event stream, a
-   computed style, a bounding box, an `aria-label`, a database row — not an
-   implementation detail.
+     Assert the acceptance line's measurable condition — an event stream, a
+     computed style, a bounding box, an `aria-label`, a database row — not an
+     implementation detail.
 6. **Mutate and confirm.** Break the code your new test protects. Watch it fail.
    Restore the code. A test that passes against broken code gets rewritten, not
    committed. Do this every iteration; it is the step that makes the rest mean
@@ -81,7 +81,7 @@ find easier work.**
 7. **Run it and look.** Where the ticket has a running surface, start the app and
    see the behaviour yourself at the viewports the acceptance line names. Do not
    report a fix you have not observed.
-8. **Run `pnpm ci`.** Fix what you broke and repeat until it passes with no
+8. **Run `pnpm run ci`.** Fix what you broke and repeat until it passes with no
    errors and no warnings. **Never lower a coverage threshold, a contrast
    requirement, a touch-target minimum, or any other gate to make it pass.**
 9. **Update the docs your change made wrong.** `AGENTS.md`, the relevant spec, or
@@ -102,7 +102,7 @@ Read the full **Traps** section in the backlog. These are the ones that most
 often survive a passing test suite:
 
 - **A display name in the wire layer is a defect.** `Address`, `Block`, `The
-  Committee`, `Noise Complaint` are presentation only. The server sends
+Committee`, `Noise Complaint` are presentation only. The server sends
   `district`; the component renders "Block". A display name in a command, event,
   wire field, database column, content ID, analytics property, or test fixture is
   wrong even when everything compiles.

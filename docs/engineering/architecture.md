@@ -46,13 +46,13 @@ packages/game-content/            # versioned original board, decks, economy, va
 
 The application is deliberately split internally into browser and server modules. A client component must not import `src/server`, `mongodb`, secrets, or the engine's server acceptance path. Route Handlers and server-side page code may import the internal packages and the database adapter. The engine remains independently testable and does not know that Next.js or MongoDB exists.
 
-| Module | May depend on | Must not depend on |
-|---|---|---|
-| `apps/web` server modules | `contracts`, `game-engine`, `game-content`, `mongodb`, Next.js server APIs, Node `crypto` | browser globals in server-only code; raw capabilities in responses/logs |
-| `apps/web` client modules | `contracts`, presentation metadata, React/shadcn components | `mongodb`, Node-only modules, engine acceptance, database credentials, capability values in storage/URLs |
-| `packages/game-engine` | `contracts`, `game-content` interfaces | Next.js, Node APIs, clock, randomness, IO, database, transport |
-| `packages/contracts` | Zod only | React, Next.js, MongoDB, engine implementation |
-| `packages/game-content` | data and validation helpers | infrastructure, third-party content, application runtime |
+| Module                    | May depend on                                                                             | Must not depend on                                                                                       |
+| ------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `apps/web` server modules | `contracts`, `game-engine`, `game-content`, `mongodb`, Next.js server APIs, Node `crypto` | browser globals in server-only code; raw capabilities in responses/logs                                  |
+| `apps/web` client modules | `contracts`, presentation metadata, React/shadcn components                               | `mongodb`, Node-only modules, engine acceptance, database credentials, capability values in storage/URLs |
+| `packages/game-engine`    | `contracts`, `game-content` interfaces                                                    | Next.js, Node APIs, clock, randomness, IO, database, transport                                           |
+| `packages/contracts`      | Zod only                                                                                  | React, Next.js, MongoDB, engine implementation                                                           |
+| `packages/game-content`   | data and validation helpers                                                               | infrastructure, third-party content, application runtime                                                 |
 
 Enforce this table with package exports, TypeScript project references, ESLint/import rules, and a CI fixture that proves browser code cannot import server-only modules and the engine cannot import Node or database modules.
 
@@ -62,17 +62,17 @@ Enforce this table with package exports, TypeScript project references, ESLint/i
 
 Use the Next.js App Router with Node.js Route Handlers. All state-changing game operations use explicit HTTP JSON endpoints; do not put authoritative game mutations in client code or implicit UI state. Server Components may read through the same server modules used by Route Handlers, but they must not duplicate authorization or game-resolution logic.
 
-| Area | Responsibility |
-|---|---|
-| App Router pages | Landing, create, join, lobby, game, summary, settings, rules, and accessibility screens from the UX specification |
-| `POST /api/games` | Create a game, select immutable content/rules versions, issue separate host/seat capabilities, and return the opaque invite URL |
-| `POST /api/invites/[inviteId]/join` | Validate admission, claim an open seat, issue the seat capability cookie, and return the authorized lobby projection |
-| `GET /api/games/[gameId]/bootstrap` | Authenticate the seat, then return the authorized current snapshot, versions, legal actions, and action availability |
-| `POST /api/games/[gameId]/commands` | Validate an envelope and run every lobby, gameplay, host, replacement, reclaim, transfer, and `EndNoContest` command through the transactional command path |
-| `GET /api/games/[gameId]/events` | Authenticated Server-Sent Events stream for committed projections, presence, and catch-up hints; never an authorization mechanism |
-| `GET /api/games/[gameId]/sync` | Return a contiguous authorized event range or a complete authorized snapshot from the client's last sequence/version |
-| `GET /api/health/live` and `/api/health/ready` | Process liveness and dependency/migration readiness without game data or secrets |
-| `POST /api/internal/cleanup` | Secret-protected scheduled retention cleanup using the same application image; never exposed as a player operation |
+| Area                                           | Responsibility                                                                                                                                              |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| App Router pages                               | Landing, create, join, lobby, game, summary, settings, rules, and accessibility screens from the UX specification                                           |
+| `POST /api/games`                              | Create a game, select immutable content/rules versions, issue separate host/seat capabilities, and return the opaque invite URL                             |
+| `POST /api/invites/[inviteId]/join`            | Validate admission, claim an open seat, issue the seat capability cookie, and return the authorized lobby projection                                        |
+| `GET /api/games/[gameId]/bootstrap`            | Authenticate the seat, then return the authorized current snapshot, versions, legal actions, and action availability                                        |
+| `POST /api/games/[gameId]/commands`            | Validate an envelope and run every lobby, gameplay, host, replacement, reclaim, transfer, and `EndNoContest` command through the transactional command path |
+| `GET /api/games/[gameId]/events`               | Authenticated Server-Sent Events stream for committed projections, presence, and catch-up hints; never an authorization mechanism                           |
+| `GET /api/games/[gameId]/sync`                 | Return a contiguous authorized event range or a complete authorized snapshot from the client's last sequence/version                                        |
+| `GET /api/health/live` and `/api/health/ready` | Process liveness and dependency/migration readiness without game data or secrets                                                                            |
+| `POST /api/internal/cleanup`                   | Secret-protected scheduled retention cleanup using the same application image; never exposed as a player operation                                          |
 
 The exact route parameters remain opaque identifiers. Game IDs locate resources but grant no authority. Invite URLs contain only the opaque invitation identifier; host, seat, and reclaim capabilities are issued as secure cookies and never appear in URLs, local storage, analytics, logs, or SSE query strings.
 
@@ -108,15 +108,15 @@ Presence is ephemeral process state and is emitted as `connected`, `disconnected
 
 Use the official `mongodb` Node driver behind a small server-only repository adapter. Domain IDs are opaque UUID strings, not MongoDB-generated IDs. MongoDB transactions require a replica set; the local and Coolify deployments must use a single-node replica set for development/small production, with a documented path to a multi-node deployment later.
 
-| Collection | Contents and required constraints |
-|---|---|
-| `games` | Game metadata plus the latest bounded authoritative snapshot, `aggregateVersion`, `lastSequence`, `status`, `contentVersion`, `rulesSchemaVersion`, `variantSchemaVersion`, `stateSchemaVersion`, `engineVersion`, host seat reference, timestamps, and expiry. Unique `_id`; indexes on status/expiry. |
-| `gameEvents` | One validated domain event per document with `gameId`, sequence, aggregate version, type, event version, payload, actor reference, and creation time. Unique `(gameId, sequence)` and index `(gameId, aggregateVersion)`. |
-| `commandReceipts` | Durable idempotency result keyed by unique `(gameId, commandId)`, actor seat, expected version, accepted/rejected result, and event range. Bounded payload; no raw command capability. |
-| `invitations` | Opaque invite ID, game reference, admission status/use policy, and expiry. Unique invite ID and indexes on game/status/expiry. |
-| `capabilities` | Hashes and metadata for `seatCapability` command tokens and reclaim claims: game, seat, kind, status, created/revoked/expiry times. Unique token hash and active game/seat/kind indexes. |
-| `hostCapabilities` | Separate host capability hashes, active status, host seat, rotation and expiry metadata. One active host capability per game. |
-| `auditLog` | Minimal security/recovery actions, pseudonymous references, reason codes, and time. Never raw tokens, invite URLs, names, full payloads, or private state. |
+| Collection         | Contents and required constraints                                                                                                                                                                                                                                                                       |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `games`            | Game metadata plus the latest bounded authoritative snapshot, `aggregateVersion`, `lastSequence`, `status`, `contentVersion`, `rulesSchemaVersion`, `variantSchemaVersion`, `stateSchemaVersion`, `engineVersion`, host seat reference, timestamps, and expiry. Unique `_id`; indexes on status/expiry. |
+| `gameEvents`       | One validated domain event per document with `gameId`, sequence, aggregate version, type, event version, payload, actor reference, and creation time. Unique `(gameId, sequence)` and index `(gameId, aggregateVersion)`.                                                                               |
+| `commandReceipts`  | Durable idempotency result keyed by unique `(gameId, commandId)`, actor seat, expected version, accepted/rejected result, and event range. Bounded payload; no raw command capability.                                                                                                                  |
+| `invitations`      | Opaque invite ID, game reference, admission status/use policy, and expiry. Unique invite ID and indexes on game/status/expiry.                                                                                                                                                                          |
+| `capabilities`     | Hashes and metadata for `seatCapability` command tokens and reclaim claims: game, seat, kind, status, created/revoked/expiry times. Unique token hash and active game/seat/kind indexes.                                                                                                                |
+| `hostCapabilities` | Separate host capability hashes, active status, host seat, rotation and expiry metadata. One active host capability per game.                                                                                                                                                                           |
+| `auditLog`         | Minimal security/recovery actions, pseudonymous references, reason codes, and time. Never raw tokens, invite URLs, names, full payloads, or private state.                                                                                                                                              |
 
 The authoritative snapshot is bounded and stored in the `games` document to make one aggregate read and one versioned replacement sufficient. It contains the state fields required by [ENG-021](game-engine.md#eng-021-state-phases-commands-and-events), but secret seed material and future deck order remain server-only fields and are excluded from every projection. Validate and bound snapshot/event sizes before the transaction. Use explicit indexes and application-controlled cleanup; MongoDB TTL indexes may be an additional safety net but must not be the authoritative expiry transition.
 
@@ -142,13 +142,13 @@ Graceful shutdown stops new commands, closes SSE streams with a retryable status
 
 Pin compatible versions in `package.json`, workspace package manifests, and `pnpm-lock.yaml`; select and pin one supported Node.js LTS version in the repository before implementation. No dependency is loaded from a CDN at runtime.
 
-| Layer | Required dependencies |
-|---|---|
-| Application runtime | `next`, `react`, `react-dom`, `mongodb`, `zod`, and `server-only` |
-| UI | Tailwind CSS, shadcn/ui-generated components, the required Radix primitives, `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react`, and `next-themes` if theme switching uses it |
-| Analytics/content assets | `posthog-js` only after consent; self-hosted Atkinson Hyperlegible and Fraunces font files with provenance/license records; original icons/art with provenance |
-| Workspace/build | `typescript`, Next.js ESLint integration, ESLint import/dependency-direction rules, formatter, pnpm workspace tooling, and `tsx` or an equivalent runner for maintenance scripts |
-| Tests | `vitest`, `fast-check`, coverage tooling, `mongodb-memory-server` or an ephemeral replica-set MongoDB test service, `@playwright/test`, and axe integration |
+| Layer                    | Required dependencies                                                                                                                                                                           |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Application runtime      | `next`, `react`, `react-dom`, `mongodb`, `zod`, and `server-only`                                                                                                                               |
+| UI                       | Tailwind CSS, shadcn/ui-generated components, the required Radix primitives, `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react`, and `next-themes` if theme switching uses it |
+| Analytics/content assets | `posthog-js` only after consent; self-hosted Atkinson Hyperlegible and Fraunces font files with provenance/license records; original icons/art with provenance                                  |
+| Workspace/build          | `typescript`, Next.js ESLint integration, ESLint import/dependency-direction rules, formatter, pnpm workspace tooling, and `tsx` or an equivalent runner for maintenance scripts                |
+| Tests                    | `vitest`, `fast-check`, coverage tooling, `mongodb-memory-server` or an ephemeral replica-set MongoDB test service, `@playwright/test`, and axe integration                                     |
 
 shadcn/ui is treated as source-owned accessible components configured in the app, not as a separately deployed runtime. The primary navigation uses the shadcn Sidebar composition from the design system. Avoid adding an ORM, a second database abstraction, Socket.IO, Fastify, PostgreSQL/Drizzle, Redis, or a second web framework unless a new reviewed architecture decision replaces this one.
 
@@ -170,27 +170,27 @@ Required server configuration is documented by [OPS-003](../delivery/operations.
 
 ## Decisions and rejected alternatives
 
-| ID | Decision | Rationale |
-|---|---|---|
-| ENG-005 | One deployable Next.js App Router application | The product owner wants one application to build, run, and deploy; keeping UI and authoritative Route Handlers together removes a service boundary and deployment coordination cost. Supersedes the prior separate game-server decision. |
-| ENG-006 | MongoDB with the official driver | Document snapshots fit the bounded game aggregate, transactions provide atomic command persistence, and change streams provide process-local event delivery without another runtime service. Supersedes the prior PostgreSQL/Drizzle decision. |
-| ENG-007 | HTTP Route Handlers plus authenticated SSE | Commands are explicit and retryable over HTTP; committed state can stream from the same Next.js runtime without a separate WebSocket server. |
-| ENG-008 | Internal pure packages remain | Contracts, content, and the engine are deep seams that preserve determinism, legal-rule locality, and testability while remaining part of one deployed application. |
-| ENG-009 | shadcn/ui and shadcn Sidebar | Accessible, source-owned UI primitives and the requested navigation composition provide a consistent presentation seam without introducing a UI runtime service. |
+| ID      | Decision                                                          | Rationale                                                                                                                                                                                                                                             |
+| ------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ENG-005 | One deployable Next.js App Router application                     | The product owner wants one application to build, run, and deploy; keeping UI and authoritative Route Handlers together removes a service boundary and deployment coordination cost. Supersedes the prior separate game-server decision.              |
+| ENG-006 | MongoDB with the official driver                                  | Document snapshots fit the bounded game aggregate, transactions provide atomic command persistence, and change streams provide process-local event delivery without another runtime service. Supersedes the prior PostgreSQL/Drizzle decision.        |
+| ENG-007 | HTTP Route Handlers plus authenticated SSE                        | Commands are explicit and retryable over HTTP; committed state can stream from the same Next.js runtime without a separate WebSocket server.                                                                                                          |
+| ENG-008 | Internal pure packages remain                                     | Contracts, content, and the engine are deep seams that preserve determinism, legal-rule locality, and testability while remaining part of one deployed application.                                                                                   |
+| ENG-009 | shadcn/ui and shadcn Sidebar                                      | Accessible, source-owned UI primitives and the requested navigation composition provide a consistent presentation seam without introducing a UI runtime service.                                                                                      |
 | ENG-010 | Snapshot plus append-only event journal and separate capabilities | Snapshots keep bootstrap/recovery bounded; events preserve ordering, replay, auditability, and catch-up. Invite admission, seat commands, host controls, and reclaim remain different authorities with separate hashes, cookies, and lifecycle rules. |
 
 The following are explicitly rejected for this final architecture:
 
-| Alternative | Rejected because |
-|---|---|
-| Separately deployed Fastify/Socket.IO game server | Violates the one-application deployment requirement and adds an unnecessary runtime seam. |
-| PostgreSQL/Drizzle | Replaced by the owner-selected MongoDB design; the bounded aggregate and event documents map directly to MongoDB transactions. |
-| Socket.IO/WebSocket as the required transport | Next.js Route Handlers do not need a second socket runtime; HTTP commands plus SSE preserve the needed directionality and reconnect model. |
-| Client-authoritative rules or peer-to-peer state | Enables cheating and makes recovery/dispute resolution unreliable. |
-| MongoDB without replica-set transactions | Cannot provide the atomic command path required for duplicate/concurrent command safety. |
-| Redis from day one | Adds infrastructure before measured need; MongoDB durability and change streams are sufficient for the initial single-app deployment. |
-| ORM or unbounded generic repository layer | Hides the small set of aggregate operations that must be audited for atomicity and version checks. |
-| Opaque canvas board | Fails the accessibility requirement; use semantic DOM and SVG decoration with an equivalent board list. |
+| Alternative                                       | Rejected because                                                                                                                           |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Separately deployed Fastify/Socket.IO game server | Violates the one-application deployment requirement and adds an unnecessary runtime seam.                                                  |
+| PostgreSQL/Drizzle                                | Replaced by the owner-selected MongoDB design; the bounded aggregate and event documents map directly to MongoDB transactions.             |
+| Socket.IO/WebSocket as the required transport     | Next.js Route Handlers do not need a second socket runtime; HTTP commands plus SSE preserve the needed directionality and reconnect model. |
+| Client-authoritative rules or peer-to-peer state  | Enables cheating and makes recovery/dispute resolution unreliable.                                                                         |
+| MongoDB without replica-set transactions          | Cannot provide the atomic command path required for duplicate/concurrent command safety.                                                   |
+| Redis from day one                                | Adds infrastructure before measured need; MongoDB durability and change streams are sufficient for the initial single-app deployment.      |
+| ORM or unbounded generic repository layer         | Hides the small set of aggregate operations that must be audited for atomicity and version checks.                                         |
+| Opaque canvas board                               | Fails the accessibility requirement; use semantic DOM and SVG decoration with an equivalent board list.                                    |
 
 ## ENG-018: Implementation acceptance checklist
 
@@ -201,7 +201,7 @@ The following are explicitly rejected for this final architecture:
 - Commands/events use canonical wire vocabulary and versioned schemas; UI display names remain at the presentation boundary.
 - Duplicate, stale, malformed, unauthorized, out-of-order, reconnect, replacement, reclaim, host-transfer, expiry, and no-contest cases satisfy the linked protocol/security requirements.
 - The board, navigation sidebar, dialogs, action surfaces, event feed, and accessible board list use shadcn/Tailwind design rules and pass the UX/DS requirements.
-- `pnpm ci` covers package boundaries, engine determinism, MongoDB transaction/idempotency behavior, route/projection authorization, SSE/sync recovery, PWA behavior, accessibility, and security redaction.
+- `pnpm run ci` covers package boundaries, engine determinism, MongoDB transaction/idempotency behavior, route/projection authorization, SSE/sync recovery, PWA behavior, accessibility, and security redaction.
 - Coolify deployment, backup/restore, cleanup, readiness, rollback, and capacity evidence is recorded against [traceability](../traceability.md).
 
 ## ENG-019: Primary implementation references

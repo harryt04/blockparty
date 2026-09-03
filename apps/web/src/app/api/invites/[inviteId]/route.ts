@@ -13,10 +13,7 @@ import { jsonError, jsonOk } from "@/server/http/responses";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ inviteId: string }> },
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ inviteId: string }> }) {
   const limit = checkRateLimit(request, "join");
   if (!limit.ok) return jsonError(limit.code, { reason: limit.reason });
 

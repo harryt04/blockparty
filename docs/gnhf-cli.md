@@ -5,8 +5,8 @@ iteration makes one small committed change toward the objective. This document
 holds the exact commands for this repository.
 
 The loop prompt is [gnhf-prompt.md](gnhf-prompt.md). The work queue is
-[build-backlog.md](delivery/build-backlog.md). See [MILE-011](delivery/roadmap.md)
-for the delivery policy this implements.
+[build-backlog.md](delivery/build-backlog.md), whose claim protocol is the
+delivery policy this command implements.
 
 ## One-time setup
 
@@ -41,7 +41,7 @@ each success. `master` stays clean. Review the whole run as one pull request.
 
 ## Run length
 
-62 tickets at one ticket per iteration needs roughly two runs at
+64 tickets at one ticket per iteration needs roughly two runs at
 `--max-iterations 40`. gnhf resumes on the same branch, so a second invocation of
 the same command continues the existing history and iteration numbering. It does
 not start over.

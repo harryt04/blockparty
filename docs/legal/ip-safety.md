@@ -14,18 +14,18 @@ These are United States starting points only. A globally reachable launch also r
 
 ## Legal requirements
 
-| ID | Requirement |
-|---|---|
-| LEGAL-001 | The raw prompt at `docs/mvp-prd-prompt.md` is superseded historical input, not implementation authority, and is excluded from any public release/documentation package unless counsel approves its inclusion. |
-| LEGAL-002 | Production requirements, rules copy, topology, economic data, decks, art, and tests are independently authored with provenance; superficial synonym substitution is prohibited. |
+| ID        | Requirement                                                                                                                                                                                                                                                                                |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| LEGAL-001 | The raw prompt at `docs/mvp-prd-prompt.md` is superseded historical input, not implementation authority, and is excluded from any public release/documentation package unless counsel approves its inclusion.                                                                              |
+| LEGAL-002 | Production requirements, rules copy, topology, economic data, decks, art, and tests are independently authored with provenance; superficial synonym substitution is prohibited.                                                                                                            |
 | LEGAL-003 | If counsel authorizes publisher-specific research, store a version-pinned citation, edition, retrieval date, access list, factual extraction record, independent author, and similarity-review disposition in restricted records. Never commit third-party scans to the public repository. |
-| LEGAL-004 | Counsel reviews the complete selection and arrangement of mechanics together with presentation, not merely isolated names or assets. |
-| LEGAL-005 | Name, logo, trade-dress, unfair-competition, patent/design-right, and launch-territory reviews are complete before public launch. |
-| LEGAL-006 | Every shipped asset and dependency has verified provenance, compatible rights, required notices, and a named approver. |
-| LEGAL-007 | Code, content/assets, contributor terms, and trademark policy are approved separately before public “free” or “open source” claims. |
-| LEGAL-008 | Public copy contains no affiliation implication, clone/remake/compatibility claim, hidden comparative keyword, or unapproved nominative reference. |
-| LEGAL-009 | Complaints, demands, and uncertain materials trigger preservation and attorney escalation, not superficial renaming, deletion of evidence, or public argument. |
-| LEGAL-010 | Material changes to mechanics, name, visual presentation, territory, assets, licensing, or monetization reopen the attorney release gate. |
+| LEGAL-004 | Counsel reviews the complete selection and arrangement of mechanics together with presentation, not merely isolated names or assets.                                                                                                                                                       |
+| LEGAL-005 | Name, logo, trade-dress, unfair-competition, patent/design-right, and launch-territory reviews are complete before public launch.                                                                                                                                                          |
+| LEGAL-006 | Every shipped asset and dependency has verified provenance, compatible rights, required notices, and a named approver.                                                                                                                                                                     |
+| LEGAL-007 | Code, content/assets, contributor terms, and trademark policy are approved separately before public “free” or “open source” claims.                                                                                                                                                        |
+| LEGAL-008 | Public copy contains no affiliation implication, clone/remake/compatibility claim, hidden comparative keyword, or unapproved nominative reference.                                                                                                                                         |
+| LEGAL-009 | Complaints, demands, and uncertain materials trigger preservation and attorney escalation, not superficial renaming, deletion of evidence, or public argument.                                                                                                                             |
+| LEGAL-010 | Material changes to mechanics, name, visual presentation, territory, assets, licensing, or monetization reopen the attorney release gate.                                                                                                                                                  |
 
 ## Project rule: original expression, independently made
 
@@ -70,25 +70,25 @@ Keep references to external games or brands only in private, access-controlled r
 
 ## Risk matrix
 
-| Risk level | Examples | Required action |
-| --- | --- | --- |
-| **Green** | Independently commissioned district art; newly written tutorial; original token shapes; original map topology; documented original economic data; permissively licensed dependency used within terms. | Keep provenance/license records; complete normal review before merge. |
-| **Yellow** | Generic/descriptive candidate name; the provisional mark placed adjacent to blockchain/web3 language; art asset with unclear source history; a board layout that begins to resemble a known product; AI output with incomplete prompt/input records; third-party font with uncertain web-embedding terms; a design inspired by genre screenshots. | Pause publication and production use. Obtain records, redesign for separation, conduct searches, and escalate to brand/IP owner or counsel. |
-| **Red** | Copied/paraphrased rules text; recreated board order/data/card copy; source-derived art or audio; title-adjacent puns/sound-alikes; a synonym of the category-defining mark used as a product name; a square-grid or perimeter board under the Blockparty name; public “clone/remake/unofficial version” claims; logo or board that implies affiliation; unlicensed asset; demand/takedown/cease-and-desist. | Stop use and distribution of affected material, preserve evidence, notify the project owner, and obtain attorney direction before any response or re-release. Do not “fix” by superficial recoloring or word substitution. |
+| Risk level | Examples                                                                                                                                                                                                                                                                                                                                                                                                     | Required action                                                                                                                                                                                                            |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Green**  | Independently commissioned district art; newly written tutorial; original token shapes; original map topology; documented original economic data; permissively licensed dependency used within terms.                                                                                                                                                                                                        | Keep provenance/license records; complete normal review before merge.                                                                                                                                                      |
+| **Yellow** | Generic/descriptive candidate name; the provisional mark placed adjacent to blockchain/web3 language; art asset with unclear source history; a board layout that begins to resemble a known product; AI output with incomplete prompt/input records; third-party font with uncertain web-embedding terms; a design inspired by genre screenshots.                                                            | Pause publication and production use. Obtain records, redesign for separation, conduct searches, and escalate to brand/IP owner or counsel.                                                                                |
+| **Red**    | Copied/paraphrased rules text; recreated board order/data/card copy; source-derived art or audio; title-adjacent puns/sound-alikes; a synonym of the category-defining mark used as a product name; a square-grid or perimeter board under the Blockparty name; public “clone/remake/unofficial version” claims; logo or board that implies affiliation; unlicensed asset; demand/takedown/cease-and-desist. | Stop use and distribution of affected material, preserve evidence, notify the project owner, and obtain attorney direction before any response or re-release. Do not “fix” by superficial recoloring or word substitution. |
 
 ## Contributor asset provenance
 
 Every contribution containing creative content requires a record before merge or release:
 
-| Required field | What to record |
-| --- | --- |
-| Asset identifier | File path, hash/version, and preview where practical. |
-| Creator and authority | Creator name/handle and confirmation they can grant the stated rights. |
-| Origin | Independently created, commissioned, licensed, public-domain (with basis), or generated; never leave blank. |
-| Source material | Links/files consulted or supplied; flag and reject protected-source copying. |
-| License/assignment | Exact license, version, URL, attribution text, commercial/web use rights, modification rights, and share-alike obligations. |
-| AI record | Tool/version, prompts, inputs, output date, human edits, and confirmation that no protected-source image/audio/text or artist-style imitation was requested. |
-| Approval | Reviewer, date, and any counsel escalation. |
+| Required field        | What to record                                                                                                                                               |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Asset identifier      | File path, hash/version, and preview where practical.                                                                                                        |
+| Creator and authority | Creator name/handle and confirmation they can grant the stated rights.                                                                                       |
+| Origin                | Independently created, commissioned, licensed, public-domain (with basis), or generated; never leave blank.                                                  |
+| Source material       | Links/files consulted or supplied; flag and reject protected-source copying.                                                                                 |
+| License/assignment    | Exact license, version, URL, attribution text, commercial/web use rights, modification rights, and share-alike obligations.                                  |
+| AI record             | Tool/version, prompts, inputs, output date, human edits, and confirmation that no protected-source image/audio/text or artist-style imitation was requested. |
+| Approval              | Reviewer, date, and any counsel escalation.                                                                                                                  |
 
 Contributors must not upload extracted, scanned, transcribed, traced, or “redrawn” materials from third-party games. A contributor’s statement is evidence, not a substitute for review. Preserve raw/source files and license copies with the asset record.
 

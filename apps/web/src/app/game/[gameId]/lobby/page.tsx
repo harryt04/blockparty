@@ -20,11 +20,7 @@ import { stubLobby } from "@/server/stub-data";
 
 export const metadata: Metadata = { title: "Lobby" };
 
-export default async function LobbyPage({
-  params,
-}: {
-  params: Promise<{ gameId: string }>;
-}) {
+export default async function LobbyPage({ params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = await params;
 
   // TODO(ENG-003): authenticate the seat cookie and load the real projection.
@@ -39,8 +35,8 @@ export default async function LobbyPage({
         <CardHeader>
           <CardTitle>Invite</CardTitle>
           <CardDescription>
-            Share this link with the people you want to play. It admits them to
-            the lobby. It does not give host controls.
+            Share this link with the people you want to play. It admits them to the lobby. It does
+            not give host controls.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -91,8 +87,8 @@ export default async function LobbyPage({
         <CardHeader>
           <CardTitle>Rules</CardTitle>
           <CardDescription>
-            Preset: {lobby.configuration.preset}. Content version{" "}
-            {lobby.versions.contentVersion}. These lock when the game starts.
+            Preset: {lobby.configuration.preset}. Content version {lobby.versions.contentVersion}.
+            These lock when the game starts.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -124,8 +120,8 @@ export default async function LobbyPage({
 
       <Alert variant="info">
         <AlertDescription>
-          Anyone with the link can join until the game starts. Games are removed
-          30 days after the last action.
+          Anyone with the link can join until the game starts. Games are removed 30 days after the
+          last action.
         </AlertDescription>
       </Alert>
     </div>

@@ -10,10 +10,7 @@ import { cn } from "@/lib/utils";
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn(
-        "rounded-(--radius-lg) border border-line bg-surface-raised",
-        className,
-      )}
+      className={cn("rounded-(--radius-lg) border border-line bg-surface-raised", className)}
       {...props}
     />
   );
@@ -24,15 +21,10 @@ export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElemen
 }
 
 export function CardTitle({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) {
-  return (
-    <h2 className={cn("font-serif text-lg leading-tight", className)} {...props} />
-  );
+  return <h2 className={cn("font-serif text-lg leading-tight", className)} {...props} />;
 }
 
-export function CardDescription({
-  className,
-  ...props
-}: HTMLAttributes<HTMLParagraphElement>) {
+export function CardDescription({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) {
   return <p className={cn("text-sm text-muted-ink", className)} {...props} />;
 }
 
@@ -41,7 +33,5 @@ export function CardContent({ className, ...props }: HTMLAttributes<HTMLDivEleme
 }
 
 export function CardFooter({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div className={cn("flex items-center gap-2 p-4 pt-0", className)} {...props} />
-  );
+  return <div className={cn("flex items-center gap-2 p-4 pt-0", className)} {...props} />;
 }

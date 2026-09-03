@@ -19,11 +19,7 @@ import { PlayerStrip } from "@/components/game/player-strip";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { stubSnapshot } from "@/server/stub-data";
 
-export default async function GamePage({
-  params,
-}: {
-  params: Promise<{ gameId: string }>;
-}) {
+export default async function GamePage({ params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = await params;
 
   // TODO(ENG-003): authenticate the seat cookie and call the bootstrap path.
@@ -82,8 +78,8 @@ export default async function GamePage({
 
           <Alert variant="warning">
             <AlertDescription>
-              Scaffolding build. The board and players are placeholder content.
-              No rules run and nothing is saved.
+              Scaffolding build. The board and players are placeholder content. No rules run and
+              nothing is saved.
             </AlertDescription>
           </Alert>
         </div>

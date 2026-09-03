@@ -22,10 +22,7 @@ export interface GameStreamHandlers {
  * TODO(PROTO-003): add exponential backoff with jitter on reconnect and the
  * visibility-resume resync.
  */
-export function openGameStream(
-  gameId: string,
-  handlers: GameStreamHandlers,
-): () => void {
+export function openGameStream(gameId: string, handlers: GameStreamHandlers): () => void {
   const source = new EventSource(`/api/games/${encodeURIComponent(gameId)}/events`, {
     withCredentials: true,
   });

@@ -38,9 +38,7 @@ async function readCapabilityHash(kind: CapabilityKind): Promise<string | undefi
  * unexpired, confirm it belongs to `gameId`, check game status, and return the
  * seat. Compare in constant time and return a generic failure either way.
  */
-export async function readSeatCapability(
-  _gameId: string,
-): Promise<AuthenticatedSeat | undefined> {
+export async function readSeatCapability(_gameId: string): Promise<AuthenticatedSeat | undefined> {
   const hash = await readCapabilityHash("seat");
   if (hash === undefined) return undefined;
   return undefined;
@@ -52,9 +50,7 @@ export async function readSeatCapability(
  *
  * TODO(SEC-002): look the hash up in `hostCapabilities`.
  */
-export async function readHostCapability(
-  _gameId: string,
-): Promise<AuthenticatedSeat | undefined> {
+export async function readHostCapability(_gameId: string): Promise<AuthenticatedSeat | undefined> {
   const hash = await readCapabilityHash("host");
   if (hash === undefined) return undefined;
   return undefined;
@@ -67,9 +63,7 @@ export async function readHostCapability(
  *
  * TODO(SEC-002): look the hash up in `capabilities` with kind "reclaim".
  */
-export async function readReclaimClaim(
-  _gameId: string,
-): Promise<AuthenticatedSeat | undefined> {
+export async function readReclaimClaim(_gameId: string): Promise<AuthenticatedSeat | undefined> {
   const hash = await readCapabilityHash("reclaim");
   if (hash === undefined) return undefined;
   return undefined;

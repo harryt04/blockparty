@@ -16,10 +16,7 @@ import { stubSnapshot } from "@/server/stub-data";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ gameId: string }> },
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = await params;
 
   const limit = checkRateLimit(request, "sync");

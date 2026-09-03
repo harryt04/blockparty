@@ -37,9 +37,7 @@ export function ActiveSpaceDetail({
 
   const category = SPACE_CATEGORY_DISPLAY[space.category];
   const deedCategory =
-    space.deedCategory === undefined
-      ? undefined
-      : DEED_CATEGORY_DISPLAY[space.deedCategory];
+    space.deedCategory === undefined ? undefined : DEED_CATEGORY_DISPLAY[space.deedCategory];
   const owner = seats.find((seat) => seat.seatId === space.ownerSeatId);
 
   return (

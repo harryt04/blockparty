@@ -64,7 +64,11 @@ export function validateBundle(
       fail("MISSING_ROUTE_TARGET", `spaces.${space.spaceId}.next`, "Route target does not exist.");
     }
     if (space.type === "deed" && (space.deedId === undefined || !deedIds.has(space.deedId))) {
-      fail("MISSING_DEED", `spaces.${space.spaceId}.deedId`, "Deed space references no valid deed.");
+      fail(
+        "MISSING_DEED",
+        `spaces.${space.spaceId}.deedId`,
+        "Deed space references no valid deed.",
+      );
     }
   }
 
@@ -80,16 +84,28 @@ export function validateBundle(
   for (const deed of bundle.deeds) {
     if (deed.category === "district") {
       if (deed.districtId === undefined || !districtIds.has(deed.districtId)) {
-        fail("INVALID_DISTRICT", `deeds.${deed.deedId}.districtId`, "District membership is invalid.");
+        fail(
+          "INVALID_DISTRICT",
+          `deeds.${deed.deedId}.districtId`,
+          "District membership is invalid.",
+        );
       }
     } else if (deed.districtId !== undefined) {
-      fail("UNEXPECTED_DISTRICT", `deeds.${deed.deedId}.districtId`, "Only district deeds belong to a district.");
+      fail(
+        "UNEXPECTED_DISTRICT",
+        `deeds.${deed.deedId}.districtId`,
+        "Only district deeds belong to a district.",
+      );
     }
   }
   for (const district of bundle.districts) {
     for (const deedId of district.deedIds) {
       if (!deedIds.has(deedId)) {
-        fail("MISSING_DISTRICT_DEED", `districts.${district.districtId}`, "District names an unknown deed.");
+        fail(
+          "MISSING_DISTRICT_DEED",
+          `districts.${district.districtId}`,
+          "District names an unknown deed.",
+        );
       }
     }
   }
@@ -113,7 +129,11 @@ export function validateBundle(
   // --- Jackpot eligibility (CONTENT-007) ----------------------------------
   for (const spaceId of bundle.jackpotEligibleSpaceIds) {
     if (!spaceIds.has(spaceId)) {
-      fail("MISSING_JACKPOT_SPACE", "jackpotEligibleSpaceIds", "Jackpot-eligible space does not exist.");
+      fail(
+        "MISSING_JACKPOT_SPACE",
+        "jackpotEligibleSpaceIds",
+        "Jackpot-eligible space does not exist.",
+      );
     }
   }
 

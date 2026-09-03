@@ -67,7 +67,7 @@
   --color-asset-district-north: oklch(60% 0.12 30);
   --color-asset-district-east: oklch(60% 0.12 150);
   --color-asset-district-west: oklch(60% 0.12 265);
-  --color-asset-transit: oklch(58% 0.10 90);
+  --color-asset-transit: oklch(58% 0.1 90);
   --color-asset-utility: oklch(58% 0.09 210);
 }
 
@@ -90,7 +90,7 @@
     --color-success: oklch(70% 0.13 155);
     --color-warning: oklch(78% 0.14 78);
     --color-danger: oklch(68% 0.17 27);
-    --color-info: oklch(72% 0.10 240);
+    --color-info: oklch(72% 0.1 240);
 
     --color-focus: oklch(75% 0.14 250);
     --color-selection: oklch(32% 0.05 250);
@@ -101,12 +101,12 @@
     --color-player-3: oklch(72% 0.14 255);
     --color-player-4: oklch(78% 0.14 85);
     --color-player-5: oklch(70% 0.15 315);
-    --color-player-6: oklch(72% 0.10 195);
+    --color-player-6: oklch(72% 0.1 195);
 
     --color-asset-district-north: oklch(72% 0.12 30);
     --color-asset-district-east: oklch(72% 0.12 150);
     --color-asset-district-west: oklch(72% 0.12 265);
-    --color-asset-transit: oklch(72% 0.10 90);
+    --color-asset-transit: oklch(72% 0.1 90);
     --color-asset-utility: oklch(72% 0.09 210);
   }
 }

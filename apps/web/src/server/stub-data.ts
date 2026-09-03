@@ -10,14 +10,8 @@ import "server-only";
  * When a route becomes real, remove its builder. When the last builder goes,
  * delete the file and this comment with it.
  */
-import {
-  DEFAULT_CONTENT_VERSION,
-  PLACEHOLDER_BUNDLE,
-} from "@blockparty/game-content";
-import {
-  ENGINE_VERSION,
-  STATE_SCHEMA_VERSION,
-} from "@blockparty/game-engine";
+import { DEFAULT_CONTENT_VERSION, PLACEHOLDER_BUNDLE } from "@blockparty/game-content";
+import { ENGINE_VERSION, STATE_SCHEMA_VERSION } from "@blockparty/game-engine";
 import {
   STANDARD_CONFIGURATION,
   type BoardSpaceProjection,

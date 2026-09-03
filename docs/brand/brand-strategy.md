@@ -1,6 +1,6 @@
 # Brand Strategy
 
-> **Working premise:** This is a free, open-source web game for people 13+ that captures the social, property-trading, rent-collecting *category* of a familiar tabletop experience while giving every public-facing expression an independent identity. It is not positioned as a replacement, sequel, edition, or unofficial version of any existing game.
+> **Working premise:** This is a free, open-source web game for people 13+ that captures the social, property-trading, rent-collecting _category_ of a familiar tabletop experience while giving every public-facing expression an independent identity. It is not positioned as a replacement, sequel, edition, or unofficial version of any existing game.
 
 Related documents: [Naming](naming.md) and [IP safety](../legal/ip-safety.md). Naming is provisional until the clearance and release gates in those documents are complete.
 
@@ -14,11 +14,11 @@ Related documents: [Naming](naming.md) and [IP safety](../legal/ip-safety.md). N
 
 ### Audience and promise
 
-| Audience | Need | Brand promise |
-| --- | --- | --- |
-| Casual social players | A friendly game night that does not require a long tutorial | “Invite people, make deals, laugh at reversals.” |
-| Strategically curious players | Meaningful choices beyond dice outcomes | “Read the table, manage risk, negotiate well.” |
-| Open-source hosts and contributors | A transparent, adaptable game they can run themselves | “Play it, inspect it, and help shape it.” |
+| Audience                           | Need                                                        | Brand promise                                    |
+| ---------------------------------- | ----------------------------------------------------------- | ------------------------------------------------ |
+| Casual social players              | A friendly game night that does not require a long tutorial | “Invite people, make deals, laugh at reversals.” |
+| Strategically curious players      | Meaningful choices beyond dice outcomes                     | “Read the table, manage risk, negotiate well.”   |
+| Open-source hosts and contributors | A transparent, adaptable game they can run themselves       | “Play it, inspect it, and help shape it.”        |
 
 The tone is **social and welcoming, but strategically sharp**. It should never talk down to new players or imply that success is pure luck.
 
@@ -35,12 +35,12 @@ The tone is **social and welcoming, but strategically sharp**. It should never t
 
 These are creative directions, not legal conclusions. Each still requires the research and attorney review in [IP safety](../legal/ip-safety.md).
 
-| Territory | Core idea | Visual and verbal cues | Strengths | Watch-outs |
-| --- | --- | --- | --- | --- |
-| **A. Civic Exchange** | Players build influence through a living town marketplace. | Wayfinding signs, district maps, local notices, warm ink and paper textures; words such as “district,” “charter,” and “exchange.” | Social, grounded, and flexible for negotiation. Can make economic systems easy to understand. | A literal square perimeter board or overly familiar corner/space treatment could still create trade-dress similarity. |
-| **B. Neon Network** | Players connect a changing city of routes, services, and opportunities. | Modular grid, electric transit lines, dark base with bright signals; concise “network” language. | Strong digital-native visual system; supports sharp strategy. | Can become cold, cyberpunk-generic, or imply a route-building game rather than a property game. |
-| **C. Festival of Fortunes** | Players steward stalls, venues, and attractions during a seasonal city festival. | Banners, ticket stubs, lanterns, hand-painted icons; playful deal-making language. | Highly social and celebratory; naturally distinct in setting and art. | Must avoid gambling/casino cues and overly whimsical art that obscures strategic depth. |
-| **D. Archipelago Commons** | Players develop and trade access across a connected island economy. | Tide charts, docks, topographic patterns, calm saturated colors; “harbor,” “guild,” and “commons.” | Fresh world, strong space for original economic data and board topology. | Avoid colonial extraction narratives; requires careful accessibility contrast. |
+| Territory                   | Core idea                                                                        | Visual and verbal cues                                                                                                            | Strengths                                                                                     | Watch-outs                                                                                                            |
+| --------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **A. Civic Exchange**       | Players build influence through a living town marketplace.                       | Wayfinding signs, district maps, local notices, warm ink and paper textures; words such as “district,” “charter,” and “exchange.” | Social, grounded, and flexible for negotiation. Can make economic systems easy to understand. | A literal square perimeter board or overly familiar corner/space treatment could still create trade-dress similarity. |
+| **B. Neon Network**         | Players connect a changing city of routes, services, and opportunities.          | Modular grid, electric transit lines, dark base with bright signals; concise “network” language.                                  | Strong digital-native visual system; supports sharp strategy.                                 | Can become cold, cyberpunk-generic, or imply a route-building game rather than a property game.                       |
+| **C. Festival of Fortunes** | Players steward stalls, venues, and attractions during a seasonal city festival. | Banners, ticket stubs, lanterns, hand-painted icons; playful deal-making language.                                                | Highly social and celebratory; naturally distinct in setting and art.                         | Must avoid gambling/casino cues and overly whimsical art that obscures strategic depth.                               |
+| **D. Archipelago Commons**  | Players develop and trade access across a connected island economy.              | Tide charts, docks, topographic patterns, calm saturated colors; “harbor,” “guild,” and “commons.”                                | Fresh world, strong space for original economic data and board topology.                      | Avoid colonial extraction narratives; requires careful accessibility contrast.                                        |
 
 ### Recommendation: Blockparty
 
@@ -68,13 +68,13 @@ A block party is warm, not chaotic. Keep the strategic register from the Voice s
 
 ### Voice attributes
 
-| Attribute | Sounds like | Does not sound like |
-| --- | --- | --- |
-| Inviting | “Bring a few friends. The town is open.” | “Dominate your opponents.” |
-| Clear | “This district earns when visitors arrive.” | Dense financial jargon or unexplained slang. |
-| Wry, not cruel | “That was an ambitious bid.” | Humiliating loss messages or taunts. |
-| Strategically precise | “Your next upgrade raises recurring income and upkeep.” | “Just roll and hope.” |
-| Community-minded | “Host a room, suggest a rule set, contribute an icon.” | Ownership claims that erase contributors. |
+| Attribute             | Sounds like                                             | Does not sound like                          |
+| --------------------- | ------------------------------------------------------- | -------------------------------------------- |
+| Inviting              | “Bring a few friends. The town is open.”                | “Dominate your opponents.”                   |
+| Clear                 | “This district earns when visitors arrive.”             | Dense financial jargon or unexplained slang. |
+| Wry, not cruel        | “That was an ambitious bid.”                            | Humiliating loss messages or taunts.         |
+| Strategically precise | “Your next upgrade raises recurring income and upkeep.” | “Just roll and hope.”                        |
+| Community-minded      | “Host a room, suggest a rule set, contribute an icon.”  | Ownership claims that erase contributors.    |
 
 ### Copy examples
 
@@ -124,7 +124,7 @@ Beyond the standing prohibitions in [IP safety](../legal/ip-safety.md), this set
 
 ### Familiar without confusing source
 
-Familiarity should come from the *genre contract*: turn-taking, acquiring and improving assets, variable income/costs, resource pressure, and player negotiation. It must not come from reproducing a source game’s protected expression. Build recognition through onboarding, clear information hierarchy, original iconography, and explanatory microcopy. Test the product with a “source confusion” review: a player should understand the genre, but should not reasonably believe it is affiliated with, endorsed by, or derived from a specific commercial game.
+Familiarity should come from the _genre contract_: turn-taking, acquiring and improving assets, variable income/costs, resource pressure, and player negotiation. It must not come from reproducing a source game’s protected expression. Build recognition through onboarding, clear information hierarchy, original iconography, and explanatory microcopy. Test the product with a “source confusion” review: a player should understand the genre, but should not reasonably believe it is affiliated with, endorsed by, or derived from a specific commercial game.
 
 ## Provisional terminology
 
@@ -137,30 +137,30 @@ The project runs **two vocabularies**, and they must not be confused.
 - The **wire layer** is the canonical engineering vocabulary in the [Glossary](../product/glossary.md): `deed`, `district`, `transit`, `utility`, `detention`, `rest`, `start`, `landmark`, `improvement`, `bank`. It appears in commands, domain events, wire fields, and tests. **Blockparty does not change it.** A name change must never trigger a schema migration.
 - The **display layer** is what a player reads. It is defined here and mapped one-to-one in the Glossary.
 
-| Wire term | Blockparty display name | Notes |
-| --- | --- | --- |
-| board / route | The Neighborhood | An irregular street map. Never a square perimeter. |
-| deed | Address | One ownable spot on a street. |
-| district | Block | The set of Addresses on one street. Sizes vary. |
-| improvement | Folding Table → Stall | Intermediate levels only. Each throws a bigger party. Original visual progression. |
-| landmark | Block Stage | Final level only. Completes the ladder above. |
-| transit | Food Truck | Replaces the source game's vehicle category outright. |
-| utility | Hookup | Street-party infrastructure. Instances are Power Hookup and Water Hookup. |
-| bank | The Committee | The organizing committee. Non-player counterparty. |
-| Start | Sunup | Crossing it pays the day's float. No slogan, no corner label. |
-| Rest | The Stoop | Neutral space. Sit a while. |
-| Detention | Noise Complaint | Constrained player state and its board location. |
-| Detention-release card | Neighborly Word | Clears the complaint. |
-| fee space | Permit Fee · Cleanup Fee | Independently authored fee themes and values. |
-| variant jackpot pool | The Potluck | Everyone brings something. Warm, not a jackpot. |
-| event decks | Word of Mouth · Favors | Two decks, independently authored titles and text. |
-| currency | Tabs | See the review flag below. |
-| player pieces | Guest markers | Original silhouettes, patterns, and animation. |
-| obligation | Owed | What a player must pay, with the reason shown. |
-| bankruptcy | Packed Up | Elimination. Wry, never humiliating — see Voice. |
-| redeem mortgage | Buy Back | Clearing a mortgaged Address. |
-| host capability | Host controls | The host's lobby and recovery controls. |
-| seat, invite, host | unchanged | Already block-party words. Same term in both layers. |
+| Wire term              | Blockparty display name  | Notes                                                                              |
+| ---------------------- | ------------------------ | ---------------------------------------------------------------------------------- |
+| board / route          | The Neighborhood         | An irregular street map. Never a square perimeter.                                 |
+| deed                   | Address                  | One ownable spot on a street.                                                      |
+| district               | Block                    | The set of Addresses on one street. Sizes vary.                                    |
+| improvement            | Folding Table → Stall    | Intermediate levels only. Each throws a bigger party. Original visual progression. |
+| landmark               | Block Stage              | Final level only. Completes the ladder above.                                      |
+| transit                | Food Truck               | Replaces the source game's vehicle category outright.                              |
+| utility                | Hookup                   | Street-party infrastructure. Instances are Power Hookup and Water Hookup.          |
+| bank                   | The Committee            | The organizing committee. Non-player counterparty.                                 |
+| Start                  | Sunup                    | Crossing it pays the day's float. No slogan, no corner label.                      |
+| Rest                   | The Stoop                | Neutral space. Sit a while.                                                        |
+| Detention              | Noise Complaint          | Constrained player state and its board location.                                   |
+| Detention-release card | Neighborly Word          | Clears the complaint.                                                              |
+| fee space              | Permit Fee · Cleanup Fee | Independently authored fee themes and values.                                      |
+| variant jackpot pool   | The Potluck              | Everyone brings something. Warm, not a jackpot.                                    |
+| event decks            | Word of Mouth · Favors   | Two decks, independently authored titles and text.                                 |
+| currency               | Tabs                     | See the review flag below.                                                         |
+| player pieces          | Guest markers            | Original silhouettes, patterns, and animation.                                     |
+| obligation             | Owed                     | What a player must pay, with the reason shown.                                     |
+| bankruptcy             | Packed Up                | Elimination. Wry, never humiliating — see Voice.                                   |
+| redeem mortgage        | Buy Back                 | Clearing a mortgaged Address.                                                      |
+| host capability        | Host controls            | The host's lobby and recovery controls.                                            |
+| seat, invite, host     | unchanged                | Already block-party words. Same term in both layers.                               |
 
 **Review flag — currency.** “Tabs” carries a mild bar-tab connotation. The audience is 13+ and this brand bans gambling framing. If review objects, fall back to **Credits**. Do not use Chips, Kitty, Pot, or Tickets — every one of those reads gambling.
 

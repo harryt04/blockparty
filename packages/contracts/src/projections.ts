@@ -109,7 +109,9 @@ export const LegalAction = z
   .object({
     type: CommandTypeSchema,
     /** Bounded parameters, such as a minimum and maximum auction bid. */
-    constraints: z.record(z.string().max(32), z.union([z.number(), z.string(), z.boolean()])).optional(),
+    constraints: z
+      .record(z.string().max(32), z.union([z.number(), z.string(), z.boolean()]))
+      .optional(),
   })
   .strict();
 export type LegalAction = z.infer<typeof LegalAction>;

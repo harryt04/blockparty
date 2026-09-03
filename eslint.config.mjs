@@ -17,8 +17,7 @@ const SERVER_ONLY_MODULES = [
   },
   {
     name: "@blockparty/game-engine",
-    message:
-      "Only apps/web server modules call the engine to accept a command. See ENG-002.",
+    message: "Only apps/web server modules call the engine to accept a command. See ENG-002.",
   },
 ];
 
@@ -86,8 +85,7 @@ export default tseslint.config(
           patterns: [
             {
               group: ["@/server", "@/server/*", "**/server/*"],
-              message:
-                "Browser code must not import apps/web server modules. See ENG-002.",
+              message: "Browser code must not import apps/web server modules. See ENG-002.",
             },
           ],
         },

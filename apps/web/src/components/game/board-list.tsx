@@ -23,17 +23,14 @@ export function BoardList({
   seats: readonly SeatProjection[];
   currencyLabel?: string;
 }) {
-  const seatName = (seatId: string) =>
-    seats.find((seat) => seat.seatId === seatId)?.name ?? seatId;
+  const seatName = (seatId: string) => seats.find((seat) => seat.seatId === seatId)?.name ?? seatId;
 
   return (
     <ol aria-label="Board stops in route order" className="flex flex-col gap-2">
       {spaces.map((space) => {
         const category = SPACE_CATEGORY_DISPLAY[space.category];
         const deedCategory =
-          space.deedCategory === undefined
-            ? undefined
-            : DEED_CATEGORY_DISPLAY[space.deedCategory];
+          space.deedCategory === undefined ? undefined : DEED_CATEGORY_DISPLAY[space.deedCategory];
 
         return (
           <li
@@ -41,9 +38,7 @@ export function BoardList({
             className="rounded-(--radius-md) border border-line bg-surface-raised p-3"
           >
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <span className="tabular text-sm text-muted-ink">
-                Stop {space.routeIndex}
-              </span>
+              <span className="tabular text-sm text-muted-ink">Stop {space.routeIndex}</span>
               <span className="font-medium">{space.name}</span>
               <Badge>{deedCategory?.label ?? category.label}</Badge>
             </div>

@@ -30,17 +30,17 @@ Transport types are `game.command`, `game.snapshot`, `game.events`, `game.comman
 
 `game.commandAck` is durable acceptance, not merely HTTP receipt: `{commandId, accepted: true, aggregateVersion, firstSequence, lastSequence}`. Repeating a committed `commandId` returns the stored ACK/events metadata and does not re-run the engine. An unknown or uncommitted command ID may be retried with the same command ID. A rejected command returns `accepted: false` with no state change.
 
-| Code | Meaning | Client behavior |
-|---|---|---|
-| `INVALID_ENVELOPE` / `INVALID_PAYLOAD` | Schema or bounded input failed | Show safe error; do not retry unchanged. |
-| `UNAUTHENTICATED` / `FORBIDDEN` | Missing/invalid capability or wrong seat | Refresh/join flow; do not expose detail. |
-| `NOT_FOUND` / `GAME_EXPIRED` | Resource unavailable/retained no longer | Return to home. |
-| `STALE_VERSION` | `expectedVersion` differs | Request sync; require the user to act on current state. |
-| `ILLEGAL_ACTION` / `PHASE_MISMATCH` | Engine rejects action now | Refresh legal actions/state. |
-| `DUPLICATE_COMMAND` | Already committed | Treat stored ACK as success. |
-| `RATE_LIMITED` / `SERVER_BUSY` | Retryable admission failure | Back off with jitter. |
-| `PROTOCOL_UNSUPPORTED` / `CONTENT_UNSUPPORTED` | Client/game incompatible | Force app update or support message. |
-| `INTERNAL` | Unexpected server failure | Retry only with the same `commandId`; show generic message. |
+| Code                                           | Meaning                                  | Client behavior                                             |
+| ---------------------------------------------- | ---------------------------------------- | ----------------------------------------------------------- |
+| `INVALID_ENVELOPE` / `INVALID_PAYLOAD`         | Schema or bounded input failed           | Show safe error; do not retry unchanged.                    |
+| `UNAUTHENTICATED` / `FORBIDDEN`                | Missing/invalid capability or wrong seat | Refresh/join flow; do not expose detail.                    |
+| `NOT_FOUND` / `GAME_EXPIRED`                   | Resource unavailable/retained no longer  | Return to home.                                             |
+| `STALE_VERSION`                                | `expectedVersion` differs                | Request sync; require the user to act on current state.     |
+| `ILLEGAL_ACTION` / `PHASE_MISMATCH`            | Engine rejects action now                | Refresh legal actions/state.                                |
+| `DUPLICATE_COMMAND`                            | Already committed                        | Treat stored ACK as success.                                |
+| `RATE_LIMITED` / `SERVER_BUSY`                 | Retryable admission failure              | Back off with jitter.                                       |
+| `PROTOCOL_UNSUPPORTED` / `CONTENT_UNSUPPORTED` | Client/game incompatible                 | Force app update or support message.                        |
+| `INTERNAL`                                     | Unexpected server failure                | Retry only with the same `commandId`; show generic message. |
 
 ## PROTO-003: SSE subscriptions, presence, and reconnect
 
@@ -70,15 +70,15 @@ Use the official MongoDB driver. MongoDB must run as a replica set because stand
 
 The complete collection shape is defined in [MongoDB data model](architecture.md#mongodb-data-model). In summary:
 
-| Collection | Required indexes/constraints |
-|---|---|
-| `games` | Unique `_id`; status/expiry index; bounded snapshot and captured version metadata. |
-| `gameEvents` | Unique `(gameId, sequence)`; `(gameId, aggregateVersion)` index; validated event version/type. |
-| `commandReceipts` | Unique `(gameId, commandId)`; bounded ACK/event metadata. |
-| `invitations` | Unique opaque invite ID; game/status/expiry indexes. |
-| `capabilities` | Unique token hash; game/seat/kind/status and expiry indexes. |
-| `hostCapabilities` | One active capability per game; unique token hash. |
-| `auditLog` | Game/time and seat/time indexes; no raw tokens or names. |
+| Collection         | Required indexes/constraints                                                                   |
+| ------------------ | ---------------------------------------------------------------------------------------------- |
+| `games`            | Unique `_id`; status/expiry index; bounded snapshot and captured version metadata.             |
+| `gameEvents`       | Unique `(gameId, sequence)`; `(gameId, aggregateVersion)` index; validated event version/type. |
+| `commandReceipts`  | Unique `(gameId, commandId)`; bounded ACK/event metadata.                                      |
+| `invitations`      | Unique opaque invite ID; game/status/expiry indexes.                                           |
+| `capabilities`     | Unique token hash; game/seat/kind/status and expiry indexes.                                   |
+| `hostCapabilities` | One active capability per game; unique token hash.                                             |
+| `auditLog`         | Game/time and seat/time indexes; no raw tokens or names.                                       |
 
 Use string UUIDs for domain identifiers. Validate document and event sizes before insert. Application-controlled cleanup performs the authoritative expiry transition; a MongoDB TTL index may be a secondary cleanup guard only.
 

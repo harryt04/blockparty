@@ -65,8 +65,8 @@ export default function CreatePage() {
           <CardHeader>
             <CardTitle>Seats</CardTitle>
             <CardDescription>
-              Two to six seats. Fill any seat you do not need with a bot. At
-              least one seat stays open for a person.
+              Two to six seats. Fill any seat you do not need with a bot. At least one seat stays
+              open for a person.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -107,8 +107,8 @@ export default function CreatePage() {
           <CardHeader>
             <CardTitle>Rules</CardTitle>
             <CardDescription>
-              Start from a preset, then change any of the eight options. Rules
-              lock when the game starts.
+              Start from a preset, then change any of the eight options. Rules lock when the game
+              starts.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -128,8 +128,8 @@ export default function CreatePage() {
                 <span>
                   Short game
                   <span className="block text-sm text-muted-ink">
-                    Deals Addresses at the start and relaxes even building.
-                    Shorter, but higher variance.
+                    Deals Addresses at the start and relaxes even building. Shorter, but higher
+                    variance.
                   </span>
                 </span>
               </label>
@@ -154,10 +154,9 @@ export default function CreatePage() {
 
         <Alert variant="info">
           <AlertDescription>
-            Anyone with the invite link can join until the game starts. Names
-            are for this game only; do not use a real name. The game and its
-            links are removed 30 days after the last action. For players aged
-            13 and over.
+            Anyone with the invite link can join until the game starts. Names are for this game
+            only; do not use a real name. The game and its links are removed 30 days after the last
+            action. For players aged 13 and over.
           </AlertDescription>
         </Alert>
 
