@@ -278,12 +278,13 @@ print the seed on failure.
       Proves: fixed-seed deck goldens and every-effect lifecycle scenarios; TEST-002 pure-engine golden/scenario layer.
       Implemented server-only deterministic deck cursors, replayable card draws/discards, ordered effect execution, and retained-card removal; `packages/game-engine/test/cards.test.ts` proves fixed-seed shuffles, both deck paths, lifecycle ordering, and replay.
 
-- [ ] **A11 — Detention**
+- [x] **A11 — Detention**
       Blocked by: A10
       Requirements: RULE-009, RULE-010, CONTENT-005
       Read: docs/product/rules.md, docs/product/game-content.md
       Acceptance: entry, fee/card release, roll attempts, matching release, income/asset rights, movement, and turn completion follow the no-timer state machine.
       Proves: detention transition tables cover every release path and final-attempt edge; TEST-002 pure-engine table layer.
+      Implemented replayable Detention choice routes for held release cards, post-attempt fees, matching attempts, failed-attempt turn completion, and VAR-004 income suppression; `packages/game-engine/test/detention.test.ts` covers release, movement, replay, asset retention, and no-timer transitions.
 
 - [ ] **A12 — Obligation and debt**
       Blocked by: A5, A9

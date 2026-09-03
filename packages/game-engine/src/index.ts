@@ -207,6 +207,10 @@ function payloadBoolean(event: EngineEvent, key: string): boolean | undefined {
   return typeof value === "boolean" ? value : undefined;
 }
 
+function detentionChoiceId(seatId: SeatId): string {
+  return `detention:${seatId}`;
+}
+
 function payloadSeatOrder(event: EngineEvent): readonly SeatId[] | undefined {
   const value = event.payload.seatOrder;
   if (
@@ -517,14 +521,19 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
           : { pendingImprovementAuction: undefined }),
       });
     }
-    case "TurnStarted":
+    case "TurnStarted": {
+      const seatId = payloadSeatId(event, "seatId") ?? state.activeSeatId;
+      const seat = seatId === undefined ? undefined : findSeat(state, seatId);
+      const detained = seat?.detained ?? false;
       return freezeState({
         ...state,
-        phase: "AwaitRoll",
-        activeSeatId: payloadSeatId(event, "seatId") ?? state.activeSeatId,
-        prioritySeatId: payloadSeatId(event, "seatId") ?? state.prioritySeatId,
+        phase: detained ? "AwaitChoice" : "AwaitRoll",
+        activeSeatId: seatId,
+        prioritySeatId: seatId ?? state.prioritySeatId,
         effectQueue: [],
-        pendingChoice: undefined,
+        pendingChoice: detained
+          ? { choiceId: detentionChoiceId(seatId as SeatId), continuation: [] }
+          : undefined,
         pendingAcquisitionDeedId: undefined,
         pendingAuction: undefined,
         resolvingCard: undefined,
@@ -534,16 +543,25 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
           ? {}
           : { pendingImprovementAuction: undefined }),
       });
+    }
     case "DiceRolled": {
       // Dice values are event data. Replay changes no PRNG state and never
       // asks the random source to reconstruct the recorded outcome. ENG-022.
       const dice = payloadDice(event);
       const matchingRolls = payloadNumber(event, "consecutiveMatchingRolls");
+      const detentionTurnsRemaining = payloadNumber(event, "detentionTurnsRemaining");
       return freezeState({
         ...state,
         phase: "ResolveMove",
         lastRoll: dice,
         consecutiveMatchingRolls: matchingRolls ?? state.consecutiveMatchingRolls,
+        ...(detentionTurnsRemaining === undefined
+          ? {}
+          : {
+              seats: state.seats.map((seat) =>
+                seat.seatId === state.activeSeatId ? { ...seat, detentionTurnsRemaining } : seat,
+              ),
+            }),
       });
     }
     case "TokenMoved": {
@@ -683,6 +701,47 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
           seat.seatId === seatId && !seat.detentionReleaseCardIds.includes(cardId)
             ? { ...seat, detentionReleaseCardIds: [...seat.detentionReleaseCardIds, cardId] }
             : seat,
+        ),
+      });
+    }
+    case "DetentionReleaseCardUsed": {
+      const seatId = payloadSeatId(event, "seatId");
+      const cardId = payloadSeatId(event, "cardId");
+      const deckId = payloadString(event, "deckId");
+      if (seatId === undefined || cardId === undefined) return state;
+      const decks =
+        deckId === undefined || state.decks === undefined
+          ? state.decks
+          : state.decks.map((deck) =>
+              deck.deckId === deckId && !deck.discardPile.includes(cardId)
+                ? { ...deck, discardPile: [...deck.discardPile, cardId] }
+                : deck,
+            );
+      return freezeState({
+        ...state,
+        ...(decks === undefined ? {} : { decks }),
+        seats: state.seats.map((seat) =>
+          seat.seatId === seatId
+            ? {
+                ...seat,
+                detentionReleaseCardIds: seat.detentionReleaseCardIds.filter(
+                  (candidate) => candidate !== cardId,
+                ),
+              }
+            : seat,
+        ),
+      });
+    }
+    case "DetentionReleased": {
+      const seatId = payloadSeatId(event, "seatId");
+      if (seatId === undefined) return state;
+      return freezeState({
+        ...state,
+        phase: "AwaitRoll",
+        pendingChoice: undefined,
+        consecutiveMatchingRolls: 0,
+        seats: state.seats.map((seat) =>
+          seat.seatId === seatId ? { ...seat, detained: false, detentionTurnsRemaining: 0 } : seat,
         ),
       });
     }
@@ -1242,6 +1301,8 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         phase: "TurnStart",
         activeSeatId: payloadSeatId(event, "nextSeatId") ?? state.activeSeatId,
         prioritySeatId: payloadSeatId(event, "nextSeatId") ?? state.prioritySeatId,
+        consecutiveMatchingRolls:
+          payloadBoolean(event, "resetMatchingRolls") === true ? 0 : state.consecutiveMatchingRolls,
         effectQueue: [],
         pendingChoice: undefined,
         ...(state.scarceImprovementDemands === undefined ? {} : { scarceImprovementDemands: [] }),
@@ -1674,6 +1735,15 @@ function calculateRent(
   deedState: DeedState,
   ownerSeatId: SeatId,
 ): RentCalculation | Rejection {
+  const owner = findSeat(state, ownerSeatId);
+  if (owner === undefined) {
+    return reject("INVALID_PAYLOAD", "UNKNOWN_RENT_CREDITOR", "The rent creditor is not active.");
+  }
+  if (owner.detained && rules.configuration.noIncomeWhileDetained) {
+    // VAR-004 suppresses only income received by a detained owner. Ownership
+    // and the deed's other rights remain unchanged until release.
+    return { amount: 0, basis: { category: deed.category, suppressed: true } };
+  }
   const ownerDeeds = state.deeds.filter((candidate) => candidate.ownerSeatId === ownerSeatId);
   switch (deed.category) {
     case "district": {
@@ -1776,7 +1846,7 @@ function calculateRent(
 function moveEvent(
   actorSeatId: SeatId,
   movement: Movement,
-  movementType: "normalDice" | "forced",
+  movementType: "normalDice" | "detentionAttempt" | "forced",
   remainingEffects: readonly QueuedEffect[] = [],
 ): EngineEvent {
   return freezeEvent({
@@ -1802,7 +1872,7 @@ function applyMovement(
   movement: Movement,
   rules: RuleSet,
   events: EngineEvent[],
-  movementType: "normalDice" | "forced",
+  movementType: "normalDice" | "detentionAttempt" | "forced",
   exactNormalStart: boolean,
   remainingEffects: readonly QueuedEffect[] = [],
 ): GameState {
@@ -2068,6 +2138,12 @@ function resolveDeedLanding(
     const rent = calculateRent(state, rules, deed, deedState, deedState.ownerSeatId);
     if ("ok" in rent) {
       return { state: freezeState({ ...state, effectQueue: [] }), events: Object.freeze([]) };
+    }
+    if (rent.amount === 0 && rent.basis.suppressed === true) {
+      return {
+        state: freezeState({ ...state, effectQueue: [] }),
+        events: Object.freeze([]),
+      };
     }
     const creditorSeatId = deedState.ownerSeatId;
     const creditor = findSeat(state, creditorSeatId);
@@ -2335,6 +2411,13 @@ function resolveEffectQueue(
       case "CollectBank": {
         const amount = effect.amount;
         if (!Number.isSafeInteger(amount) || amount < 0) break;
+        const actor = findSeat(nextState, actorSeatId);
+        if (actor?.detained && rules.configuration.noIncomeWhileDetained) {
+          // VAR-004: card-directed income is suppressed while detained, not
+          // deferred. The ordered effect is consumed with no ledger event.
+          nextState = freezeState({ ...nextState, effectQueue: remaining });
+          continue;
+        }
         const payment = freezeEvent({
           type: "BankPaymentCollected",
           eventVersion: 1,
@@ -2355,6 +2438,17 @@ function resolveEffectQueue(
       case "CollectEachPlayer": {
         const amount = effect.amount;
         if (!Number.isSafeInteger(amount) || amount < 0) break;
+        const actor = findSeat(nextState, actorSeatId);
+        if (
+          effect.type === "CollectEachPlayer" &&
+          actor?.detained &&
+          rules.configuration.noIncomeWhileDetained
+        ) {
+          // The detained player is the recipient of this card-directed
+          // collection; suppress it without creating a debt or payment.
+          nextState = freezeState({ ...nextState, effectQueue: remaining });
+          continue;
+        }
         const otherSeats = nextState.seats.filter(
           (seat) => seat.status === "active" && seat.seatId !== actorSeatId,
         );
@@ -2613,6 +2707,211 @@ function resolveEffectQueue(
   };
 }
 
+/** RULE-009, RULE-010, CONTENT-005: resolve the untimed Detention routes. */
+function resolveDetentionChoice(
+  state: GameState,
+  actorSeatId: SeatId,
+  optionId: string,
+  rules: RuleSet,
+): Resolution {
+  const seat = findSeat(state, actorSeatId);
+  if (seat === undefined || !seat.detained) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "NOT_DETAINED",
+      "Only a detained seat may choose a release route.",
+    );
+  }
+  const fee = rules.content.economy.detentionReleaseFee;
+  const maxAttempts = rules.content.economy.detentionMaxAttempts;
+  if (
+    !Number.isSafeInteger(fee) ||
+    fee < 0 ||
+    !Number.isSafeInteger(maxAttempts) ||
+    maxAttempts < 1
+  ) {
+    return reject("INVALID_PAYLOAD", "INVALID_DETENTION_RULES", "Detention rules are invalid.");
+  }
+
+  if (optionId.startsWith("use-release-card:")) {
+    const cardId = optionId.slice("use-release-card:".length);
+    if (!seat.detentionReleaseCardIds.includes(cardId)) {
+      return reject(
+        "ILLEGAL_ACTION",
+        "RELEASE_CARD_NOT_HELD",
+        "The selected Detention-release card is not held by this seat.",
+      );
+    }
+    const deckId = rules.content.decks.find((deck) =>
+      deck.cards.some((card) => card.cardId === cardId),
+    )?.deckId;
+    const used = freezeEvent({
+      type: "DetentionReleaseCardUsed",
+      eventVersion: 1,
+      actorSeatId,
+      payload: { seatId: actorSeatId, cardId, ...(deckId === undefined ? {} : { deckId }) },
+    } satisfies EngineEvent);
+    const released = freezeEvent({
+      type: "DetentionReleased",
+      eventVersion: 1,
+      actorSeatId,
+      payload: { seatId: actorSeatId, reason: "RELEASE_CARD" },
+    } satisfies EngineEvent);
+    return {
+      ok: true,
+      state: freezeState([used, released].reduce(applyEvent, state)),
+      events: Object.freeze([used, released]),
+    };
+  }
+
+  if (optionId === "pay-release-fee") {
+    if (seat.detentionTurnsRemaining < maxAttempts) {
+      return reject(
+        "ILLEGAL_ACTION",
+        "RELEASE_FEE_REQUIRED_AFTER_ATTEMPTS",
+        "The release fee is required only after the configured failed attempts.",
+      );
+    }
+    if (seat.balance < fee) {
+      const obligation = freezeEvent({
+        type: "ObligationCreated",
+        eventVersion: 1,
+        actorSeatId,
+        payload: {
+          debtorSeatId: actorSeatId,
+          amount: fee,
+          reasonCode: "DETENTION_RELEASE_FEE",
+          remainingEffects: [],
+        },
+      } satisfies EngineEvent);
+      return {
+        ok: true,
+        state: freezeState({
+          ...applyEvent(state, obligation),
+          phase: "AwaitDebt",
+          obligation: {
+            debtorSeatId: actorSeatId,
+            amount: fee,
+            reasonCode: "DETENTION_RELEASE_FEE",
+            continuation: [],
+          },
+        }),
+        events: Object.freeze([obligation]),
+      };
+    }
+    const paid = bankPaymentEvent(actorSeatId, fee, "DETENTION_RELEASE_FEE");
+    const released = freezeEvent({
+      type: "DetentionReleased",
+      eventVersion: 1,
+      actorSeatId,
+      payload: { seatId: actorSeatId, reason: "RELEASE_FEE" },
+    } satisfies EngineEvent);
+    const releasedState = freezeState([paid, released].reduce(applyEvent, state));
+    // CONTENT-005: after the final failed attempt, paying the fee includes
+    // the required roll and movement in that same untimed turn.
+    const rolled = resolveRollDice(
+      freezeState({ ...releasedState, consecutiveMatchingRolls: 0 }),
+      actorSeatId,
+      rules,
+    );
+    if (!rolled.ok) return rolled;
+    return {
+      ok: true,
+      state: rolled.state,
+      events: Object.freeze([paid, released, ...rolled.events]),
+    };
+  }
+
+  if (optionId !== "attempt-roll") {
+    return reject(
+      "INVALID_PAYLOAD",
+      "INVALID_DETENTION_OPTION",
+      "The Detention release route is invalid.",
+    );
+  }
+  if (seat.detentionTurnsRemaining >= maxAttempts) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "DETENTION_ATTEMPTS_EXHAUSTED",
+      "The release fee must be paid after the configured failed attempts.",
+    );
+  }
+
+  const first = nextInt(state.prng, 6);
+  const second = nextInt(first.next, 6);
+  const dice: readonly [number, number] = [first.value + 1, second.value + 1];
+  const matching = dice[0] === dice[1];
+  const attempts = matching ? seat.detentionTurnsRemaining : seat.detentionTurnsRemaining + 1;
+  const rolled = freezeEvent({
+    type: "DiceRolled",
+    eventVersion: 1,
+    actorSeatId,
+    payload: {
+      dice,
+      matching,
+      consecutiveMatchingRolls: 0,
+      detentionTurnsRemaining: attempts,
+      source: "detentionAttempt",
+    },
+  } satisfies EngineEvent);
+  let nextState = freezeState({ ...state, prng: second.next });
+  nextState = freezeState(applyEvent(nextState, rolled));
+  const events: EngineEvent[] = [rolled];
+
+  if (!matching) {
+    const nextSeatId = nextActiveSeatId(state, actorSeatId);
+    if (nextSeatId !== undefined) {
+      const ended = freezeEvent({
+        type: "TurnEnded",
+        eventVersion: 1,
+        actorSeatId,
+        payload: { nextSeatId, resetMatchingRolls: true, reason: "DETENTION_ATTEMPT_FAILED" },
+      } satisfies EngineEvent);
+      const started = freezeEvent({
+        type: "TurnStarted",
+        eventVersion: 1,
+        actorSeatId: nextSeatId,
+        payload: { seatId: nextSeatId },
+      } satisfies EngineEvent);
+      events.push(ended, started);
+      nextState = freezeState(applyEvent(nextState, ended));
+      nextState = freezeState(applyEvent(nextState, started));
+    }
+    return { ok: true, state: nextState, events: Object.freeze(events) };
+  }
+
+  const released = freezeEvent({
+    type: "DetentionReleased",
+    eventVersion: 1,
+    actorSeatId,
+    payload: { seatId: actorSeatId, reason: "MATCHING_ROLL" },
+  } satisfies EngineEvent);
+  events.push(released);
+  nextState = freezeState(applyEvent(nextState, released));
+  const movement = walkRoute(rules, seat.position, dice[0] + dice[1], true);
+  if (!("toPosition" in movement)) return movement;
+  const destination = findSpaceAtPosition(rules, movement.toPosition);
+  if (destination === undefined) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "INVALID_DESTINATION",
+      "The release roll reached no authored space.",
+    );
+  }
+  nextState = applyMovement(
+    nextState,
+    actorSeatId,
+    movement,
+    rules,
+    events,
+    "detentionAttempt",
+    false,
+    queuedEffects(destination),
+  );
+  const queued = resolveEffectQueue(nextState, actorSeatId, rules, queuedEffects(destination));
+  return { ok: true, state: queued.state, events: Object.freeze([...events, ...queued.events]) };
+}
+
 function resolvePendingChoice(
   state: GameState,
   actorSeatId: SeatId,
@@ -2634,6 +2933,10 @@ function resolvePendingChoice(
   }
   if (state.pendingChoice.choiceId !== choiceId) {
     return reject("ILLEGAL_ACTION", "CHOICE_MISMATCH", "The selected choice is no longer pending.");
+  }
+
+  if (choiceId === detentionChoiceId(actorSeatId)) {
+    return resolveDetentionChoice(state, actorSeatId, optionId, rules);
   }
 
   const resumed = resolveEffectQueue(
