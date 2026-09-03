@@ -23,7 +23,7 @@ import {
   generateInviteId,
   hashCapability,
 } from "../auth/capabilities";
-import type { CapturedVersions, GameId, SeatId } from "@blockparty/contracts";
+import type { CapturedVersions, GameId, GameStatus, SeatId } from "@blockparty/contracts";
 
 const RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -37,7 +37,7 @@ export interface GameSeatRecord {
 
 export interface GameDocument {
   readonly _id: GameId;
-  readonly status: "LOBBY";
+  readonly status: GameStatus;
   readonly name?: string;
   readonly seatCount: number;
   readonly seats: readonly GameSeatRecord[];
@@ -93,8 +93,8 @@ export interface AuditDocument {
   readonly _id?: string;
   readonly gameId: GameId;
   readonly seatId: SeatId;
-  readonly action: "game_created";
-  readonly reasonCode: "CREATE";
+  readonly action: "game_created" | "game_joined";
+  readonly reasonCode: "CREATE" | "JOIN";
   readonly occurredAt: Date;
 }
 

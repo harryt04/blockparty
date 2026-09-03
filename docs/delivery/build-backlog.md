@@ -352,12 +352,13 @@ seat. Each ticket removes the corresponding builder from
       Proves: create integration cases inspect documents/cookies and prove no raw capability or seed crosses storage/response/log boundaries; TEST-002 protocol/security layer.
       Implemented transaction-scoped lobby creation, immutable version/hash capture, 256-bit seed storage, 30-day expiry, audit record, and distinct host/seat/reclaim cookies with hash-only capability documents; `apps/web/test/create-game.test.ts` proves persistence and response/cookie secrecy.
 
-- [ ] **B3 — Join gate, seat claim, and pseudonym validation**
+- [x] **B3 — Join gate, seat claim, and pseudonym validation**
       Blocked by: B2
       Requirements: PRD-FUN-003, PRD-FUN-004, PRD-FUN-005, SEC-002, SEC-003
       Read: docs/product/prd.md, docs/engineering/realtime-and-data.md, docs/engineering/security-privacy-analytics.md
       Acceptance: invite admission reveals only the join gate, valid pseudonyms claim one open seat and receive new seat/reclaim cookies, occupied seats cannot be displaced, and failures remain non-enumerating.
       Proves: separate-client join integration tests cover validation, races, full rooms, replayed invites, and generic errors; TEST-002 protocol/security layer.
+      Implemented database-backed invite status and transactional seat claims with normalized grapheme-aware pseudonyms, hash-only seat/reclaim authorities, generic unavailable responses, and audit records. Proven by `apps/web/test/join-game.test.ts` and `apps/web/test/join-route.test.ts`; full CI passes.
 
 - [ ] **B4 — The transactional command path**
       Blocked by: B3

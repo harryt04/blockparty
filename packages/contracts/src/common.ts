@@ -95,22 +95,50 @@ function hasUnsafeCharacter(value: string): boolean {
   return false;
 }
 
+/** Reserved pseudonyms are configuration, not a new wire field. PRD-FUN-003. */
+export const DEFAULT_DISPLAY_NAME_DENYLIST = [
+  "admin",
+  "administrator",
+  "moderator",
+  "system",
+  "support",
+] as const;
+
+function graphemeCount(value: string): number {
+  return Array.from(new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(value))
+    .length;
+}
+
 /**
- * A game-scoped pseudonym. Never a real name, email, or account.
- * 1-24 characters after trim; control and bidi-override characters rejected.
- * See PRD-FUN-003.
- *
- * TODO: count grapheme clusters with Intl.Segmenter rather than code units,
- * collapse internal whitespace, and apply the configurable denylist.
+ * Normalizes a game-scoped pseudonym. Never a real name, email, or account.
+ * The denylist is injectable so deployments can add local reserved names
+ * without changing the wire shape. See PRD-FUN-003.
  */
-export const DisplayName = z
-  .string()
-  .trim()
-  .min(1)
-  .max(24)
-  .refine((value) => !hasUnsafeCharacter(value), {
-    message: "Control and bidirectional override characters are not allowed",
-  });
+export function normalizeDisplayName(value: string): string {
+  return value.trim().replace(/\s+/gu, " ");
+}
+
+export function createDisplayNameSchema(
+  denylist: readonly string[] = DEFAULT_DISPLAY_NAME_DENYLIST,
+) {
+  const normalizedDenylist = new Set(
+    denylist.map((entry) => normalizeDisplayName(entry).toLowerCase()),
+  );
+  return z
+    .string()
+    .refine((value) => !hasUnsafeCharacter(value), {
+      message: "Control and bidirectional override characters are not allowed",
+    })
+    .transform(normalizeDisplayName)
+    .refine((value) => graphemeCount(value) >= 1 && graphemeCount(value) <= 24, {
+      message: "Names must contain 1-24 Unicode grapheme clusters",
+    })
+    .refine((value) => !normalizedDenylist.has(value.toLowerCase()), {
+      message: "That pseudonym is reserved",
+    });
+}
+
+export const DisplayName = createDisplayNameSchema();
 export type DisplayName = z.infer<typeof DisplayName>;
 
 export const SeatKind = z.enum(["human", "bot", "open"]);

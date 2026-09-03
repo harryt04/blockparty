@@ -6,10 +6,23 @@
  * authority. On success the server issues the seat capability as a cookie; the
  * response body carries no capability material. See SEC-002.
  */
-import { JoinGameRequest, type JoinGameResponse } from "@blockparty/contracts";
+import { InviteId, JoinGameRequest, type JoinGameResponse } from "@blockparty/contracts";
+import { getDb, withMongoTransaction } from "@/server/db/client";
+import { COLLECTIONS } from "@/server/db/collections";
+import type {
+  AuditDocument,
+  CapabilityDocument,
+  GameDocument,
+  InvitationDocument,
+} from "@/server/games/create-game";
+import {
+  claimSeatInTransaction,
+  JoinNameUnavailableError,
+  JoinUnavailableError,
+  setJoinCookies,
+} from "@/server/games/join-game";
 import { guardMutation } from "@/server/http/guards";
 import { jsonError, jsonOk } from "@/server/http/responses";
-import { stubLobby } from "@/server/stub-data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,7 +35,7 @@ export async function POST(
   if (!guard.ok) return jsonError(guard.code, { reason: guard.reason });
 
   const { inviteId } = await params;
-  if (inviteId.length === 0) return jsonError("NOT_FOUND");
+  if (!InviteId.safeParse(inviteId).success) return jsonError("NOT_FOUND");
 
   let body: unknown;
   try {
@@ -34,15 +47,33 @@ export async function POST(
   const parsed = JoinGameRequest.safeParse(body);
   if (!parsed.success) return jsonError("INVALID_PAYLOAD");
 
-  // TODO(ENG-003): validate admission, confirm the name is unique among active
-  // seats by normalized case-insensitive comparison, claim an open seat in one
-  // transaction, issue the seat capability cookie, and return the authorized
-  // lobby projection.
-  const gameId = "00000000-0000-4000-8000-000000000000";
-  const response: JoinGameResponse = {
-    gameId,
-    seatId: "seat-1",
-    lobby: stubLobby(gameId),
-  };
-  return jsonOk(response);
+  try {
+    const database = getDb();
+    const joined = await withMongoTransaction((session) =>
+      claimSeatInTransaction(
+        {
+          games: database.collection<GameDocument>(COLLECTIONS.games),
+          invitations: database.collection<InvitationDocument>(COLLECTIONS.invitations),
+          capabilities: database.collection<CapabilityDocument>(COLLECTIONS.capabilities),
+          auditLog: database.collection<AuditDocument>(COLLECTIONS.auditLog),
+        },
+        session,
+        inviteId,
+        parsed.data,
+      ),
+    );
+
+    const responseBody: JoinGameResponse = {
+      gameId: joined.gameId,
+      seatId: joined.seatId,
+      lobby: joined.lobby,
+    };
+    const response = jsonOk(responseBody);
+    setJoinCookies(response, joined.capabilities);
+    return response;
+  } catch (error) {
+    if (error instanceof JoinNameUnavailableError) return jsonError("INVALID_PAYLOAD");
+    if (error instanceof JoinUnavailableError) return jsonError("NOT_FOUND");
+    return jsonError("SERVER_BUSY");
+  }
 }
