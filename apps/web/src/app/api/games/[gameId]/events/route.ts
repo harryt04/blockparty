@@ -9,7 +9,12 @@
  *
  * A dropped stream loses nothing: the client reconnects and calls /sync.
  */
-import { canSubscribe, KEEP_ALIVE_FRAME, subscribe } from "@/server/sse/registry";
+import { SyncQuery } from "@blockparty/contracts";
+import { getDb } from "@/server/db/client";
+import { COLLECTIONS } from "@/server/db/collections";
+import type { GameDocument } from "@/server/games/create-game";
+import { recover, recoveryStore, type RecoveryEnvelope } from "@/server/sync/recovery";
+import { canSubscribe, formatFrame, KEEP_ALIVE_FRAME, subscribe } from "@/server/sse/registry";
 import { ensureChangeStream } from "@/server/sse/change-stream";
 import { readSeatCapability } from "@/server/auth/session";
 import { checkRateLimit } from "@/server/http/guards";
@@ -28,6 +33,25 @@ export async function GET(request: Request, { params }: { params: Promise<{ game
   const limit = checkRateLimit(request, "sse");
   if (!limit.ok) return jsonError(limit.code, { gameId, reason: limit.reason });
 
+  const url = new URL(request.url);
+  const hasRecoveryQuery =
+    url.searchParams.has("lastSequence") || url.searchParams.has("aggregateVersion");
+  let recoveryQuery:
+    { readonly lastSequence: number; readonly aggregateVersion: number } | undefined;
+  if (hasRecoveryQuery) {
+    const lastSequence = url.searchParams.get("lastSequence");
+    const aggregateVersion = url.searchParams.get("aggregateVersion");
+    if (lastSequence === null || aggregateVersion === null) {
+      return jsonError("INVALID_PAYLOAD", { gameId });
+    }
+    const parsed = SyncQuery.safeParse({
+      lastSequence,
+      aggregateVersion,
+    });
+    if (!parsed.success) return jsonError("INVALID_PAYLOAD", { gameId });
+    recoveryQuery = parsed.data;
+  }
+
   try {
     const actor = await readSeatCapability(gameId);
     if (actor === undefined) return jsonError("UNAUTHENTICATED", { gameId });
@@ -35,6 +59,29 @@ export async function GET(request: Request, { params }: { params: Promise<{ game
       return jsonError("RATE_LIMITED", { gameId, reason: "SSE_CONNECTION_LIMIT" });
     }
     ensureChangeStream();
+
+    let recovery: RecoveryEnvelope | undefined;
+    if (recoveryQuery !== undefined) {
+      const database = getDb();
+      const game = await database
+        .collection<GameDocument>(COLLECTIONS.games)
+        .findOne({ _id: gameId });
+      if (game === null) return jsonError("NOT_FOUND", { gameId });
+      if (game.status === "EXPIRED" || game.expiresAt <= new Date()) {
+        return jsonError("GAME_EXPIRED", { gameId });
+      }
+      if (!game.seats.some((seat) => seat.seatId === actor.seatId)) {
+        return jsonError("FORBIDDEN", { gameId });
+      }
+      recovery = await recover(
+        recoveryStore(database),
+        game,
+        actor.seatId,
+        recoveryQuery.lastSequence,
+        recoveryQuery.aggregateVersion,
+      );
+      if (recovery === undefined) return jsonError("CONTENT_UNSUPPORTED", { gameId });
+    }
 
     const seatId = actor.seatId;
 
@@ -58,6 +105,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ game
           send: write,
           close: () => controller.close(),
         });
+
+        // A requested range/snapshot is sent after subscription admission so
+        // the connection remains live for changes that follow the recovery
+        // read. The envelope is already authorized and bounded by recover().
+        if (recovery !== undefined) write(formatFrame(recovery.type, recovery));
 
         keepAlive = setInterval(() => {
           try {

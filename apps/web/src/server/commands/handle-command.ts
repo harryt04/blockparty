@@ -133,12 +133,27 @@ function capturedRuleSet(game: GameDocument): RuleSet {
   return { content: bundle, configuration: game.configuration };
 }
 
-function publicEvent(event: DomainEvent): DomainEvent {
-  // GameStarted records shuffled order for replay, but future deck order is a
-  // server secret. B5 replaces this with a per-seat projection. ENG-022.
-  if (event.type !== "GameStarted" || !("deckOrders" in event.payload)) return event;
-  const payload = { ...event.payload };
-  delete payload.deckOrders;
+/** Removes server-only replay facts before a domain event crosses the wire. */
+export function publicEvent(event: DomainEvent): DomainEvent {
+  // Replay continuations and future deck state are intentionally absent from
+  // public event ranges; the seat-scoped snapshot carries the current result.
+  // ENG-022, PROTO-004.
+  const privateKeys = new Set([
+    "deckOrders",
+    "remainingCardIds",
+    "discardCardIds",
+    "remainingEffects",
+    "resolvingCardStack",
+  ]);
+  const payload = Object.fromEntries(
+    Object.entries(event.payload).filter(([key]) => !privateKeys.has(key)),
+  );
+  if (event.type === "CardDrawn" || event.type === "DetentionReleaseCardGranted") {
+    delete payload.cardId;
+    delete payload.retainable;
+    delete payload.deckId;
+  }
+  if (Object.keys(payload).length === Object.keys(event.payload).length) return event;
   return DomainEvent.parse({ ...event, payload });
 }
 

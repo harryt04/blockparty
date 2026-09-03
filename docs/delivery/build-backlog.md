@@ -385,12 +385,13 @@ seat. Each ticket removes the corresponding builder from
       Implemented cookie-authenticated SSE admission, per-seat allowlisted snapshot fan-out from the MongoDB change stream, bounded subscriptions, monotonic sequence filtering, and ephemeral presence in `apps/web/src/server/sse/`.
       Proven by `apps/web/test/events-route.test.ts` and `apps/web/test/sse.test.ts`; `pnpm run ci` and `pnpm build` pass (build retains the existing Next.js ESLint-plugin warning).
 
-- [ ] **B7 — Catch-up and resync**
+- [x] **B7 — Catch-up and resync**
       Blocked by: B6
       Requirements: PROTO-002, PROTO-003, PROTO-004, PRD-NFR-004
       Read: docs/engineering/realtime-and-data.md
       Acceptance: `/events` returns authorized bounded contiguous ranges, `/sync` selects catch-up or snapshot by sequence/version and retention bounds, and gaps/unsupported history require a snapshot rather than fabricated continuity.
       Proves: restart/gap/duplicate/out-of-order integration matrix proves catch-up, snapshot fallback, and per-seat filtering; TEST-002 protocol-integration layer.
+      Implemented bounded durable recovery in `apps/web/src/server/sync/recovery.ts`, authenticated `/sync`, and reconnect catch-up frames on `/events`; `apps/web/test/sync-route.test.ts` and `apps/web/test/events-route.test.ts` prove contiguous-range, gap, duplicate, ordering, boundedness, snapshot-fallback, and seat-filtering behavior.
 
 - [ ] **B8 — Disconnect pause and host transfer**
       Blocked by: B7
