@@ -9,7 +9,7 @@ import "server-only";
  * receives traffic. Never perform an opaque destructive migration at
  * application startup. See ENG-004.
  */
-import type { CreateIndexesOptions, IndexSpecification } from "mongodb";
+import type { Collection, CreateIndexesOptions, IndexDescription } from "mongodb";
 
 export const COLLECTIONS = {
   games: "games",
@@ -24,7 +24,7 @@ export const COLLECTIONS = {
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
 
 export interface IndexDefinition {
-  readonly key: IndexSpecification;
+  readonly key: IndexDescription["key"];
   readonly options: CreateIndexesOptions;
 }
 
@@ -71,3 +71,25 @@ export const INDEXES: Readonly<Record<CollectionName, readonly IndexDefinition[]
     { key: { seatId: 1, occurredAt: -1 }, options: { name: "seat_time" } },
   ],
 };
+
+/**
+ * Applies the complete index contract. `createIndexes` is idempotent when the
+ * named definition is unchanged, so this is safe to run before every image
+ * receives traffic. See ENG-004, ENG-016, and OPS-004.
+ */
+export async function ensureIndexes(
+  database: Pick<{ collection: (name: string) => Collection }, "collection">,
+): Promise<{ collections: number; indexes: number }> {
+  let indexes = 0;
+  for (const [name, definitions] of Object.entries(INDEXES) as [
+    CollectionName,
+    readonly IndexDefinition[],
+  ][]) {
+    if (definitions.length === 0) continue;
+    await database
+      .collection(name)
+      .createIndexes(definitions.map(({ key, options }) => ({ key, ...options })));
+    indexes += definitions.length;
+  }
+  return { collections: Object.keys(INDEXES).length, indexes };
+}

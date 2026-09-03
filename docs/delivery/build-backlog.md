@@ -335,12 +335,14 @@ Protocol tests use an ephemeral MongoDB replica set and separate clients per
 seat. Each ticket removes the corresponding builder from
 `apps/web/src/server/stub-data.ts`; B11 removes the empty file.
 
-- [ ] **B1 — MongoDB adapter, indexes, the maintenance command, real readiness**
+- [x] **B1 — MongoDB adapter, indexes, the maintenance command, real readiness**
       Blocked by: A16
       Requirements: ENG-004, ENG-006, ENG-016, OPS-002, OPS-004
       Read: docs/engineering/architecture.md, docs/engineering/realtime-and-data.md, docs/delivery/operations.md
       Acceptance: the official driver supplies bounded pools/sessions, applies every idempotent index from the web image, shuts down gracefully, and readiness distinguishes absent, healthy replica-set, and unhealthy database states.
       Proves: replica-set integration tests cover connection/index idempotency/readiness/shutdown; TEST-002 protocol-integration layer.
+      Implemented bounded MongoDB sessions/pools, full index maintenance, lifecycle shutdown wiring, and replica-set-aware readiness.
+      Proven by `apps/web/test/db.test.ts` (including a real replica-set run when `MONGODB_TEST_URI` is configured) and the full CI gate.
 
 - [ ] **B2 — Create game and capability issuance**
       Blocked by: B1
