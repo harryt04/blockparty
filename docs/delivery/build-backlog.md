@@ -198,12 +198,13 @@ provenance review.
 Pure Vitest only: no browser, clock, network, or database. Use fixed seeds and
 print the seed on failure.
 
-- [ ] **A1 — Seeded PRNG and replay determinism**
+- [x] **A1 — Seeded PRNG and replay determinism**
       Blocked by: 0.7
       Requirements: ENG-020, ENG-022, ENG-027
       Read: docs/engineering/game-engine.md
       Acceptance: a fixed-integer PRNG derives from a 256-bit seed, every random outcome is event data, and replay reconstructs byte-identical state without PRNG access or future deck order.
       Proves: fixed-seed goldens, event-only replay, and forbidden-import cases; TEST-002 pure-engine golden layer.
+      Implemented xoshiro128** seeded draws, event-only lifecycle replay, and immutable PRNG snapshots; `packages/game-engine/test/engine-seam.test.ts` covers fixed-seed goldens, recorded dice data, replay identity, mutation detection, and validation.
 
 - [ ] **A2 — `GameState`, the phase union, `StartGame`, `RollDice`**
       Blocked by: A1

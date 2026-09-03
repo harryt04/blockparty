@@ -47,6 +47,17 @@ Commands are tagged unions with an actor seat: `StartGame`, `RollDice`, `Acquire
 
 At game creation the server obtains a cryptographically random 256-bit seed, stores it as secret server data, and derives initial `prngState`. The engine uses a documented seeded PRNG algorithm implemented in TypeScript with fixed integer operations. One resolution consumes a known number of draws; dice values, deck shuffles, and any chance outcome are emitted in events. Replaying events must not require a PRNG, but replaying commands from the seed must produce the same events.
 
+The engine derives four big-endian 32-bit words from the seed. Each word is
+expanded with the fixed `mix32` avalanche (XOR with `0x9e3779b9`, multiply by
+`0x85ebca6b`, shift-XOR by 13, multiply by `0xc2b2ae35`, then shift-XOR by
+16), with each seed word XORed with a per-word `0x6d2b79f5` offset. The resulting four-word state uses
+the xoshiro128** transition: output `rotl(s1 * 5, 7) * 9`, then apply the
+published xoshiro128** XOR/rotate transition. `nextInt` maps one 32-bit output
+to bounds through `2^32`, and two outputs to an exact 53-bit sample for larger
+safe-integer bounds, using integer high-product arithmetic for a fixed draw
+count. `draws` counts 32-bit outputs consumed. These choices are part of the
+engine version.
+
 Never expose the seed or future deck order to a client. The public state exposes only outcomes and authorized current information. Engine tests must use fixed seeds and assert exact event streams.
 
 ## ENG-023: Legal actions and invariants

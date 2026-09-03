@@ -30,7 +30,7 @@ import type { PrngState } from "./prng";
 export * from "./prng";
 export * from "./invariants";
 
-export const ENGINE_VERSION = "0.0.0";
+export const ENGINE_VERSION = "0.1.0";
 export const STATE_SCHEMA_VERSION = "1.0.0";
 
 /**
@@ -83,6 +83,50 @@ export interface EngineEvent {
   readonly eventVersion: number;
   readonly actorSeatId?: SeatId;
   readonly payload: Readonly<Record<string, unknown>>;
+}
+
+function payloadSeatId(event: EngineEvent, key: string): SeatId | undefined {
+  const value = event.payload[key];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+/**
+ * The event-only foundation for replay. Rule tickets extend this reducer with
+ * their state transitions; random events are deliberately never re-drawn.
+ */
+function applyEvent(state: GameState, event: EngineEvent): GameState {
+  switch (event.type) {
+    case "GameStarted":
+      return {
+        ...state,
+        phase: "TurnStart",
+        activeSeatId: payloadSeatId(event, "firstSeatId") ?? state.activeSeatId,
+        prioritySeatId: payloadSeatId(event, "firstSeatId") ?? state.prioritySeatId,
+      };
+    case "TurnStarted":
+      return {
+        ...state,
+        phase: "AwaitRoll",
+        activeSeatId: payloadSeatId(event, "seatId") ?? state.activeSeatId,
+        prioritySeatId: payloadSeatId(event, "seatId") ?? state.prioritySeatId,
+      };
+    case "DiceRolled":
+      // Dice values are event data. Replay changes no PRNG state and never
+      // asks the random source to reconstruct the recorded outcome. ENG-022.
+      return { ...state, phase: "ResolveMove" };
+    case "TurnEnded":
+      return {
+        ...state,
+        phase: "TurnStart",
+        activeSeatId: payloadSeatId(event, "nextSeatId") ?? state.activeSeatId,
+        prioritySeatId: payloadSeatId(event, "nextSeatId") ?? state.prioritySeatId,
+      };
+    case "GameCompleted":
+    case "GameEndedNoContest":
+      return { ...state, phase: "Finished" };
+    default:
+      return state;
+  }
 }
 
 export interface Rejection {
@@ -163,9 +207,9 @@ export function actionAvailability(
  * every chance outcome is already recorded in the events. See ENG-022.
  */
 export function replay(
-  _initialState: GameState,
-  _events: readonly EngineEvent[],
+  initialState: GameState,
+  events: readonly EngineEvent[],
   _rules: RuleSet,
 ): GameState {
-  throw new Error("UNIMPLEMENTED: replay. See ENG-020.");
+  return events.reduce(applyEvent, initialState);
 }
