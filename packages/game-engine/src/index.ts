@@ -17,6 +17,7 @@
  */
 import type {
   ActorScopedCommand,
+  Command,
   CommandType,
   DomainEventType,
   Money,
@@ -5021,6 +5022,67 @@ function resolveDeclareBankruptcy(
   return { ok: true, state: working, events: Object.freeze(events) };
 }
 
+/** RULE-001, RULE-002: close a resolved turn and start the next priority seat. */
+function resolveEndTurn(state: GameState, actorSeatId: SeatId): Resolution {
+  const actorRejection = requireActiveActor(state, actorSeatId);
+  if (actorRejection !== undefined) return actorRejection;
+  if (state.phase !== "TurnStart" && state.phase !== "ResolveMove" && state.phase !== "TurnEnd") {
+    return reject(
+      "PHASE_MISMATCH",
+      "END_TURN_REQUIRES_MANAGE_PHASE",
+      "A turn can only end during the active management phase.",
+    );
+  }
+  if (state.activeSeatId !== actorSeatId) {
+    return reject("ILLEGAL_ACTION", "OUT_OF_TURN", "Only the active seat may end the turn.");
+  }
+  if (
+    state.effectQueue.length > 0 ||
+    state.pendingChoice !== undefined ||
+    state.pendingAcquisitionDeedId !== undefined ||
+    state.pendingAuction !== undefined ||
+    state.pendingImprovementAuction !== undefined ||
+    state.obligation !== undefined
+  ) {
+    return reject(
+      "PHASE_MISMATCH",
+      "END_TURN_REQUIRES_SAFE_BOUNDARY",
+      "A turn cannot end while a mandatory resolution is pending.",
+    );
+  }
+
+  const extraTurn = state.phase !== "TurnEnd" && state.consecutiveMatchingRolls > 0;
+  const nextSeatId = extraTurn ? actorSeatId : nextActiveSeatId(state, actorSeatId);
+  if (nextSeatId === undefined) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "NO_NEXT_SEAT",
+      "No active seat is available for the next turn.",
+    );
+  }
+  const ended = freezeEvent({
+    type: "TurnEnded",
+    eventVersion: 1,
+    actorSeatId,
+    payload: {
+      nextSeatId,
+      resetMatchingRolls: !extraTurn,
+      reason: extraTurn ? "MATCHING_ROLL_EXTRA_TURN" : "TURN_COMPLETE",
+    },
+  } satisfies EngineEvent);
+  const started = freezeEvent({
+    type: "TurnStarted",
+    eventVersion: 1,
+    actorSeatId: nextSeatId,
+    payload: { seatId: nextSeatId },
+  } satisfies EngineEvent);
+  return {
+    ok: true,
+    state: freezeState(applyEvent(applyEvent(state, ended), started)),
+    events: Object.freeze([ended, started]),
+  };
+}
+
 /** PRD-FUN-019: only an active host-boundary command can end a game without a winner. */
 function resolveEndNoContest(state: GameState, actorSeatId: SeatId): Resolution {
   const actorRejection = requireActiveActor(state, actorSeatId);
@@ -5654,8 +5716,262 @@ export function resolve(state: GameState, command: ActorScopedCommand, rules: Ru
       );
     case "EndNoContest":
       return resolveEndNoContest(state, command.actorSeatId);
+    case "EndTurn":
+      return resolveEndTurn(state, command.actorSeatId);
     default:
       return unimplemented(command.command.type);
+  }
+}
+
+type ActionCandidate = {
+  readonly command: Command;
+  readonly constraints?: Readonly<Record<string, number | string | boolean>>;
+};
+
+const availabilityReasons: Readonly<Record<string, string>> = {
+  UNKNOWN_SEAT: "This seat is not part of the game.",
+  SEAT_NOT_ACTIVE: "This seat is no longer active.",
+  INSUFFICIENT_SEATS: "At least two active seats are needed to start.",
+  OUT_OF_TURN: "Waiting for the active seat to act.",
+  DEBTOR_REQUIRED: "Only the seat with the pending obligation may act.",
+  AUCTION_PRIORITY_REQUIRED: "Waiting for the current auction priority seat.",
+  AUCTION_ALREADY_PASSED: "This seat already passed in the auction.",
+  BID_EXCEEDS_BALANCE: "The current balance cannot cover that bid.",
+  INSUFFICIENT_FUNDS: "There are not enough funds for this action.",
+  BANKRUPTCY_LIQUIDITY_AVAILABLE: "A legal liquidation action can still settle the debt.",
+  TRADE_ALREADY_PENDING: "Resolve the existing trade offer first.",
+  TRADE_PARTY_REQUIRED: "Only a named trade party may respond.",
+  TRADE_NOT_PENDING: "There is no active trade offer for this seat.",
+  TRADE_COUNTERPARTY_NOT_SOLVENT: "The trade counterparty must be active and solvent.",
+  DEED_NOT_OWNED: "This seat does not own that deed.",
+  DEED_ALREADY_MORTGAGED: "This deed is already mortgaged.",
+  DEED_NOT_MORTGAGED: "This deed is not mortgaged.",
+  IMPROVEMENT_PRESENT: "A deed with improvements cannot be mortgaged or traded.",
+  DISTRICT_HAS_IMPROVEMENTS: "Every deed in the district must be unimproved to mortgage it.",
+  DISTRICT_NOT_COMPLETE: "The district must be complete and unmortgaged first.",
+  IMPROVEMENT_AT_MAX_LEVEL: "This deed is already at its maximum improvement level.",
+  NO_IMPROVEMENT_TO_SELL: "This deed has no improvement to sell.",
+  EVEN_BUILDING_REQUIRED: "Improvements must follow the district's even-building order.",
+  IMPROVEMENT_INVENTORY_EXHAUSTED: "The bank has no available improvement pieces.",
+  SCARCE_AUCTION_DISABLED: "Scarce improvement auctions are disabled by the rules.",
+  SCARCE_DEMAND_DUPLICATE: "This improvement demand is already declared.",
+  NOT_DETAINED: "This seat is not in Detention.",
+  RELEASE_FEE_REQUIRED_AFTER_ATTEMPTS: "The release fee is required after the failed attempts.",
+  DETENTION_ATTEMPTS_EXHAUSTED: "The release attempts are exhausted; pay the release fee.",
+  CHOICE_NOT_PENDING: "There is no pending choice to answer.",
+  CHOICE_MISMATCH: "That choice is no longer pending.",
+  NO_CONTEST_REQUIRES_SAFE_BOUNDARY: "No-contest is available only at a safe turn boundary.",
+  END_TURN_REQUIRES_SAFE_BOUNDARY:
+    "Finish the current mandatory resolution before ending the turn.",
+  END_TURN_REQUIRES_MANAGE_PHASE: "A turn can only end during the active management phase.",
+};
+
+function availabilityReason(reasonCode: string): string {
+  return availabilityReasons[reasonCode] ?? "This action is unavailable right now.";
+}
+
+function deedCandidate(
+  type:
+    | "AcquireDeed"
+    | "DeclineAcquisition"
+    | "MortgageDeed"
+    | "RedeemMortgage"
+    | "BuyImprovement"
+    | "SellImprovement"
+    | "RequestScarceImprovement",
+  deedId: string,
+): ActionCandidate {
+  return { command: { type, deedId }, constraints: { deedId } } as ActionCandidate;
+}
+
+function managementCandidates(state: GameState): readonly ActionCandidate[] {
+  return state.deeds.flatMap((deed) => [
+    deedCandidate("MortgageDeed", deed.deedId),
+    deedCandidate("RedeemMortgage", deed.deedId),
+    deedCandidate("BuyImprovement", deed.deedId),
+    deedCandidate("SellImprovement", deed.deedId),
+    deedCandidate("RequestScarceImprovement", deed.deedId),
+  ]);
+}
+
+function tradeCandidate(state: GameState, actorSeatId: SeatId): ActionCandidate | undefined {
+  const counterparty = state.seats.find(
+    (seat) => seat.status === "active" && seat.seatId !== actorSeatId,
+  );
+  const actor = findSeat(state, actorSeatId);
+  if (counterparty === undefined || actor === undefined) return undefined;
+
+  const emptySide = (): {
+    cash: number;
+    deedIds: string[];
+    detentionReleaseCardIds: string[];
+  } => ({
+    cash: 0,
+    deedIds: [],
+    detentionReleaseCardIds: [],
+  });
+  const offered = emptySide();
+  const requested = emptySide();
+  if (actor.balance > 0) {
+    offered.cash = 1;
+  } else if (actor.deedIds[0] !== undefined) {
+    offered.deedIds = [actor.deedIds[0]];
+  } else if (actor.detentionReleaseCardIds[0] !== undefined) {
+    offered.detentionReleaseCardIds = [actor.detentionReleaseCardIds[0]];
+  } else if (counterparty.balance > 0) {
+    requested.cash = 1;
+  } else if (counterparty.deedIds[0] !== undefined) {
+    requested.deedIds = [counterparty.deedIds[0]];
+  } else if (counterparty.detentionReleaseCardIds[0] !== undefined) {
+    requested.detentionReleaseCardIds = [counterparty.detentionReleaseCardIds[0]];
+  } else {
+    return undefined;
+  }
+  return {
+    command: {
+      type: "ProposeTrade",
+      counterpartySeatId: counterparty.seatId,
+      offered,
+      requested,
+    },
+    constraints: { counterpartySeatId: counterparty.seatId },
+  };
+}
+
+function pendingTradeCandidates(state: GameState): readonly ActionCandidate[] {
+  const trade = state.pendingTrade;
+  if (trade === undefined) return [];
+  return [
+    {
+      command: { type: "AcceptTrade", tradeId: trade.tradeId },
+      constraints: { tradeId: trade.tradeId },
+    },
+    {
+      command: { type: "RejectTrade", tradeId: trade.tradeId },
+      constraints: { tradeId: trade.tradeId },
+    },
+    {
+      command: { type: "CancelTrade", tradeId: trade.tradeId },
+      constraints: { tradeId: trade.tradeId },
+    },
+  ];
+}
+
+function actionCandidates(
+  state: GameState,
+  actorSeatId: SeatId,
+  rules: RuleSet,
+): readonly ActionCandidate[] {
+  const seat = findSeat(state, actorSeatId);
+  if (seat?.status !== "active") return [];
+
+  switch (state.phase) {
+    case "Lobby":
+      return [{ command: { type: "StartGame" } }];
+    case "AwaitRoll":
+      return [{ command: { type: "RollDice" } }, { command: { type: "EndNoContest" } }];
+    case "AwaitPurchase": {
+      const deedId = state.pendingAcquisitionDeedId;
+      return deedId === undefined
+        ? []
+        : [deedCandidate("AcquireDeed", deedId), deedCandidate("DeclineAcquisition", deedId)];
+    }
+    case "AwaitAuction": {
+      const auction = state.pendingAuction;
+      if (auction === undefined) return [];
+      const bidAmount = auction.highBid + 1;
+      return [
+        {
+          command: { type: "PlaceAuctionBid", amount: bidAmount },
+          constraints: { minBid: bidAmount, maxBid: seat.balance },
+        },
+        { command: { type: "PassAuction" } },
+      ];
+    }
+    case "ImprovementAuction": {
+      const auction = state.pendingImprovementAuction;
+      if (auction === undefined) return [];
+      const demand = auction.demands.find((candidate) => candidate.seatId === actorSeatId);
+      const baseCost = demand?.baseCost ?? 0;
+      const bidAmount = auction.highBid + 1;
+      return [
+        {
+          command: { type: "PlaceAuctionBid", amount: bidAmount },
+          constraints: {
+            minBid: bidAmount,
+            maxBid: Math.max(0, seat.balance - baseCost),
+          },
+        },
+        { command: { type: "PassAuction" } },
+      ];
+    }
+    case "AwaitChoice": {
+      const choiceId = state.pendingChoice?.choiceId;
+      if (choiceId === undefined) return [];
+      if (choiceId !== detentionChoiceId(actorSeatId)) {
+        return [
+          {
+            command: { type: "ChoosePendingOption", choiceId, optionId: "selected" },
+            constraints: { choiceId },
+          },
+        ];
+      }
+      const options: ActionCandidate[] =
+        state.seats
+          .find((candidate) => candidate.seatId === actorSeatId)
+          ?.detentionReleaseCardIds.map((cardId) => ({
+            command: {
+              type: "ChoosePendingOption",
+              choiceId,
+              optionId: `use-release-card:${cardId}`,
+            },
+            constraints: { choiceId, optionId: `use-release-card:${cardId}` },
+          })) ?? [];
+      const detentionSeat = findSeat(state, actorSeatId);
+      const maxAttempts = rules.content.economy.detentionMaxAttempts;
+      if (detentionSeat !== undefined && detentionSeat.detentionTurnsRemaining < maxAttempts) {
+        options.push({
+          command: { type: "ChoosePendingOption", choiceId, optionId: "attempt-roll" },
+          constraints: { choiceId, optionId: "attempt-roll" },
+        });
+      } else {
+        options.push({
+          command: { type: "ChoosePendingOption", choiceId, optionId: "pay-release-fee" },
+          constraints: { choiceId, optionId: "pay-release-fee" },
+        });
+      }
+      return options;
+    }
+    case "TurnStart":
+    case "ResolveMove": {
+      const candidates = [...managementCandidates(state)];
+      const trade =
+        state.pendingTrade === undefined ? tradeCandidate(state, actorSeatId) : undefined;
+      if (trade !== undefined) candidates.push(trade);
+      candidates.push(...pendingTradeCandidates(state));
+      candidates.push({ command: { type: "EndTurn" } });
+      if (state.phase === "TurnStart") candidates.push({ command: { type: "EndNoContest" } });
+      return candidates;
+    }
+    case "TurnEnd":
+      return [{ command: { type: "EndTurn" } }];
+    case "AwaitDebt": {
+      const candidates = [
+        ...state.deeds.map((deed) => deedCandidate("MortgageDeed", deed.deedId)),
+        ...state.deeds.map((deed) => deedCandidate("SellImprovement", deed.deedId)),
+        { command: { type: "PayObligation" } } as ActionCandidate,
+        { command: { type: "DeclareBankruptcy" } } as ActionCandidate,
+      ];
+      const trade =
+        state.pendingTrade === undefined ? tradeCandidate(state, actorSeatId) : undefined;
+      if (trade !== undefined) candidates.push(trade);
+      candidates.push(...pendingTradeCandidates(state));
+      return candidates;
+    }
+    case "Finished":
+      return [];
+    default:
+      return [];
   }
 }
 
@@ -5667,20 +5983,23 @@ export function resolve(state: GameState, command: ActorScopedCommand, rules: Ru
 export function legalActions(
   state: GameState,
   actorSeatId: SeatId,
-  _rules: RuleSet,
+  rules: RuleSet,
 ): readonly LegalAction[] {
-  const seat = findSeat(state, actorSeatId);
-  if (seat?.status !== "active") return [];
-  if (
-    state.phase === "Lobby" &&
-    state.seats.filter((candidate) => candidate.status === "active").length >= 2
-  ) {
-    return [{ type: "StartGame" }];
-  }
-  if (state.phase === "AwaitRoll" && state.activeSeatId === actorSeatId) {
-    return [{ type: "RollDice" }];
-  }
-  return [];
+  return Object.freeze(
+    actionCandidates(state, actorSeatId, rules).flatMap((candidate) => {
+      const result = resolve(state, { actorSeatId, command: candidate.command }, rules);
+      return result.ok
+        ? [
+            {
+              type: candidate.command.type,
+              ...(candidate.constraints === undefined
+                ? {}
+                : { constraints: candidate.constraints }),
+            },
+          ]
+        : [];
+    }),
+  );
 }
 
 /**
@@ -5688,11 +6007,26 @@ export function legalActions(
  * UI data only; it never grants authority. See PRD-FUN-009.
  */
 export function actionAvailability(
-  _state: GameState,
-  _actorSeatId: SeatId,
-  _rules: RuleSet,
+  state: GameState,
+  actorSeatId: SeatId,
+  rules: RuleSet,
 ): readonly ActionAvailability[] {
-  return [];
+  const seen = new Set<string>();
+  const unavailable: ActionAvailability[] = [];
+  for (const candidate of actionCandidates(state, actorSeatId, rules)) {
+    const result = resolve(state, { actorSeatId, command: candidate.command }, rules);
+    if (result.ok) continue;
+    const key = `${candidate.command.type}:${result.reasonCode}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unavailable.push({
+      type: candidate.command.type,
+      available: false,
+      reasonCode: result.reasonCode,
+      reason: availabilityReason(result.reasonCode),
+    });
+  }
+  return Object.freeze(unavailable);
 }
 
 /**

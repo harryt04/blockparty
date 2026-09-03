@@ -303,19 +303,20 @@ print the seed on failure.
       Implemented escrow-free trade proposals with canonical cash/deed/release-card terms, atomic acceptance and mortgage transfer charges, named rejection/cancellation, stale invalidation, and debt liquidity support; `packages/game-engine/test/trade.test.ts` covers the reducer scenarios and replay.
 
 - [x] **A14 — Bankruptcy, elimination, endgame, and no-contest**
-  Blocked by: A12
-  Requirements: RULE-011, PRD-FUN-015, PRD-FUN-019
-  Read: docs/product/rules.md, docs/product/prd.md
-  Acceptance: unresolved debt disposes assets by creditor rule, eliminates seats from turns, produces configured winner/no-winner outcomes, and permits irreversible host no-contest only at a safe boundary.
-  Proves: bankruptcy/endgame scenarios cover both creditors, inventory, winner/no-winner, and no-contest legality; TEST-002 pure-engine scenario layer.
-  Implemented replayable bankruptcy liquidation, creditor/bank asset handling, elimination, terminal winner/no-winner outcomes, and safe-boundary no-contest; `packages/game-engine/test/bankruptcy.test.ts` covers the scenarios and replay.
+      Blocked by: A12
+      Requirements: RULE-011, PRD-FUN-015, PRD-FUN-019
+      Read: docs/product/rules.md, docs/product/prd.md
+      Acceptance: unresolved debt disposes assets by creditor rule, eliminates seats from turns, produces configured winner/no-winner outcomes, and permits irreversible host no-contest only at a safe boundary.
+      Proves: bankruptcy/endgame scenarios cover both creditors, inventory, winner/no-winner, and no-contest legality; TEST-002 pure-engine scenario layer.
+      Implemented replayable bankruptcy liquidation, creditor/bank asset handling, elimination, terminal winner/no-winner outcomes, and safe-boundary no-contest; `packages/game-engine/test/bankruptcy.test.ts` covers the scenarios and replay.
 
-- [ ] **A15 — `legalActions` and `actionAvailability`**
+- [x] **A15 — `legalActions` and `actionAvailability`**
       Blocked by: A14
       Requirements: PRD-FUN-009, ENG-020, ENG-023
       Read: docs/product/prd.md, docs/engineering/game-engine.md
       Acceptance: every phase exposes exhaustive seat-scoped legal actions/bounds and stable unavailable reasons while `resolve` rejects forged/stale commands independently.
       Proves: phase/seat tables compare query output with command resolution across the state union; TEST-002 pure-engine table layer.
+      Implemented reducer-backed legal-action enumeration for every supported phase, bounded auction parameters, detention choices, management targets, trade responses, and stable blocked-action copy; `packages/game-engine/test/legal-actions.test.ts` compares advertised actions with `resolve` and checks phase/seat reasons.
 
 - [ ] **A16 — Invariants, property tests, and golden replay fixtures**
       Blocked by: A15
