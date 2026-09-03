@@ -6,7 +6,8 @@
  *
  *   - The values are unbalanced and carry no simulation evidence (CONTENT-010).
  *   - The provenance record is a placeholder (CONTENT-008).
- *   - `hash` is a literal, not a computed canonical hash (CONTENT-001).
+ *   - The canonical hash is valid, but this bundle is still scaffolding and
+ *     is not an authored release bundle (CONTENT-001, CONTENT-008).
  *
  * `validateBundle` refuses this bundle in production for exactly that reason.
  * Authoring the first real bundle is its own ticket; do not grow this file.
@@ -363,8 +364,8 @@ export const PLACEHOLDER_BUNDLE: ContentBundle = {
       "Generated as build scaffolding. No third-party board, values, or card text consulted.",
     similarityDisposition: "Not reviewed. Blocks release until replaced by an authored bundle.",
   },
-  // TODO: compute the canonical hash over the serialized bundle. CONTENT-001.
-  hash: "placeholder-not-a-canonical-hash",
+  // Canonical SHA-256 over this bundle without the hash field. CONTENT-001.
+  hash: "4ff6b56b74c9d7ad7cd2687bb6b8faab1b96d9ed29b35a92df01af4f21488db7",
   startSpaceId: "s00",
   detentionSpaceId: "s06",
   spaces,

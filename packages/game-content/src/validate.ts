@@ -5,6 +5,7 @@
  * malformed authoring input must be rejected before it can become a RuleSet.
  */
 import type { BoardSpace, ContentBundle, Deed, Deck, District } from "./types";
+import { canonicalHashBundle } from "./canonical";
 
 const SUPPORTED_VARIANT_SCHEMA_VERSION = "1.0.0";
 const SPACE_TYPES = new Set([
@@ -58,6 +59,14 @@ export function validateBundle(
       "PLACEHOLDER_IN_PRODUCTION",
       "provenance.status",
       "Scaffolding content cannot be served in production. See CONTENT-008.",
+    );
+  }
+
+  if (bundle.hash !== canonicalHashBundle(bundle)) {
+    fail(
+      "BUNDLE_HASH_MISMATCH",
+      "hash",
+      "Recorded bundle hash does not match canonical content. See CONTENT-001.",
     );
   }
 

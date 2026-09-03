@@ -183,12 +183,13 @@ provenance review.
   Acceptance: Word of Mouth and Favors contain independently authored cards using only the closed DSL, and the register covers every creative/numerical asset while retaining the human release gate.
   Proves: deck/effect fixtures and complete register audit plus human sign-off; TEST-002 content-validation/human-review layers.
 
-- [ ] **0.7 — Canonical bundle hash, version registry, placeholder ban in production**
+- [x] **0.7 — Canonical bundle hash, version registry, placeholder ban in production**
       Blocked by: 0.6
       Requirements: CONTENT-001, CONTENT-008, ENG-027, PRD-NFR-008
       Read: docs/product/game-content.md, docs/engineering/game-engine.md
       Acceptance: canonical serialization matches the recorded v1.0.0 hash, registry lookups preserve started-game versions, and production refuses all `PLACEHOLDER_NOT_FOR_RELEASE` bundles.
       Proves: hash golden, old-version lookup, tamper, and production-placeholder cases; TEST-002 content fixture/compatibility layer.
+      Implemented canonical key-sorted serialization with browser-safe SHA-256, immutable version registries, hash validation, and production lookup rejection; `packages/game-content/test/canonical.test.ts` covers the golden, archived lookup, tamper, and placeholder cases.
 
 ---
 
