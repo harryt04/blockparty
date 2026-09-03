@@ -145,6 +145,34 @@ export interface PendingImprovementAuction {
   readonly passedSeatIds: readonly SeatId[];
 }
 
+/** A present-value, escrow-free side of a trade offer. ENG-025. */
+export interface TradeSide {
+  readonly cash: Money;
+  readonly deedIds: readonly string[];
+  readonly detentionReleaseCardIds: readonly string[];
+}
+
+interface TradeDeedSnapshot {
+  readonly deedId: string;
+  readonly mortgaged: boolean;
+  readonly improvementLevel: number;
+}
+
+/** The exact offer retained until its named counterparty responds. */
+export interface PendingTrade {
+  readonly tradeId: string;
+  readonly proposerSeatId: SeatId;
+  readonly counterpartySeatId: SeatId;
+  readonly offered: TradeSide;
+  readonly requested: TradeSide;
+  readonly proposerBalance: Money;
+  readonly counterpartyBalance: Money;
+  readonly offeredDeedSnapshots: readonly TradeDeedSnapshot[];
+  readonly requestedDeedSnapshots: readonly TradeDeedSnapshot[];
+  /** Server-assigned version at which the proposer confirmed this offer. */
+  readonly aggregateVersion: number;
+}
+
 export interface GameState {
   readonly stateSchemaVersion: string;
   readonly contentVersion: string;
@@ -176,6 +204,8 @@ export interface GameState {
   readonly scarceImprovementDemands?: readonly ScarceImprovementDemand[];
   /** Serialized handoff to the scarce-improvement auction reducer. */
   readonly pendingImprovementAuction?: PendingImprovementAuction;
+  /** Escrow-free offer; assets remain with their owners until acceptance. */
+  readonly pendingTrade?: PendingTrade;
   /** Server-only deck cursors and future order. Never expose in a projection. ENG-022. */
   readonly decks?: readonly DeckState[];
   /** Server-only card context used to return ordinary cards after resolution. */
@@ -363,6 +393,73 @@ function payloadDemands(event: EngineEvent, key = "demands"): readonly ScarceImp
   });
 }
 
+function payloadTradeSide(event: EngineEvent, key: string): TradeSide | undefined {
+  const value = event.payload[key];
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const side = value as Record<string, unknown>;
+  const cash = side.cash;
+  const deedIds = side.deedIds;
+  const detentionReleaseCardIds = side.detentionReleaseCardIds;
+  if (
+    typeof cash !== "number" ||
+    !Number.isSafeInteger(cash) ||
+    cash < 0 ||
+    !Array.isArray(deedIds) ||
+    !deedIds.every((id): id is string => typeof id === "string") ||
+    !Array.isArray(detentionReleaseCardIds) ||
+    !detentionReleaseCardIds.every((id): id is string => typeof id === "string")
+  ) {
+    return undefined;
+  }
+  return { cash, deedIds, detentionReleaseCardIds };
+}
+
+function payloadTradeDeedSnapshots(
+  event: EngineEvent,
+  key: string,
+): readonly TradeDeedSnapshot[] | undefined {
+  const value = event.payload[key];
+  if (!Array.isArray(value)) return undefined;
+  if (
+    !value.every((entry) => {
+      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return false;
+      const snapshot = entry as Record<string, unknown>;
+      return (
+        typeof snapshot.deedId === "string" &&
+        typeof snapshot.mortgaged === "boolean" &&
+        typeof snapshot.improvementLevel === "number" &&
+        Number.isSafeInteger(snapshot.improvementLevel) &&
+        snapshot.improvementLevel >= 0
+      );
+    })
+  ) {
+    return undefined;
+  }
+  return value as TradeDeedSnapshot[];
+}
+
+interface TradeTransferCharge {
+  readonly deedId: string;
+  readonly recipientSeatId: SeatId;
+  readonly amount: Money;
+}
+
+function payloadTradeTransferCharges(event: EngineEvent): readonly TradeTransferCharge[] {
+  const value = event.payload.transferCharges;
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is TradeTransferCharge => {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return false;
+    const charge = entry as Record<string, unknown>;
+    return (
+      typeof charge.deedId === "string" &&
+      typeof charge.recipientSeatId === "string" &&
+      typeof charge.amount === "number" &&
+      Number.isSafeInteger(charge.amount) &&
+      charge.amount >= 0
+    );
+  });
+}
+
 function freezeState(state: GameState): GameState {
   const seats = state.seats.map((seat) =>
     Object.freeze({
@@ -445,6 +542,36 @@ function freezeState(state: GameState): GameState {
     state.resolvingCardStack === undefined
       ? undefined
       : Object.freeze(state.resolvingCardStack.map((card) => Object.freeze({ ...card })));
+  const pendingTrade =
+    state.pendingTrade === undefined
+      ? undefined
+      : Object.freeze({
+          ...state.pendingTrade,
+          offered: Object.freeze({
+            ...state.pendingTrade.offered,
+            deedIds: Object.freeze([...state.pendingTrade.offered.deedIds]),
+            detentionReleaseCardIds: Object.freeze([
+              ...state.pendingTrade.offered.detentionReleaseCardIds,
+            ]),
+          }),
+          requested: Object.freeze({
+            ...state.pendingTrade.requested,
+            deedIds: Object.freeze([...state.pendingTrade.requested.deedIds]),
+            detentionReleaseCardIds: Object.freeze([
+              ...state.pendingTrade.requested.detentionReleaseCardIds,
+            ]),
+          }),
+          offeredDeedSnapshots: Object.freeze(
+            state.pendingTrade.offeredDeedSnapshots.map((snapshot) =>
+              Object.freeze({ ...snapshot }),
+            ),
+          ),
+          requestedDeedSnapshots: Object.freeze(
+            state.pendingTrade.requestedDeedSnapshots.map((snapshot) =>
+              Object.freeze({ ...snapshot }),
+            ),
+          ),
+        });
   return Object.freeze({
     ...state,
     seats: Object.freeze(seats),
@@ -457,6 +584,7 @@ function freezeState(state: GameState): GameState {
     pendingAuction,
     ...(scarceImprovementDemands === undefined ? {} : { scarceImprovementDemands }),
     ...(pendingImprovementAuction === undefined ? {} : { pendingImprovementAuction }),
+    ...(pendingTrade === undefined ? {} : { pendingTrade }),
     ...(decks === undefined ? {} : { decks }),
     ...(resolvingCard === undefined ? {} : { resolvingCard }),
     ...(resolvingCardStack === undefined ? {} : { resolvingCardStack }),
@@ -1159,6 +1287,162 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
           cash: state.bank.cash + winningBid,
           deedIds: state.bank.deedIds.filter((candidate) => candidate !== deedId),
         },
+      });
+    }
+    case "TradeProposed": {
+      const tradeId = payloadString(event, "tradeId");
+      const proposerSeatId = payloadSeatId(event, "proposerSeatId");
+      const counterpartySeatId = payloadSeatId(event, "counterpartySeatId");
+      const offered = payloadTradeSide(event, "offered");
+      const requested = payloadTradeSide(event, "requested");
+      const aggregateVersion = payloadNumber(event, "aggregateVersion");
+      const proposerBalance = payloadNumber(event, "proposerBalance");
+      const counterpartyBalance = payloadNumber(event, "counterpartyBalance");
+      const offeredDeedSnapshots = payloadTradeDeedSnapshots(event, "offeredDeedSnapshots");
+      const requestedDeedSnapshots = payloadTradeDeedSnapshots(event, "requestedDeedSnapshots");
+      if (
+        tradeId === undefined ||
+        proposerSeatId === undefined ||
+        counterpartySeatId === undefined ||
+        offered === undefined ||
+        requested === undefined ||
+        aggregateVersion === undefined ||
+        proposerBalance === undefined ||
+        counterpartyBalance === undefined ||
+        offeredDeedSnapshots === undefined ||
+        requestedDeedSnapshots === undefined ||
+        proposerSeatId === counterpartySeatId
+      ) {
+        return state;
+      }
+      return freezeState({
+        ...state,
+        pendingTrade: {
+          tradeId,
+          proposerSeatId,
+          counterpartySeatId,
+          offered,
+          requested,
+          proposerBalance,
+          counterpartyBalance,
+          offeredDeedSnapshots,
+          requestedDeedSnapshots,
+          aggregateVersion,
+        },
+      });
+    }
+    case "TradeRejected":
+    case "TradeCancelled":
+    case "TradeStaled": {
+      const tradeId = payloadString(event, "tradeId");
+      if (tradeId === undefined || state.pendingTrade?.tradeId !== tradeId) return state;
+      return freezeState({ ...state, pendingTrade: undefined });
+    }
+    case "TradeAccepted": {
+      const tradeId = payloadString(event, "tradeId");
+      const proposerSeatId = payloadSeatId(event, "proposerSeatId");
+      const counterpartySeatId = payloadSeatId(event, "counterpartySeatId");
+      const offered = payloadTradeSide(event, "offered");
+      const requested = payloadTradeSide(event, "requested");
+      const bankCharge = payloadNumber(event, "bankCharge");
+      if (
+        tradeId === undefined ||
+        proposerSeatId === undefined ||
+        counterpartySeatId === undefined ||
+        offered === undefined ||
+        requested === undefined ||
+        bankCharge === undefined ||
+        bankCharge < 0 ||
+        state.pendingTrade?.tradeId !== tradeId ||
+        state.pendingTrade.proposerSeatId !== proposerSeatId ||
+        state.pendingTrade.counterpartySeatId !== counterpartySeatId
+      ) {
+        return state;
+      }
+      const proposer = findSeat(state, proposerSeatId);
+      const counterparty = findSeat(state, counterpartySeatId);
+      if (
+        proposer === undefined ||
+        counterparty === undefined ||
+        proposerSeatId === counterpartySeatId
+      ) {
+        return state;
+      }
+      const proposerCharges = payloadTradeTransferCharges(event)
+        .filter((charge) => charge.recipientSeatId === proposerSeatId)
+        .reduce((total, charge) => total + charge.amount, 0);
+      const counterpartyCharges = payloadTradeTransferCharges(event)
+        .filter((charge) => charge.recipientSeatId === counterpartySeatId)
+        .reduce((total, charge) => total + charge.amount, 0);
+      if (
+        !Number.isSafeInteger(proposerCharges) ||
+        !Number.isSafeInteger(counterpartyCharges) ||
+        proposerCharges + counterpartyCharges !== bankCharge
+      ) {
+        return state;
+      }
+      const proposerBalance = proposer.balance - offered.cash + requested.cash - proposerCharges;
+      const counterpartyBalance =
+        counterparty.balance - requested.cash + offered.cash - counterpartyCharges;
+      if (
+        !Number.isSafeInteger(proposerBalance) ||
+        proposerBalance < 0 ||
+        !Number.isSafeInteger(counterpartyBalance) ||
+        counterpartyBalance < 0 ||
+        !Number.isSafeInteger(state.bank.cash + bankCharge)
+      ) {
+        return state;
+      }
+      const offeredDeeds = new Set(offered.deedIds);
+      const requestedDeeds = new Set(requested.deedIds);
+      const offeredCards = new Set(offered.detentionReleaseCardIds);
+      const requestedCards = new Set(requested.detentionReleaseCardIds);
+      return freezeState({
+        ...state,
+        pendingTrade: undefined,
+        seats: state.seats.map((seat) => {
+          if (seat.seatId === proposerSeatId) {
+            return {
+              ...seat,
+              balance: proposerBalance,
+              deedIds: [
+                ...seat.deedIds.filter((id) => !offeredDeeds.has(id)),
+                ...requested.deedIds.filter((id) => !seat.deedIds.includes(id)),
+              ],
+              detentionReleaseCardIds: [
+                ...seat.detentionReleaseCardIds.filter((id) => !offeredCards.has(id)),
+                ...requested.detentionReleaseCardIds.filter(
+                  (id) => !seat.detentionReleaseCardIds.includes(id),
+                ),
+              ],
+            };
+          }
+          if (seat.seatId === counterpartySeatId) {
+            return {
+              ...seat,
+              balance: counterpartyBalance,
+              deedIds: [
+                ...seat.deedIds.filter((id) => !requestedDeeds.has(id)),
+                ...offered.deedIds.filter((id) => !seat.deedIds.includes(id)),
+              ],
+              detentionReleaseCardIds: [
+                ...seat.detentionReleaseCardIds.filter((id) => !requestedCards.has(id)),
+                ...offered.detentionReleaseCardIds.filter(
+                  (id) => !seat.detentionReleaseCardIds.includes(id),
+                ),
+              ],
+            };
+          }
+          return seat;
+        }),
+        deeds: state.deeds.map((deed) =>
+          offeredDeeds.has(deed.deedId)
+            ? { ...deed, ownerSeatId: counterpartySeatId }
+            : requestedDeeds.has(deed.deedId)
+              ? { ...deed, ownerSeatId: proposerSeatId }
+              : deed,
+        ),
+        bank: { ...state.bank, cash: state.bank.cash + bankCharge },
       });
     }
     case "ScarceImprovementRequested": {
@@ -4465,6 +4749,403 @@ function resolvePayObligation(state: GameState, actorSeatId: SeatId, rules: Rule
   return { ok: true, state: nextState, events: Object.freeze(events) };
 }
 
+interface ValidatedTrade {
+  readonly transferCharges: readonly TradeTransferCharge[];
+  readonly bankCharge: Money;
+}
+
+function tradePhaseRejection(state: GameState): Rejection | undefined {
+  if (state.phase === "TurnStart" || state.phase === "ResolveMove" || state.phase === "AwaitDebt") {
+    return undefined;
+  }
+  return reject(
+    "PHASE_MISMATCH",
+    "TRADE_NOT_AVAILABLE_IN_PHASE",
+    "Trades are unavailable during the current mandatory resolution.",
+  );
+}
+
+function hasDuplicates(values: readonly string[]): boolean {
+  return new Set(values).size !== values.length;
+}
+
+function tradeDeedSnapshots(
+  state: GameState,
+  deedIds: readonly string[],
+): readonly TradeDeedSnapshot[] {
+  return deedIds.flatMap((deedId) => {
+    const deed = state.deeds.find((candidate) => candidate.deedId === deedId);
+    return deed === undefined
+      ? []
+      : [{ deedId, mortgaged: deed.mortgaged, improvementLevel: deed.improvementLevel }];
+  });
+}
+
+function sameTradeDeedSnapshots(
+  current: readonly TradeDeedSnapshot[],
+  recorded: readonly TradeDeedSnapshot[],
+): boolean {
+  return (
+    current.length === recorded.length &&
+    current.every(
+      (snapshot, index) =>
+        snapshot.deedId === recorded[index]?.deedId &&
+        snapshot.mortgaged === recorded[index]?.mortgaged &&
+        snapshot.improvementLevel === recorded[index]?.improvementLevel,
+    )
+  );
+}
+
+/** Rechecks present ownership and integer funds at proposal and acceptance. ENG-023, ENG-025. */
+function validateTrade(
+  state: GameState,
+  proposerSeatId: SeatId,
+  counterpartySeatId: SeatId,
+  offered: TradeSide,
+  requested: TradeSide,
+  rules: RuleSet,
+): Rejection | ValidatedTrade {
+  const proposer = findSeat(state, proposerSeatId);
+  const counterparty = findSeat(state, counterpartySeatId);
+  if (
+    proposer === undefined ||
+    counterparty === undefined ||
+    proposerSeatId === counterpartySeatId
+  ) {
+    return reject("INVALID_PAYLOAD", "INVALID_TRADE_PARTIES", "A trade needs two distinct seats.");
+  }
+  if (proposer.status !== "active" || counterparty.status !== "active") {
+    return reject("ILLEGAL_ACTION", "TRADE_PARTY_NOT_ACTIVE", "Both trade parties must be active.");
+  }
+  if (
+    !Number.isSafeInteger(offered.cash) ||
+    offered.cash < 0 ||
+    !Number.isSafeInteger(requested.cash) ||
+    requested.cash < 0 ||
+    proposer.balance < offered.cash ||
+    counterparty.balance < requested.cash
+  ) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "TRADE_CASH_UNAVAILABLE",
+      "A trade can include only cash currently held by its owner.",
+    );
+  }
+  if (
+    offered.cash === 0 &&
+    requested.cash === 0 &&
+    offered.deedIds.length === 0 &&
+    requested.deedIds.length === 0 &&
+    offered.detentionReleaseCardIds.length === 0 &&
+    requested.detentionReleaseCardIds.length === 0
+  ) {
+    return reject("INVALID_PAYLOAD", "EMPTY_TRADE", "A trade must contain at least one asset.");
+  }
+  if (
+    hasDuplicates(offered.deedIds) ||
+    hasDuplicates(requested.deedIds) ||
+    hasDuplicates(offered.detentionReleaseCardIds) ||
+    hasDuplicates(requested.detentionReleaseCardIds)
+  ) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "DUPLICATE_TRADE_ASSET",
+      "A trade cannot list an asset twice.",
+    );
+  }
+  if (
+    offered.deedIds.some((id) => requested.deedIds.includes(id)) ||
+    offered.detentionReleaseCardIds.some((id) => requested.detentionReleaseCardIds.includes(id))
+  ) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "TRADE_ASSET_ON_BOTH_SIDES",
+      "An asset cannot be offered and requested in the same trade.",
+    );
+  }
+
+  const transferCharges: TradeTransferCharge[] = [];
+  const validateDeeds = (
+    ownerSeatId: SeatId,
+    deedIds: readonly string[],
+    recipientSeatId: SeatId,
+  ) => {
+    for (const deedId of deedIds) {
+      const deed = rules.content.deeds.find((candidate) => candidate.deedId === deedId);
+      const deedState = state.deeds.find((candidate) => candidate.deedId === deedId);
+      const owner = findSeat(state, ownerSeatId);
+      if (
+        deed === undefined ||
+        deedState === undefined ||
+        owner === undefined ||
+        deedState.ownerSeatId !== ownerSeatId ||
+        !owner.deedIds.includes(deedId)
+      ) {
+        return reject(
+          "ILLEGAL_ACTION",
+          "DEED_NOT_OWNED",
+          "Every traded deed must be currently owned.",
+        );
+      }
+      if (deedState.improvementLevel !== 0) {
+        return reject(
+          "ILLEGAL_ACTION",
+          "IMPROVEMENT_PRESENT",
+          "A deed with improvements cannot be traded.",
+        );
+      }
+      if (!Number.isSafeInteger(deed.transferCharge) || deed.transferCharge < 0) {
+        return reject(
+          "INVALID_PAYLOAD",
+          "INVALID_TRANSFER_CHARGE",
+          "A traded deed has invalid transfer-charge data.",
+        );
+      }
+      if (deedState.mortgaged && deed.transferCharge > 0) {
+        transferCharges.push({ deedId, recipientSeatId, amount: deed.transferCharge });
+      }
+    }
+    return undefined;
+  };
+  const offeredDeedRejection = validateDeeds(proposerSeatId, offered.deedIds, counterpartySeatId);
+  if (offeredDeedRejection !== undefined) return offeredDeedRejection;
+  const requestedDeedRejection = validateDeeds(
+    counterpartySeatId,
+    requested.deedIds,
+    proposerSeatId,
+  );
+  if (requestedDeedRejection !== undefined) return requestedDeedRejection;
+
+  const validateCards = (ownerSeatId: SeatId, cardIds: readonly string[]) => {
+    const owner = findSeat(state, ownerSeatId);
+    if (owner === undefined || cardIds.some((id) => !owner.detentionReleaseCardIds.includes(id))) {
+      return reject(
+        "ILLEGAL_ACTION",
+        "RELEASE_CARD_NOT_HELD",
+        "A trade can include only held Detention-release cards.",
+      );
+    }
+    return undefined;
+  };
+  const offeredCardRejection = validateCards(proposerSeatId, offered.detentionReleaseCardIds);
+  if (offeredCardRejection !== undefined) return offeredCardRejection;
+  const requestedCardRejection = validateCards(
+    counterpartySeatId,
+    requested.detentionReleaseCardIds,
+  );
+  if (requestedCardRejection !== undefined) return requestedCardRejection;
+
+  const proposerCharge = transferCharges
+    .filter((charge) => charge.recipientSeatId === proposerSeatId)
+    .reduce((total, charge) => total + charge.amount, 0);
+  const counterpartyCharge = transferCharges
+    .filter((charge) => charge.recipientSeatId === counterpartySeatId)
+    .reduce((total, charge) => total + charge.amount, 0);
+  const proposerBalance = proposer.balance - offered.cash + requested.cash - proposerCharge;
+  const counterpartyBalance =
+    counterparty.balance - requested.cash + offered.cash - counterpartyCharge;
+  const bankCharge = proposerCharge + counterpartyCharge;
+  if (
+    !Number.isSafeInteger(proposerBalance) ||
+    proposerBalance < 0 ||
+    !Number.isSafeInteger(counterpartyBalance) ||
+    counterpartyBalance < 0 ||
+    !Number.isSafeInteger(bankCharge) ||
+    !Number.isSafeInteger(state.bank.cash + bankCharge)
+  ) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "TRANSFER_CHARGE_UNAFFORDABLE",
+      "The receiving seat must be able to pay every mortgage transfer charge immediately.",
+    );
+  }
+  return { transferCharges: Object.freeze(transferCharges), bankCharge };
+}
+
+function resolveProposeTrade(
+  state: GameState,
+  actorSeatId: SeatId,
+  counterpartySeatId: SeatId,
+  offered: TradeSide,
+  requested: TradeSide,
+  rules: RuleSet,
+): Resolution {
+  const actorRejection = requireActiveActor(state, actorSeatId);
+  if (actorRejection !== undefined) return actorRejection;
+  const phaseRejection = tradePhaseRejection(state);
+  if (phaseRejection !== undefined) return phaseRejection;
+  if (state.activeSeatId !== actorSeatId) {
+    return reject("ILLEGAL_ACTION", "OUT_OF_TURN", "Only the active seat may propose a trade.");
+  }
+  if (state.pendingTrade !== undefined) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "TRADE_ALREADY_PENDING",
+      "Only one trade offer may be pending.",
+    );
+  }
+  if (state.phase === "AwaitDebt" && state.obligation?.debtorSeatId !== actorSeatId) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "DEBTOR_REQUIRED",
+      "Only the debtor may propose a liquidity trade.",
+    );
+  }
+  const counterparty = findSeat(state, counterpartySeatId);
+  if (counterparty?.status !== "active" || counterpartySeatId === actorSeatId) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "TRADE_COUNTERPARTY_NOT_SOLVENT",
+      "The counterparty must be a distinct active seat.",
+    );
+  }
+  if (state.phase === "AwaitDebt" && state.obligation?.debtorSeatId === counterpartySeatId) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "TRADE_COUNTERPARTY_NOT_SOLVENT",
+      "A debt trade needs an active solvent counterparty.",
+    );
+  }
+  const validated = validateTrade(
+    state,
+    actorSeatId,
+    counterpartySeatId,
+    offered,
+    requested,
+    rules,
+  );
+  if ("ok" in validated) return validated;
+  const proposer = findSeat(state, actorSeatId);
+  const acceptedCounterparty = findSeat(state, counterpartySeatId);
+  if (proposer === undefined || acceptedCounterparty === undefined) {
+    return reject("INVALID_PAYLOAD", "INVALID_TRADE_PARTIES", "The trade parties left the game.");
+  }
+  const tradeId = `trade:${state.gameId}:${state.aggregateVersion}:${actorSeatId}:${counterpartySeatId}`;
+  const event = freezeEvent({
+    type: "TradeProposed",
+    eventVersion: 1,
+    actorSeatId,
+    payload: {
+      tradeId,
+      proposerSeatId: actorSeatId,
+      counterpartySeatId,
+      offered,
+      requested,
+      proposerBalance: proposer.balance,
+      counterpartyBalance: acceptedCounterparty.balance,
+      offeredDeedSnapshots: tradeDeedSnapshots(state, offered.deedIds),
+      requestedDeedSnapshots: tradeDeedSnapshots(state, requested.deedIds),
+      aggregateVersion: state.aggregateVersion + 1,
+    },
+  } satisfies EngineEvent);
+  return { ok: true, state: freezeState(applyEvent(state, event)), events: Object.freeze([event]) };
+}
+
+function resolveTradeResponse(
+  state: GameState,
+  actorSeatId: SeatId,
+  action: "accept" | "reject" | "cancel",
+  tradeId: string,
+  rules: RuleSet,
+): Resolution {
+  const actorRejection = requireActiveActor(state, actorSeatId);
+  if (actorRejection !== undefined) return actorRejection;
+  const phaseRejection = tradePhaseRejection(state);
+  if (phaseRejection !== undefined) return phaseRejection;
+  const trade = state.pendingTrade;
+  if (trade === undefined || trade.tradeId !== tradeId) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "TRADE_NOT_PENDING",
+      "The selected trade is no longer pending.",
+    );
+  }
+  if (
+    (action === "cancel" && trade.proposerSeatId !== actorSeatId) ||
+    (action !== "cancel" && trade.counterpartySeatId !== actorSeatId)
+  ) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "TRADE_PARTY_REQUIRED",
+      "Only a named trade party may respond.",
+    );
+  }
+  if (action !== "accept") {
+    const event = freezeEvent({
+      type: action === "reject" ? "TradeRejected" : "TradeCancelled",
+      eventVersion: 1,
+      actorSeatId,
+      payload: { tradeId, actorSeatId },
+    } satisfies EngineEvent);
+    return {
+      ok: true,
+      state: freezeState(applyEvent(state, event)),
+      events: Object.freeze([event]),
+    };
+  }
+  if (state.phase === "AwaitDebt" && trade.proposerSeatId !== state.obligation?.debtorSeatId) {
+    return reject(
+      "ILLEGAL_ACTION",
+      "DEBTOR_REQUIRED",
+      "Only a debtor-initiated trade may provide obligation liquidity.",
+    );
+  }
+  const versionIsCurrent =
+    trade.aggregateVersion === state.aggregateVersion ||
+    trade.aggregateVersion === state.aggregateVersion + 1;
+  const validated = validateTrade(
+    state,
+    trade.proposerSeatId,
+    trade.counterpartySeatId,
+    trade.offered,
+    trade.requested,
+    rules,
+  );
+  const proposer = findSeat(state, trade.proposerSeatId);
+  const counterparty = findSeat(state, trade.counterpartySeatId);
+  const snapshotsAreCurrent =
+    proposer !== undefined &&
+    counterparty !== undefined &&
+    proposer.balance === trade.proposerBalance &&
+    counterparty.balance === trade.counterpartyBalance &&
+    sameTradeDeedSnapshots(
+      tradeDeedSnapshots(state, trade.offered.deedIds),
+      trade.offeredDeedSnapshots,
+    ) &&
+    sameTradeDeedSnapshots(
+      tradeDeedSnapshots(state, trade.requested.deedIds),
+      trade.requestedDeedSnapshots,
+    );
+  if (!versionIsCurrent || !snapshotsAreCurrent || "ok" in validated) {
+    const event = freezeEvent({
+      type: "TradeStaled",
+      eventVersion: 1,
+      actorSeatId,
+      payload: { tradeId, actorSeatId, reasonCode: "TRADE_STALE" },
+    } satisfies EngineEvent);
+    return {
+      ok: true,
+      state: freezeState(applyEvent(state, event)),
+      events: Object.freeze([event]),
+    };
+  }
+  const event = freezeEvent({
+    type: "TradeAccepted",
+    eventVersion: 1,
+    actorSeatId,
+    payload: {
+      tradeId,
+      proposerSeatId: trade.proposerSeatId,
+      counterpartySeatId: trade.counterpartySeatId,
+      offered: trade.offered,
+      requested: trade.requested,
+      transferCharges: validated.transferCharges,
+      bankCharge: validated.bankCharge,
+    },
+  } satisfies EngineEvent);
+  return { ok: true, state: freezeState(applyEvent(state, event)), events: Object.freeze([event]) };
+}
+
 /**
  * Accepts or rejects one actor-scoped command against an immutable state.
  * Returns a new immutable state plus ordered domain events, or a rejection.
@@ -4519,6 +5200,39 @@ export function resolve(state: GameState, command: ActorScopedCommand, rules: Ru
       return resolveRedeemMortgage(state, command.actorSeatId, command.command.deedId, rules);
     case "PayObligation":
       return resolvePayObligation(state, command.actorSeatId, rules);
+    case "ProposeTrade":
+      return resolveProposeTrade(
+        state,
+        command.actorSeatId,
+        command.command.counterpartySeatId,
+        command.command.offered,
+        command.command.requested,
+        rules,
+      );
+    case "AcceptTrade":
+      return resolveTradeResponse(
+        state,
+        command.actorSeatId,
+        "accept",
+        command.command.tradeId,
+        rules,
+      );
+    case "RejectTrade":
+      return resolveTradeResponse(
+        state,
+        command.actorSeatId,
+        "reject",
+        command.command.tradeId,
+        rules,
+      );
+    case "CancelTrade":
+      return resolveTradeResponse(
+        state,
+        command.actorSeatId,
+        "cancel",
+        command.command.tradeId,
+        rules,
+      );
     default:
       return unimplemented(command.command.type);
   }

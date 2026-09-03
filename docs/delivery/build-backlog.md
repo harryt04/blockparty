@@ -294,12 +294,13 @@ print the seed on failure.
       Proves: bank/player debt scenarios cover liquidity, settlement, stale actions, pause, and continuation; TEST-002 pure-engine scenario layer.
       Implemented atomic bank/player obligation settlement, serialized continuation resumption, and debtor-only mortgage/improvement-sale liquidity; `packages/game-engine/test/debt.test.ts` covers settlement, replay, liquidity, underfunded debt, and authority.
 
-- [ ] **A13 — Trades and staleness**
+- [x] **A13 — Trades and staleness**
       Blocked by: A12
       Requirements: RULE-012, PRD-FUN-006, ENG-023
       Read: docs/product/rules.md, docs/engineering/game-engine.md
       Acceptance: trade lifecycle uses canonical assets/integer money, escrows nothing, rejects stale offers, and transfers all terms atomically in legal phases.
       Proves: trade scenarios/generated offers cover authority, staleness, charges, atomicity, and invariants; TEST-002 pure-engine scenario/property layer.
+      Implemented escrow-free trade proposals with canonical cash/deed/release-card terms, atomic acceptance and mortgage transfer charges, named rejection/cancellation, stale invalidation, and debt liquidity support; `packages/game-engine/test/trade.test.ts` covers the reducer scenarios and replay.
 
 - [ ] **A14 — Bankruptcy, elimination, endgame, and no-contest**
       Blocked by: A12
