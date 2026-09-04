@@ -21,16 +21,13 @@ import {
   type CommandEnvelope as ParsedCommandEnvelope,
   type GameStatus,
 } from "@blockparty/contracts";
-import { canonicalHashBundle, getBundle, type ContentBundle } from "@blockparty/game-content";
 import {
   assertInvariants,
   resolve,
   type EngineEvent,
   type GameState,
-  type RuleSet,
 } from "@blockparty/game-engine";
 import type { ClientSession, Collection, Filter, UpdateFilter } from "mongodb";
-import { isProduction } from "../env";
 import { getDb, withMongoTransaction } from "../db/client";
 import { COLLECTIONS } from "../db/collections";
 import type { GameDocument } from "../games/create-game";
@@ -39,6 +36,7 @@ import { ensureChangeStream } from "../sse/change-stream";
 import { connectedSeatTenures } from "../sse/registry";
 import type { AuditDocument, CapabilityDocument } from "../games/create-game";
 import { generateCapability, hashCapability } from "../auth/capabilities";
+import { capturedRuleSet } from "../games/captured-rules";
 
 export interface CommandAccepted {
   readonly ok: true;
@@ -447,6 +445,7 @@ async function transactLobbyConfiguration(
     {
       $set: {
         configuration: command.configuration,
+        rulesConfigured: true,
         snapshot: nextState,
         lobby: { ...game.lobby, configuration: command.configuration },
         aggregateVersion: nextVersion,
@@ -475,23 +474,6 @@ function gameStatus(state: GameState, previous: GameStatus): GameStatus {
   if (state.terminalReason !== undefined || state.phase === "Finished") return "COMPLETED";
   if (previous === "LOBBY" && state.phase === "Lobby") return "LOBBY";
   return "ACTIVE";
-}
-
-function capturedRuleSet(game: GameDocument): RuleSet {
-  const bundle: ContentBundle | undefined = getBundle(game.contentVersion, {
-    production: isProduction,
-  });
-  if (
-    bundle === undefined ||
-    game.contentHash !== canonicalHashBundle(bundle) ||
-    game.snapshot.contentVersion !== game.contentVersion
-  ) {
-    throw new CommandPathError("CONTENT_UNSUPPORTED", "CAPTURED_CONTENT_UNSUPPORTED");
-  }
-  if (game.snapshot.stateSchemaVersion !== game.stateSchemaVersion) {
-    throw new CommandPathError("CONTENT_UNSUPPORTED", "CAPTURED_STATE_UNSUPPORTED");
-  }
-  return { content: bundle, configuration: game.configuration };
 }
 
 /** Removes server-only replay facts before a domain event crosses the wire. */
@@ -599,6 +581,9 @@ async function transact(
   }
 
   const rules = capturedRuleSet(game);
+  if (rules === undefined) {
+    throw new CommandPathError("CONTENT_UNSUPPORTED", "CAPTURED_RULES_UNSUPPORTED");
+  }
   const priorVersion = game.aggregateVersion;
   const priorSequence = game.lastSequence;
   const resolution = resolve(
@@ -617,19 +602,38 @@ async function transact(
   }
 
   const nextVersion = priorVersion + 1;
-  const nextSequence = priorSequence + resolution.events.length;
+  const rulesConfiguredEvent =
+    envelope.payload.type === "StartGame" && game.rulesConfigured !== true
+      ? DomainEvent.parse({
+          gameId: game._id,
+          sequence: priorSequence + 1,
+          aggregateVersion: nextVersion,
+          type: "RulesConfigured",
+          eventVersion: 1,
+          actorSeatId: actor.seatId,
+          occurredAt: now.toISOString(),
+          payload: {
+            configuration: rules.configuration,
+            contentHash: game.contentHash,
+          },
+        })
+      : undefined;
+  const journalEvents = [
+    ...(rulesConfiguredEvent === undefined ? [] : [rulesConfiguredEvent]),
+    ...toJournalEvents(
+      game._id,
+      priorSequence + (rulesConfiguredEvent === undefined ? 0 : 1),
+      nextVersion,
+      resolution.events,
+      now,
+    ),
+  ];
+  const nextSequence = priorSequence + journalEvents.length;
   const nextState: GameState = Object.freeze({
     ...resolution.state,
     aggregateVersion: nextVersion,
   });
   assertInvariants(nextState, rules, game.snapshot);
-  const journalEvents = toJournalEvents(
-    game._id,
-    priorSequence,
-    nextVersion,
-    resolution.events,
-    now,
-  );
   await store.gameEvents.insertMany(journalEvents, { session, ordered: true });
 
   const update: UpdateFilter<GameDocument> = {
@@ -638,6 +642,7 @@ async function transact(
       status: gameStatus(nextState, game.status),
       aggregateVersion: nextVersion,
       lastSequence: nextSequence,
+      ...(rulesConfiguredEvent === undefined ? {} : { rulesConfigured: true }),
       lastAuthoritativeActionAt: now,
       expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
     },

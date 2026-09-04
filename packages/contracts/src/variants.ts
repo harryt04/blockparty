@@ -26,6 +26,31 @@ export const VARIANT_KEYS = [
 
 export type VariantKey = (typeof VARIANT_KEYS)[number];
 
+type NamedPreset = Exclude<RulesPreset, "custom">;
+
+const PRESET_TOGGLE_VALUES: Record<NamedPreset, Record<VariantKey, boolean>> = {
+  standard: {
+    restSpaceJackpot: false,
+    doubleStartOnExactLanding: false,
+    noAuctionAfterDeclinedAcquisition: false,
+    noIncomeWhileDetained: false,
+    bonusForMatchingOnes: false,
+    startingAssetsDealt: false,
+    relaxedEvenBuilding: false,
+    unlimitedImprovementInventory: false,
+  },
+  "short-game": {
+    restSpaceJackpot: false,
+    doubleStartOnExactLanding: false,
+    noAuctionAfterDeclinedAcquisition: false,
+    noIncomeWhileDetained: false,
+    bonusForMatchingOnes: false,
+    startingAssetsDealt: true,
+    relaxedEvenBuilding: true,
+    unlimitedImprovementInventory: false,
+  },
+};
+
 /**
  * A resolved configuration. `.strict()` enforces VAR-009: unknown keys,
  * missing keys, and non-booleans are rejected before start.
@@ -43,8 +68,37 @@ export const RulesConfiguration = z
     relaxedEvenBuilding: z.boolean(),
     unlimitedImprovementInventory: z.boolean(),
   })
-  .strict();
+  .strict()
+  .superRefine((configuration, context) => {
+    if (configuration.preset === "custom") return;
+    const expected = PRESET_TOGGLE_VALUES[configuration.preset];
+    for (const key of VARIANT_KEYS) {
+      if (configuration[key] !== expected[key]) {
+        context.addIssue({
+          code: "custom",
+          path: [key],
+          message: `The ${configuration.preset} preset must use its documented default.`,
+        });
+      }
+    }
+  });
 export type RulesConfiguration = z.infer<typeof RulesConfiguration>;
+
+/**
+ * Validate and freeze the resolved configuration at a persistence boundary.
+ * Version 1.0.0 is the only supported schema, so migration is deliberately an
+ * identity operation until a future additive schema is introduced. VAR-009,
+ * VAR-010, VAR-011, VAR-012.
+ */
+export function migrateRulesConfiguration(input: unknown): RulesConfiguration {
+  const parsed = RulesConfiguration.parse(input);
+  return Object.freeze({ ...parsed });
+}
+
+/** Resolve a validated lobby value into the immutable engine configuration. */
+export function resolveRulesConfiguration(input: unknown): RulesConfiguration {
+  return migrateRulesConfiguration(input);
+}
 
 /** All eight toggles false. See the `standard` preset row in VAR. */
 export const STANDARD_CONFIGURATION: RulesConfiguration = {

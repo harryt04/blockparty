@@ -22,9 +22,8 @@ import { publicEvent, type GameEventDocument } from "../commands/handle-command"
 import { COLLECTIONS } from "../db/collections";
 import type { GameDocument } from "../games/create-game";
 import { buildSeatProjection, type ProjectionSeatSource } from "../projections/authorize";
-import { canonicalHashBundle, getBundle } from "@blockparty/game-content";
-import { isProduction } from "../env";
 import { subscriberCount } from "../sse/registry";
+import { capturedRuleSet } from "../games/captured-rules";
 
 /** The transport schema and the recovery contract both cap one range at 256. */
 export const MAX_RECOVERY_EVENTS = 256;
@@ -84,11 +83,11 @@ export function authorizedSnapshot(
   viewerCapabilityKind: "seat" | "reclaim" = "seat",
 ): GameSnapshotProjection | undefined {
   if (!game.seats.some((seat) => seat.seatId === seatId)) return undefined;
-  const bundle = getBundle(game.contentVersion, { production: isProduction });
-  if (bundle === undefined || canonicalHashBundle(bundle) !== game.contentHash) return undefined;
+  const rules = capturedRuleSet(game);
+  if (rules === undefined) return undefined;
 
   return buildSeatProjection(game.snapshot, seatId, {
-    rules: { content: bundle, configuration: game.configuration },
+    rules,
     status: game.status,
     versions: {
       contentVersion: game.contentVersion,
@@ -97,7 +96,7 @@ export function authorizedSnapshot(
       stateSchemaVersion: game.stateSchemaVersion,
       engineVersion: game.engineVersion,
     },
-    configuration: game.configuration,
+    configuration: rules.configuration,
     expiresAt: game.expiresAt,
     sequence: game.lastSequence,
     hostSeatId: game.hostSeatId,

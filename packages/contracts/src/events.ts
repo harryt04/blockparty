@@ -10,6 +10,7 @@
  */
 import { z } from "zod";
 import { AggregateVersion, GameId, SeatId, Sequence, ServerTime } from "./common";
+import { RulesConfiguration } from "./variants";
 
 /**
  * Every domain event type the MVP emits. Payload schemas are added by the
@@ -106,6 +107,14 @@ export const DomainEvent = z
   })
   .strict();
 export type DomainEvent = z.infer<typeof DomainEvent>;
+
+export const RulesConfiguredPayload = z
+  .object({
+    configuration: RulesConfiguration,
+    contentHash: z.string().min(1).max(128),
+  })
+  .strict();
+export type RulesConfiguredPayload = z.infer<typeof RulesConfiguredPayload>;
 
 /**
  * A bot rationale event. Bounded public numeric factors and a stable reason

@@ -7,13 +7,12 @@
  * locates the resource; it grants no authority. See SEC-002.
  */
 import type { BootstrapResponse } from "@blockparty/contracts";
-import { canonicalHashBundle, getBundle } from "@blockparty/game-content";
 import { readGameCapability } from "@/server/auth/session";
 import { getDb } from "@/server/db/client";
 import { COLLECTIONS } from "@/server/db/collections";
-import { isProduction } from "@/server/env";
 import { jsonOk } from "@/server/http/responses";
 import type { GameDocument } from "@/server/games/create-game";
+import { capturedRuleSet } from "@/server/games/captured-rules";
 import { buildSeatProjection } from "@/server/projections/authorize";
 import { jsonError } from "@/server/http/responses";
 import { subscriberCount } from "@/server/sse/registry";
@@ -38,8 +37,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ gam
       .findOne({ _id: gameId });
     if (game === null) return jsonError("NOT_FOUND", { gameId });
 
-    const bundle = getBundle(game.contentVersion, { production: isProduction });
-    if (bundle === undefined || canonicalHashBundle(bundle) !== game.contentHash) {
+    const rules = capturedRuleSet(game);
+    if (rules === undefined) {
       return jsonError("CONTENT_UNSUPPORTED", { gameId });
     }
     if (!game.snapshot.seats.some((seat) => seat.seatId === actor.seatId)) {
@@ -52,7 +51,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ gam
     );
 
     const snapshot = buildSeatProjection(game.snapshot, actor.seatId, {
-      rules: { content: bundle, configuration: game.configuration },
+      rules,
       status: game.status,
       versions: {
         contentVersion: game.contentVersion,
@@ -61,7 +60,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ gam
         stateSchemaVersion: game.stateSchemaVersion,
         engineVersion: game.engineVersion,
       },
-      configuration: game.configuration,
+      configuration: rules.configuration,
       expiresAt: game.expiresAt,
       sequence: game.lastSequence,
       hostSeatId: game.hostSeatId,

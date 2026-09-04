@@ -264,7 +264,7 @@ describe("A11 detention state machine", () => {
     };
     const rules: RuleSet = {
       content,
-      configuration: { ...STANDARD_CONFIGURATION, noIncomeWhileDetained: true },
+      configuration: { ...STANDARD_CONFIGURATION, preset: "custom", noIncomeWhileDetained: true },
     };
     const result = resolve(before, { actorSeatId: "seat-a", command: { type: "RollDice" } }, rules);
 

@@ -78,7 +78,11 @@ describe("A3 movement and serialized effect queue", () => {
   it("applies the exact-Start variant only to normal dice movement", () => {
     const rules: RuleSet = {
       ...RULES,
-      configuration: { ...STANDARD_CONFIGURATION, doubleStartOnExactLanding: true },
+      configuration: {
+        ...STANDARD_CONFIGURATION,
+        preset: "custom",
+        doubleStartOnExactLanding: true,
+      },
     };
     const result = resolve(
       awaitRoll(10),

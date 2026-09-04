@@ -223,7 +223,11 @@ describe("A4 acquisition and bank ledger", () => {
 
     const noAuctionRules: RuleSet = {
       ...RULES,
-      configuration: { ...STANDARD_CONFIGURATION, noAuctionAfterDeclinedAcquisition: true },
+      configuration: {
+        ...STANDARD_CONFIGURATION,
+        preset: "custom",
+        noAuctionAfterDeclinedAcquisition: true,
+      },
     };
     const noAuction = resolve(
       offered.state,

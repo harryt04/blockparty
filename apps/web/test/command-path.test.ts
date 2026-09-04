@@ -248,11 +248,16 @@ describe("transactional command path", () => {
       commandId: command.commandId,
       aggregateVersion: 1,
       firstSequence: 1,
-      lastSequence: 2,
+      lastSequence: 3,
     });
     expect(fixtureState.game.aggregateVersion).toBe(1);
-    expect(fixtureState.game.lastSequence).toBe(2);
-    expect(fixtureState.events.map((event) => event.sequence)).toEqual([1, 2]);
+    expect(fixtureState.game.lastSequence).toBe(3);
+    expect(fixtureState.events.map((event) => event.sequence)).toEqual([1, 2, 3]);
+    expect(fixtureState.events[0]?.type).toBe("RulesConfigured");
+    expect(fixtureState.events[0]?.payload).toMatchObject({
+      configuration: request.configuration,
+      contentHash: fixtureState.game.contentHash,
+    });
     expect(fixtureState.events.every((event) => event.aggregateVersion === 1)).toBe(true);
     expect(fixtureState.receipts).toHaveLength(1);
     expect(published).toHaveLength(1);
@@ -273,7 +278,7 @@ describe("transactional command path", () => {
     const duplicate = await handleCommand(command, actor, { ...options, publish });
 
     expect(duplicate).toEqual(first);
-    expect(fixtureState.events).toHaveLength(2);
+    expect(fixtureState.events).toHaveLength(3);
     expect(fixtureState.receipts).toHaveLength(1);
     expect(publish).not.toHaveBeenCalled();
   });
@@ -338,6 +343,7 @@ describe("transactional command path", () => {
       lastSequence: 1,
     });
     expect(fixtureState.game.configuration.restSpaceJackpot).toBe(true);
+    expect(fixtureState.game.rulesConfigured).toBe(true);
     expect(fixtureState.events[0]?.type).toBe("RulesConfigured");
 
     const started = await handleCommand(

@@ -164,7 +164,11 @@ describe("A8 scarce improvement auctions", () => {
 
     const unlimitedRules: RuleSet = {
       content: PLACEHOLDER_BUNDLE,
-      configuration: { ...STANDARD_CONFIGURATION, unlimitedImprovementInventory: true },
+      configuration: {
+        ...STANDARD_CONFIGURATION,
+        preset: "custom",
+        unlimitedImprovementInventory: true,
+      },
     };
     const bought = resolve(
       exhausted,

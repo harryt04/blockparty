@@ -42,6 +42,10 @@ export const CreateGameRequest = z
   .refine((value) => value.botSeatCount < value.seatCount, {
     message: "At least one seat must stay open for a human",
     path: ["botSeatCount"],
+  })
+  .refine((value) => value.preset === value.configuration.preset, {
+    message: "The request preset must match the resolved configuration.",
+    path: ["preset"],
   });
 export type CreateGameRequest = z.infer<typeof CreateGameRequest>;
 

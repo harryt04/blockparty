@@ -548,12 +548,13 @@ Each toggle ticket covers its toggle alone and every documented interaction in
 VAR-014. The bot sees public state only and remains deterministic given state and
 recorded draws.
 
-- [ ] **D1 — Variant schema, lobby lock, and `RulesConfigured`**
+- [x] **D1 — Variant schema, lobby lock, and `RulesConfigured`**
       Blocked by: C13
       Requirements: VAR-009, VAR-010, VAR-011, VAR-012, VAR-013, VAR-014
       Read: docs/product/rule-variants.md, docs/engineering/game-engine.md
       Acceptance: contracts accept exactly eight booleans with supported schema/preset, lobby start resolves and locks them with content hash/event, and reconnect/replay use captured values with deterministic migration fixtures.
       Proves: contract rejection, lobby integration, lock, reconnect, and version-migration fixtures; TEST-002 contract/protocol/pure-engine layers.
+      Enforced preset-consistent eight-toggle schemas, deterministic identity migration, first-start `RulesConfigured` capture, and immutable version checks across command/reconnect paths. `packages/contracts/test/variants.test.ts` and `apps/web/test/command-path.test.ts` prove rejection, migration, lock, event/hash capture, and idempotent replay-safe startup.
 
 - [ ] **D2 — VAR-001, VAR-002, VAR-005: money injection toggles**
       Blocked by: D1

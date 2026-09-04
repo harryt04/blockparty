@@ -52,6 +52,8 @@ export interface GameDocument {
   readonly seats: readonly GameSeatRecord[];
   readonly hostSeatId: SeatId;
   readonly configuration: RulesConfiguration;
+  /** True once a RulesConfigured event has durably captured the lobby choice. */
+  readonly rulesConfigured?: boolean;
   readonly contentHash: string;
   readonly contentVersion: string;
   readonly rulesSchemaVersion: string;
@@ -325,6 +327,7 @@ export async function createGameInTransaction(
     seats,
     hostSeatId,
     configuration: request.configuration,
+    rulesConfigured: false,
     contentHash: canonicalHashBundle(bundle),
     contentVersion: versions.contentVersion,
     rulesSchemaVersion: versions.rulesSchemaVersion,

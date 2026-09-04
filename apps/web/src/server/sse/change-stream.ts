@@ -7,15 +7,15 @@ import "server-only";
  * PROTO-003, PROTO-004, and SEC-002.
  */
 import { DomainEvent, type DomainEvent as DomainEventType } from "@blockparty/contracts";
-import { canonicalHashBundle, getBundle } from "@blockparty/game-content";
 import type { ChangeStream, Db } from "mongodb";
 import { getDb } from "../db/client";
 import { COLLECTIONS } from "../db/collections";
-import { isDatabaseConfigured, isProduction } from "../env";
+import { isDatabaseConfigured } from "../env";
 import type { GameEventDocument } from "../commands/handle-command";
 import type { GameDocument } from "../games/create-game";
 import { buildSeatProjection, type ProjectionSeatSource } from "../projections/authorize";
 import { readPublicEvents } from "../sync/recovery";
+import { capturedRuleSet } from "../games/captured-rules";
 import { publishSnapshot, subscriberCount, subscribedSeatAccess } from "./registry";
 
 interface ChangeDocument {
@@ -81,8 +81,8 @@ export async function publishCommittedProjection(
     .findOne({ _id: event.gameId });
   if (game === null) return;
 
-  const bundle = getBundle(game.contentVersion, { production: isProduction });
-  if (bundle === undefined || canonicalHashBundle(bundle) !== game.contentHash) return;
+  const rules = capturedRuleSet(game);
+  if (rules === undefined) return;
 
   const publicEvents = await readPublicEvents(
     database.collection<GameEventDocument>(COLLECTIONS.gameEvents),
@@ -91,7 +91,7 @@ export async function publishCommittedProjection(
 
   for (const { seatId, capabilityKind } of subscribedSeatAccess(game._id)) {
     const snapshot = buildSeatProjection(game.snapshot, seatId, {
-      rules: { content: bundle, configuration: game.configuration },
+      rules,
       status: game.status,
       versions: {
         contentVersion: game.contentVersion,
@@ -100,7 +100,7 @@ export async function publishCommittedProjection(
         stateSchemaVersion: game.stateSchemaVersion,
         engineVersion: game.engineVersion,
       },
-      configuration: game.configuration,
+      configuration: rules.configuration,
       expiresAt: game.expiresAt,
       sequence: Math.max(game.lastSequence, event.sequence),
       hostSeatId: game.hostSeatId,
