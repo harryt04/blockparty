@@ -19,7 +19,7 @@ export default defineConfig({
     // Production output avoids the Next dev compiler's optional MongoDB
     // dependency warnings while testing the same artifact shipped to users.
     command:
-      "BLOCKPARTY_LOCAL_HTTP_TEST=1 pnpm run build && BLOCKPARTY_LOCAL_HTTP_TEST=1 pnpm --filter @blockparty/web start --hostname 127.0.0.1 --port 3100",
+      "BLOCKPARTY_LOCAL_HTTP_TEST=1 NEXT_PUBLIC_POSTHOG_KEY=phc_browser_test NEXT_PUBLIC_POSTHOG_HOST=http://127.0.0.1:3100 pnpm run build && BLOCKPARTY_LOCAL_HTTP_TEST=1 NEXT_PUBLIC_POSTHOG_KEY=phc_browser_test NEXT_PUBLIC_POSTHOG_HOST=http://127.0.0.1:3100 pnpm --filter @blockparty/web start --hostname 127.0.0.1 --port 3100",
     url: "http://127.0.0.1:3100",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

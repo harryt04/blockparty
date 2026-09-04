@@ -8,6 +8,7 @@
  * start.
  */
 import type { Metadata } from "next";
+import { AnalyticsPreferencePanel } from "@/components/analytics/analytics-provider";
 import { AppShell } from "@/components/shell/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PresentationPreferencesPanel } from "@/components/settings/presentation-preferences";
@@ -52,6 +53,8 @@ export default function SettingsPage() {
             </p>
           </CardContent>
         </Card>
+
+        <AnalyticsPreferencePanel />
       </div>
     </AppShell>
   );

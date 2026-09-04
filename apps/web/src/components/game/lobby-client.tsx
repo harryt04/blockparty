@@ -9,6 +9,11 @@ import {
 import { Check, Clipboard, Share2, Users } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  enabledVariantCountBucket,
+  playerCountBucket,
+} from "@/components/analytics/analytics-model";
+import { useAnalytics } from "@/components/analytics/analytics-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +49,7 @@ function LobbyLoading() {
 }
 
 export function LobbyClient({ gameId }: { gameId: string }) {
+  const { track } = useAnalytics();
   const [lobby, setLobby] = useState<LobbyProjection>();
   const [error, setError] = useState<string>();
   const [copyState, setCopyState] = useState<"idle" | "copied" | "shared">("idle");
@@ -139,6 +145,9 @@ export function LobbyClient({ gameId }: { gameId: string }) {
         setCommandError(parsed.success ? parsed.data.error.message : "The game could not start.");
         return;
       }
+      track("game_started", {
+        player_count_bucket: playerCountBucket(lobby.seatCount),
+      });
       setCommandPending(false);
       retry();
     } catch {
@@ -181,6 +190,12 @@ export function LobbyClient({ gameId }: { gameId: string }) {
         );
         return;
       }
+      track("rule_configuration_saved", {
+        preset: draftConfiguration.preset,
+        enabled_variant_count_bucket: enabledVariantCountBucket(
+          Object.values(configurationValues(draftConfiguration)).filter(Boolean).length,
+        ),
+      });
       await loadLobby();
       retry();
     } catch {

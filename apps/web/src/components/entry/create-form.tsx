@@ -11,6 +11,11 @@ import {
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  enabledVariantCountBucket,
+  playerCountBucket,
+} from "@/components/analytics/analytics-model";
+import { useAnalytics } from "@/components/analytics/analytics-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -92,6 +97,7 @@ function FieldError({
 
 export function CreateGameForm() {
   const router = useRouter();
+  const { track } = useAnalytics();
   const [pending, setPending] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<CreateField, string>>>({});
   const [apiError, setApiError] = useState<string>();
@@ -125,6 +131,15 @@ export function CreateGameForm() {
       return;
     }
     setErrors({});
+    track("game_create_started", {
+      player_count_bucket: playerCountBucket(result.request.seatCount),
+    });
+    track("rule_configuration_saved", {
+      preset: result.request.configuration.preset,
+      enabled_variant_count_bucket: enabledVariantCountBucket(
+        VARIANT_KEYS.filter((key) => result.request.configuration[key]).length,
+      ),
+    });
     setPending(true);
     try {
       const response = await fetch("/api/games", {
@@ -148,6 +163,9 @@ export function CreateGameForm() {
         setApiError("The lobby response was not understood. Nothing was changed. Try again.");
         return;
       }
+      track("game_created", {
+        player_count_bucket: playerCountBucket(parsed.data.lobby.seatCount),
+      });
       // Capabilities arrive only as HttpOnly Set-Cookie headers. Keep no
       // credential or game state in JavaScript storage. SEC-002, UX-010.
       router.push(`/game/${parsed.data.gameId}/lobby`);

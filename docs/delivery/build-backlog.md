@@ -652,12 +652,13 @@ recorded draws.
       Proves: Playwright install/offline/update/cache-inspection matrix proves shell availability and zero cached game state; TEST-002 browser PWA/security layer.
       Implemented generated versioned shell worker, offline fallback/status, engagement-gated install and dismissal UX, iOS instructions, and waiting-worker update flow. `apps/web/e2e/pwa.spec.ts` passes its 9-check Chromium/Firefox/WebKit matrix; `apps/web/test/pwa.test.ts` covers cache policy and install/network decisions.
 
-- [ ] **F2 — Consent gate, PostHog adapter, and the approved taxonomy**
+- [x] **F2 — Consent gate, PostHog adapter, and the approved taxonomy**
       Blocked by: F1
       Requirements: PRD-FUN-018, ANA-001, ANA-002, SEC-004
       Read: docs/engineering/security-privacy-analytics.md, docs/product/prd.md
       Acceptance: no analytics loads before opt-in; withdrawal stops/clears it; an allowlisted pseudonymous taxonomy covers approved events, rejects unexpected properties/capabilities/pseudonyms, and keeps replay disabled until separately reviewed.
       Proves: browser network tests for denied/granted/withdrawn consent and schema/redaction canaries; TEST-002 browser security/privacy layer.
+      Implemented consent-gated PostHog capture, strict taxonomy validation, device-local withdrawal, and product-event hooks. `apps/web/e2e/analytics.spec.ts` passes denied/granted/withdrawn network checks in Chromium, Firefox, and WebKit; `apps/web/test/analytics.test.ts` covers schema/redaction canaries.
 
 - [ ] **F3 — Coolify deployment, index maintenance, and the scheduled cleanup**
       Blocked by: F2

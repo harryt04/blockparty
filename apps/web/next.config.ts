@@ -10,11 +10,20 @@ import type { NextConfig } from "next";
  * still renders real document content under this policy. SEC-003.
  *
  * TODO(SEC-003): replace `unsafe-inline` on script-src with a nonce once the
- * app has interactive routes, and add the consented PostHog endpoints to
- * connect-src behind the ANA-001 consent gate.
+ * app has interactive routes. The optional PostHog origin is added to
+ * connect-src only when configured and is used only after ANA-001 consent.
  */
 const isDevelopment = process.env.NODE_ENV === "development";
 const isLocalHttpTest = process.env.BLOCKPARTY_LOCAL_HTTP_TEST === "1";
+const posthogOrigin = (() => {
+  const host = process.env.NEXT_PUBLIC_POSTHOG_HOST;
+  if (host === undefined || host.length === 0) return undefined;
+  try {
+    return new URL(host).origin;
+  } catch {
+    return undefined;
+  }
+})();
 
 const contentSecurityPolicy = [
   "default-src 'self'",
@@ -22,8 +31,9 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self'",
-  // Same-origin API and SSE only. No third-party endpoint without consent.
-  "connect-src 'self'",
+  // The optional analytics origin is present only when configured; the client
+  // still cannot use it until the ANA-001 consent gate is accepted.
+  `connect-src 'self'${posthogOrigin === undefined ? "" : ` ${posthogOrigin}`}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

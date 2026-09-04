@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import {
+  AnalyticsConsentBanner,
+  AnalyticsProvider,
+} from "@/components/analytics/analytics-provider";
 import { PresentationPreferencesProvider } from "@/components/settings/presentation-preferences";
 import { PwaClient } from "@/components/pwa/pwa-client";
 import "./globals.css";
@@ -41,8 +45,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           Skip to main content
         </a>
         <PresentationPreferencesProvider>
-          <PwaClient />
-          {children}
+          <AnalyticsProvider>
+            <PwaClient />
+            {children}
+            <AnalyticsConsentBanner />
+          </AnalyticsProvider>
         </PresentationPreferencesProvider>
       </body>
     </html>

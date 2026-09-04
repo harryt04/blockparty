@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CommandAckEnvelope,
   ErrorEnvelope,
@@ -11,6 +11,8 @@ import {
 } from "@blockparty/contracts";
 import { useGameSync } from "@/client/sync/use-game-sync";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { playerCountBucket } from "@/components/analytics/analytics-model";
+import { useAnalytics } from "@/components/analytics/analytics-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,7 +70,10 @@ function csrfToken(): string | undefined {
 
 export function GameClient({ gameId }: { gameId: string }) {
   const router = useRouter();
+  const { track } = useAnalytics();
   const { state, retry } = useGameSync(gameId);
+  const previousConnection = useRef(state.connection);
+  const previousPhase = useRef(state.snapshot?.phase);
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>();
   const [pendingAction, setPendingAction] = useState<LegalAction>();
   const [actionStatus, setActionStatus] = useState<string>();
@@ -104,6 +109,31 @@ export function GameClient({ gameId }: { gameId: string }) {
       priority,
     }));
   }
+
+  useEffect(() => {
+    const wasReconnecting =
+      previousConnection.current === "reconnecting" || previousConnection.current === "resyncing";
+    if (wasReconnecting && state.connection === "live") {
+      track("reconnect_result", { result_category: "success" });
+    } else if (wasReconnecting && state.connection === "closed") {
+      track("reconnect_result", { result_category: "unavailable" });
+    }
+    previousConnection.current = state.connection;
+  }, [state.connection, track]);
+
+  useEffect(() => {
+    if (previousPhase.current !== "Finished" && snapshot?.phase === "Finished") {
+      const finishEvent = [...(snapshot.publicEvents ?? [])]
+        .reverse()
+        .find((event) => event.type === "GameEndedNoContest" || event.type === "GameCompleted");
+      track("game_finished", {
+        player_count_bucket: playerCountBucket(snapshot.seats.length),
+        finish_reason_category:
+          finishEvent?.type === "GameEndedNoContest" ? "no_contest" : "winner",
+      });
+    }
+    previousPhase.current = snapshot?.phase;
+  }, [snapshot, track]);
 
   useEffect(() => {
     if (

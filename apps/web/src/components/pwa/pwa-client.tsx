@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { browserFamily } from "@/components/analytics/analytics-model";
+import { useAnalytics } from "@/components/analytics/analytics-provider";
 import {
   isIosDevice,
   networkStatusMessage,
@@ -33,6 +35,7 @@ function isStandalone(): boolean {
 
 /** Client-only PWA shell: no game data, capabilities, or API responses enter storage. */
 export function PwaClient() {
+  const { track } = useAnalytics();
   const [online, setOnline] = useState(true);
   const [engaged, setEngaged] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -55,10 +58,14 @@ export function PwaClient() {
     const onInstallAvailable = (event: Event) => {
       event.preventDefault();
       setInstallEvent(event as BeforeInstallPromptEvent);
+      track("pwa_install_prompted", {
+        browser_family: browserFamily(navigator.userAgent),
+      });
     };
     const onInstalled = () => {
       setInstalled(true);
       setInstallEvent(undefined);
+      track("pwa_installed", { browser_family: browserFamily(navigator.userAgent) });
     };
 
     window.addEventListener("online", onOnline);
@@ -109,7 +116,7 @@ export function PwaClient() {
       removeControllerChange?.();
       removeRegistrationListeners?.();
     };
-  }, []);
+  }, [track]);
 
   const dismissInstall = () => {
     setDismissed(true);

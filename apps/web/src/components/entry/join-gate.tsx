@@ -10,6 +10,8 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { playerCountBucket } from "@/components/analytics/analytics-model";
+import { useAnalytics } from "@/components/analytics/analytics-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -46,6 +48,7 @@ function Unavailable() {
 
 function JoinForm({ inviteId, gameName }: { inviteId: string; gameName?: string }) {
   const router = useRouter();
+  const { track } = useAnalytics();
   const [pending, setPending] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<JoinField, string>>>({});
   const [apiError, setApiError] = useState<string>();
@@ -59,6 +62,7 @@ function JoinForm({ inviteId, gameName }: { inviteId: string; gameName?: string 
       return;
     }
     setErrors({});
+    track("invite_join_started");
     setPending(true);
     try {
       const response = await fetch(`/api/invites/${encodeURIComponent(inviteId)}/join`, {
@@ -86,6 +90,10 @@ function JoinForm({ inviteId, gameName }: { inviteId: string; gameName?: string 
         setApiError("The join response was not understood. Nothing was changed. Try again.");
         return;
       }
+      track("invite_joined", {
+        result_category: "success",
+        game_player_count_bucket: playerCountBucket(parsed.data.lobby.seatCount),
+      });
       // The response contains no capability. The server places it only in a
       // secure cookie; the browser retains no credential or game state.
       router.push(`/game/${parsed.data.gameId}/lobby`);
