@@ -449,12 +449,14 @@ separate player contexts.
       Proves: Playwright create journey covers keyboard, validation, success, safe failure, cookies, and no URL/storage token; TEST-002 browser layer.
       Implemented the credentialed create form, preset-aware validation, safe pending/error states, and opaque invite-path navigation; `apps/web/test/create-form.test.ts` proves request mapping, validation, and invite safety.
 
-- [ ] **C3 — Join gate, wired**
+- [x] **C3 — Join gate, wired**
       Blocked by: C2
       Requirements: PRD-FUN-003, PRD-FUN-004, UX-011, SEC-002
       Read: docs/product/prd.md, docs/design/ux-spec.md, docs/engineering/security-privacy-analytics.md
       Acceptance: invite routes reveal only a join gate, validate pseudonyms accessibly, claim a seat once, and render indistinguishable unavailable/full/expired results without exposing credentials.
       Proves: separate-context Playwright join matrix covers valid/invalid/racing/full/expired invites and token absence; TEST-002 browser/security layer.
+      Implemented availability-gated join rendering, accessible pseudonym/token/age validation, one-submit claim handling, and neutral unavailable states in `apps/web/src/components/entry/join-gate.tsx`; `apps/web/test/join-form.test.ts` proves canonical normalization and credential-free request mapping.
+      The repository has no Playwright harness or configured MongoDB, so the separate-context browser matrix remains follow-up evidence.
 
 - [ ] **C4 — Lobby: seats, invite share, variants, and start**
       Blocked by: C3
