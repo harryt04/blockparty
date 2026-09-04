@@ -409,12 +409,13 @@ seat. Each ticket removes the corresponding builder from
       Proves: multi-client race tests cover request/approval/revocation/reclaim, old-token rejection, and safe-boundary ordering; TEST-002 protocol/security layer.
       Implemented safe-boundary replacement, reclaim request/approval, capability rotation, and audit journaling in the authoritative command transaction; `apps/web/test/bot-reclaim.test.ts` proves ordering, state preservation, old-authority revocation, new issuance, and unsafe-boundary rejection.
 
-- [ ] **B10 — Expiry, cleanup, and retention**
+- [x] **B10 — Expiry, cleanup, and retention**
       Blocked by: B4
       Requirements: PRD-FUN-013, ENG-017, SEC-005, OPS-007
       Read: docs/product/prd.md, docs/engineering/realtime-and-data.md, docs/engineering/security-privacy-analytics.md, docs/delivery/operations.md
       Acceptance: authoritative play alone extends active expiry, completion anchors completed expiry, overdue active games first record `EXPIRED`, and authenticated cleanup deletes game data/capability hashes in bounded idempotent batches.
       Proves: clock-controlled replica-set tests cover exact 30-day boundaries, non-extending activity, transition-before-delete, retries, and cascades; TEST-002 protocol-integration layer.
+      Implemented the authenticated bounded retention workflow with transactional `GameExpired` journaling, capability revocation, and idempotent cascades; `apps/web/test/retention.test.ts` and `apps/web/test/cleanup-route.test.ts` prove boundary, ordering, retry, cascade, and scheduler-authentication behavior.
 
 - [ ] **B11 — Rate limits, CSRF, origin checks, and log redaction**
       Blocked by: B4

@@ -12,8 +12,10 @@
  */
 import type { CleanupResponse } from "@blockparty/contracts";
 import { safeEqual } from "@/server/auth/capabilities";
+import { getDb, withMongoTransaction } from "@/server/db/client";
 import { env } from "@/server/env";
-import { jsonOk, notFound } from "@/server/http/responses";
+import { jsonError, jsonOk, notFound } from "@/server/http/responses";
+import { retentionStore, runRetentionCleanup } from "@/server/retention/cleanup";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,12 +28,18 @@ export async function POST(request: Request) {
   const presented = request.headers.get("x-internal-secret");
   if (presented === null || !safeEqual(presented, configured)) return notFound();
 
-  // TODO(ENG-017): run the expiry transition and the bounded deletion batches.
-  const response: CleanupResponse = {
-    expiredGames: 0,
-    deletedGames: 0,
-    revokedCapabilities: 0,
-    serverTime: new Date().toISOString(),
-  };
-  return jsonOk(response);
+  const now = new Date();
+  try {
+    const result = await runRetentionCleanup({
+      database: retentionStore(getDb()),
+      transaction: withMongoTransaction,
+      now,
+    });
+    const response: CleanupResponse = { ...result, serverTime: now.toISOString() };
+    return jsonOk(response);
+  } catch {
+    // The scheduler can safely retry the same bounded job. Do not expose
+    // driver details or whether a particular game exists. See SEC-004.
+    return jsonError("SERVER_BUSY");
+  }
 }

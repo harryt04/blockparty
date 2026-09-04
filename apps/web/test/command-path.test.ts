@@ -20,6 +20,7 @@ import {
   type CommandStore,
   type GameEventDocument,
 } from "../src/server/commands/handle-command";
+import { RETENTION_MS } from "../src/server/retention/cleanup";
 
 const request = CreateGameRequest.parse({
   seatCount: 2,
@@ -141,7 +142,61 @@ function startCommand(gameId: string, commandId: string, expectedVersion: number
   };
 }
 
+function endNoContestCommand(gameId: string, commandId: string, expectedVersion: number) {
+  return {
+    protocolVersion: 1 as const,
+    type: "game.command" as const,
+    requestId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    gameId,
+    commandId,
+    expectedVersion,
+    payload: { type: "EndNoContest" as const },
+  };
+}
+
 describe("transactional command path", () => {
+  it("extends active retention only on authoritative play and anchors completion", async () => {
+    const fixtureState = await fixture();
+    const actor = {
+      gameId: fixtureState.game._id,
+      seatId: fixtureState.game.hostSeatId,
+      kind: "host" as const,
+    };
+    const startedAt = new Date("2026-09-03T15:00:00.000Z");
+    const start = startCommand(fixtureState.game._id, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", 0);
+    const started = await handleCommand(start, actor, {
+      database: fixtureState.commandStore,
+      transaction: fixtureState.transaction,
+      now: () => startedAt,
+    });
+    expect(started.ok).toBe(true);
+    expect(fixtureState.game.lastAuthoritativeActionAt).toBe(startedAt);
+    expect(fixtureState.game.expiresAt).toEqual(new Date(startedAt.getTime() + RETENTION_MS));
+
+    const duplicate = await handleCommand(start, actor, {
+      database: fixtureState.commandStore,
+      transaction: fixtureState.transaction,
+      now: () => new Date(startedAt.getTime() + 1_000),
+    });
+    expect(duplicate).toEqual(started);
+    expect(fixtureState.game.expiresAt).toEqual(new Date(startedAt.getTime() + RETENTION_MS));
+
+    const completedAt = new Date("2026-09-10T15:00:00.000Z");
+    const completed = await handleCommand(
+      endNoContestCommand(fixtureState.game._id, "cccccccc-cccc-4ccc-8ccc-cccccccccccc", 1),
+      actor,
+      {
+        database: fixtureState.commandStore,
+        transaction: fixtureState.transaction,
+        now: () => completedAt,
+      },
+    );
+    expect(completed.ok).toBe(true);
+    expect(fixtureState.game.status).toBe("NO_CONTEST");
+    expect(fixtureState.game.lastAuthoritativeActionAt).toBe(completedAt);
+    expect(fixtureState.game.expiresAt).toEqual(new Date(completedAt.getTime() + RETENTION_MS));
+  });
+
   it("writes contiguous events, snapshot, and receipt, then publishes only after commit", async () => {
     const fixtureState = await fixture();
     let committed = false;
