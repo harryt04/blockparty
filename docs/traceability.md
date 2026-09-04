@@ -266,3 +266,9 @@ Iteration 7 also wires bot turns through
 the runner uses the public deterministic policy, persists
 `BotDecisionExplained` through `handleCommand`, and stops at human, paused, or
 terminal state boundaries, covering PRD-FUN-011, ENG-015, and ENG-026.
+
+Iteration 11 keeps the C8 Manage entry point phase-bound: `canManageInPhase`
+prevents an owned-space detail from opening management during `AwaitRoll`,
+`AwaitPurchase`, or other non-management phases while retaining the
+`TurnStart`/`ResolveMove`/`AwaitDebt` cases defined by RULE-005, RULE-008, and
+UX-016; `apps/web/test/game-model.test.ts` records the boundary regression.

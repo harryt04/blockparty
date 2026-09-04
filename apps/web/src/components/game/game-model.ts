@@ -186,6 +186,16 @@ export const MANAGEMENT_ACTION_TYPES = [
   "RedeemMortgage",
 ] as const satisfies readonly LegalAction["type"][];
 
+/**
+ * The engine exposes deed management only during the management window or an
+ * unresolved debt. Keep the detail action aligned with that authoritative
+ * phase boundary; ownership alone is not enough to make Manage actionable.
+ * See RULE-005, RULE-008, and UX-016.
+ */
+export function canManageInPhase(phase: GameSnapshotProjection["phase"]): boolean {
+  return phase === "TurnStart" || phase === "ResolveMove" || phase === "AwaitDebt";
+}
+
 type ManagementActionType = (typeof MANAGEMENT_ACTION_TYPES)[number];
 
 export interface ManagementActionContext {

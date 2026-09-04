@@ -33,6 +33,7 @@ import { RecoveryPanel } from "./recovery-panel";
 import {
   activeSpace,
   boardLayout,
+  canManageInPhase,
   commandForLegalAction,
   districtNames,
   enabledVariantLabels,
@@ -100,6 +101,8 @@ export function GameClient({ gameId }: { gameId: string }) {
     detailSpace.ownerSeatId !== undefined &&
     snapshot?.seats.some((seat) => seat.isSelf && seat.seatId === detailSpace.ownerSeatId) ===
       true &&
+    snapshot !== undefined &&
+    canManageInPhase(snapshot.phase) &&
     management !== undefined;
 
   function announceCommand(message: string, priority: CommandAnnouncement["priority"]): void {

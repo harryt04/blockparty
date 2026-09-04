@@ -95,3 +95,16 @@ The app remains correctly allowlist-based, so the live run was restarted with th
 origin rather than weakening origin validation. With that configuration, `npm run dev` created,
 started, rolled, resolved movement, ended a turn, and processed the deterministic bot turn with
 successful command acknowledgements and no browser console errors.
+
+## Iteration 11 follow-up
+
+An isolated Chromium run using `npm run dev` with a disposable MongoDB replica set reproduced a
+UI/runtime mismatch in the short-game flow. After start, the host's owned Hydrant Hookup displayed
+`Manage this Address` while the authoritative phase was `AwaitRoll`; opening it produced an empty
+management panel because the engine only advertises deed management in `TurnStart`, `ResolveMove`,
+or `AwaitDebt`. The cause was `GameClient` gating the detail control on ownership but not phase.
+
+`canManageInPhase` now makes the client entry point follow that server phase boundary, and a model
+regression covers allowed and disallowed phases. The same live browser flow still creates, starts,
+and reaches the active game, while the initial Await Roll screen no longer exposes the misleading
+management affordance. Focused model tests, full CI, and the production build all pass.

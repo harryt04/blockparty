@@ -7,6 +7,7 @@ import {
   auctionDecisionContext,
   boardStopAccessibleLabel,
   boardLayout,
+  canManageInPhase,
   commandForLegalAction,
   districtNames,
   enabledVariantLabels,
@@ -481,5 +482,13 @@ describe("game presentation model", () => {
       offeredDetentionReleaseCards: [{ assetId: "c-flyer-04", label: "A neighbourly word" }],
       counterparties: [{ seatId: "seat-b", name: "Maya", deeds: [] }],
     });
+  });
+
+  it("only exposes the management entry point in management-capable phases", () => {
+    expect(canManageInPhase("AwaitRoll")).toBe(false);
+    expect(canManageInPhase("AwaitPurchase")).toBe(false);
+    expect(canManageInPhase("TurnStart")).toBe(true);
+    expect(canManageInPhase("ResolveMove")).toBe(true);
+    expect(canManageInPhase("AwaitDebt")).toBe(true);
   });
 });
