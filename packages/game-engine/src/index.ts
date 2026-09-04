@@ -78,6 +78,8 @@ export interface PendingObligation {
   readonly creditorSeatId?: SeatId;
   readonly amount: Money;
   readonly reasonCode: string;
+  /** VAR-001: a bank fee that funds the Rest pot after settlement. */
+  readonly jackpotEligible?: boolean;
   readonly continuation: readonly QueuedEffect[];
 }
 
@@ -187,6 +189,8 @@ export interface GameState {
   readonly deeds: readonly DeedState[];
   /** The bank's currency, deeds, and finite improvement inventory are separate. */
   readonly bank: BankState;
+  /** VAR-001: present only for games with the Rest-space jackpot enabled. */
+  readonly jackpot?: Money;
   readonly activeSeatId?: SeatId;
   readonly prioritySeatId?: SeatId;
   /** Number of consecutive matching rolls by the active seat. See RULE-002. */
@@ -670,6 +674,9 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
                 deedIds: deedIds ?? state.bank.deedIds,
                 improvementInventory: improvementInventory ?? state.bank.improvementInventory,
               },
+        ...(payloadNumber(event, "jackpot") === undefined
+          ? {}
+          : { jackpot: payloadNumber(event, "jackpot") }),
         phase: "AwaitRoll",
         activeSeatId: payloadSeatId(event, "firstSeatId") ?? state.activeSeatId,
         prioritySeatId: payloadSeatId(event, "firstSeatId") ?? state.prioritySeatId,
@@ -803,6 +810,39 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
           seat.seatId === seatId ? { ...seat, balance: seat.balance - amount } : seat,
         ),
         bank: { ...state.bank, cash: state.bank.cash + amount },
+      });
+    }
+    case "JackpotFunded": {
+      const amount = payloadNumber(event, "amount");
+      if (amount === undefined || amount < 0) return state;
+      const jackpot = state.jackpot ?? 0;
+      if (!Number.isSafeInteger(jackpot + amount)) return state;
+      return freezeState({ ...state, jackpot: jackpot + amount });
+    }
+    case "JackpotPaid": {
+      const seatId = payloadSeatId(event, "seatId");
+      const amount = payloadNumber(event, "amount");
+      const seat = seatId === undefined ? undefined : findSeat(state, seatId);
+      const jackpot = state.jackpot ?? 0;
+      if (
+        seat === undefined ||
+        amount === undefined ||
+        amount < 0 ||
+        amount > jackpot ||
+        !Number.isSafeInteger(seat.balance + amount) ||
+        !Number.isSafeInteger(state.bank.cash - amount)
+      ) {
+        return state;
+      }
+      return freezeState({
+        ...state,
+        jackpot: jackpot - amount,
+        seats: state.seats.map((candidate) =>
+          candidate.seatId === seatId
+            ? { ...candidate, balance: candidate.balance + amount }
+            : candidate,
+        ),
+        bank: { ...state.bank, cash: state.bank.cash - amount },
       });
     }
     case "CardDrawn": {
@@ -1193,6 +1233,7 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
       const creditorSeatId = payloadSeatId(event, "creditorSeatId");
       const amount = payloadNumber(event, "amount");
       const reasonCode = payloadSeatId(event, "reasonCode");
+      const jackpotEligible = payloadBoolean(event, "jackpotEligible");
       if (debtorSeatId === undefined || amount === undefined || reasonCode === undefined) {
         return state;
       }
@@ -1207,6 +1248,7 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
           creditorSeatId,
           amount,
           reasonCode,
+          ...(jackpotEligible === true ? { jackpotEligible: true } : {}),
           continuation,
         },
       });
@@ -2579,6 +2621,7 @@ function resolveStartGame(state: GameState, actorSeatId: SeatId, rules: RuleSet)
     pendingAuction: undefined,
     decks,
     resolvingCard: undefined,
+    ...(rules.configuration.restSpaceJackpot ? { jackpot: 0 } : {}),
     prng,
   });
   const events = [
@@ -2595,6 +2638,7 @@ function resolveStartGame(state: GameState, actorSeatId: SeatId, rules: RuleSet)
         deedIds: rules.content.deeds.map((deed) => deed.deedId),
         bankCash: 0,
         improvementInventory: rules.content.economy.improvementInventory,
+        ...(rules.configuration.restSpaceJackpot ? { jackpot: 0 } : {}),
         // Shuffle order is an internal event fact for replay. The server must
         // strip it from every public projection. ENG-022, PROTO-004.
         deckOrders,
@@ -2622,6 +2666,7 @@ function paymentObligation(
   creditorSeatId: SeatId | undefined,
   reasonCode: string,
   continuation: readonly QueuedEffect[],
+  jackpotEligible = false,
 ): QueueResolution {
   const event = freezeEvent({
     type: "ObligationCreated",
@@ -2632,6 +2677,7 @@ function paymentObligation(
       ...(creditorSeatId === undefined ? {} : { creditorSeatId }),
       amount,
       reasonCode,
+      ...(jackpotEligible ? { jackpotEligible: true } : {}),
       remainingEffects: continuation,
     },
   } satisfies EngineEvent);
@@ -2661,6 +2707,23 @@ function bankPaymentEvent(
   });
 }
 
+/**
+ * VAR-001: board fees need both the explicit effect tag and the bundle's
+ * eligible-space declaration; a tagged card effect is eligible on its own.
+ */
+function isJackpotEligible(
+  rules: RuleSet,
+  sourceId: string,
+  effect: Extract<ContentEffect, { type: "PayBank" }>,
+): boolean {
+  if (!rules.configuration.restSpaceJackpot || effect.jackpotEligible !== true) return false;
+  const space = rules.content.spaces.find((candidate) => candidate.spaceId === sourceId);
+  return (
+    space === undefined ||
+    (space.type === "fee" && rules.content.jackpotEligibleSpaceIds.includes(sourceId))
+  );
+}
+
 function resolveDeedLanding(
   state: GameState,
   actorSeatId: SeatId,
@@ -2675,7 +2738,31 @@ function resolveDeedLanding(
       : rules.content.deeds.find((candidate) => candidate.deedId === deedId);
   const deedState =
     deedId === undefined ? undefined : state.deeds.find((candidate) => candidate.deedId === deedId);
-  if (seat === undefined || deed === undefined || deedState === undefined) {
+  if (seat === undefined) {
+    return { state: freezeState({ ...state, effectQueue: [] }), events: Object.freeze([]) };
+  }
+
+  if (space?.type === "rest") {
+    if (!rules.configuration.restSpaceJackpot) {
+      return { state: freezeState({ ...state, effectQueue: [] }), events: Object.freeze([]) };
+    }
+    const amount = state.jackpot ?? 0;
+    if (!Number.isSafeInteger(amount) || amount < 0) {
+      return { state: freezeState({ ...state, effectQueue: [] }), events: Object.freeze([]) };
+    }
+    const paid = freezeEvent({
+      type: "JackpotPaid",
+      eventVersion: 1,
+      actorSeatId,
+      payload: { seatId: actorSeatId, amount, reasonCode: "REST_SPACE_JACKPOT" },
+    } satisfies EngineEvent);
+    return {
+      state: freezeState(applyEvent(state, paid)),
+      events: Object.freeze([paid]),
+    };
+  }
+
+  if (deed === undefined || deedState === undefined) {
     return { state: freezeState({ ...state, effectQueue: [] }), events: Object.freeze([]) };
   }
 
@@ -2950,6 +3037,7 @@ function resolveEffectQueue(
         const amount = effect.amount;
         const seat = findSeat(nextState, actorSeatId);
         if (seat === undefined || !Number.isSafeInteger(amount) || amount < 0) break;
+        const jackpotEligible = isJackpotEligible(rules, entry.sourceId, effect);
         if (seat.balance < amount) {
           return paymentObligation(
             nextState,
@@ -2958,11 +3046,22 @@ function resolveEffectQueue(
             undefined,
             "CARD_PAY_BANK",
             remaining,
+            jackpotEligible,
           );
         }
         const payment = bankPaymentEvent(actorSeatId, amount, "CARD_PAY_BANK", remaining);
         events.push(payment);
         nextState = freezeState(applyEvent(nextState, payment));
+        if (jackpotEligible) {
+          const funded = freezeEvent({
+            type: "JackpotFunded",
+            eventVersion: 1,
+            actorSeatId,
+            payload: { amount, reasonCode: "JACKPOT_ELIGIBLE_FEE" },
+          } satisfies EngineEvent);
+          events.push(funded);
+          nextState = freezeState(applyEvent(nextState, funded));
+        }
         nextState = freezeState({ ...nextState, effectQueue: remaining });
         continue;
       }
@@ -4747,6 +4846,19 @@ function resolveRollDice(state: GameState, actorSeatId: SeatId, rules: RuleSet):
   const second = nextInt(first.next, 6);
   const dice: readonly [number, number] = [first.value + 1, second.value + 1];
   const matchingRolls = dice[0] === dice[1] ? state.consecutiveMatchingRolls + 1 : 0;
+  const matchingOnesBonus =
+    rules.configuration.bonusForMatchingOnes && dice[0] === 1 && dice[1] === 1;
+  if (
+    matchingOnesBonus &&
+    (!Number.isSafeInteger(rules.content.economy.startPayment) ||
+      rules.content.economy.startPayment < 0)
+  ) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "INVALID_START_PAYMENT",
+      "The content bundle has invalid Start payment data.",
+    );
+  }
   const diceEvent = freezeEvent({
     type: "DiceRolled",
     eventVersion: 1,
@@ -4768,6 +4880,34 @@ function resolveRollDice(state: GameState, actorSeatId: SeatId, rules: RuleSet):
     prng: second.next,
   });
   const events: EngineEvent[] = [diceEvent];
+
+  if (matchingOnesBonus) {
+    const amount = rules.content.economy.startPayment;
+    const seat = findSeat(nextState, actorSeatId);
+    if (
+      seat === undefined ||
+      !Number.isSafeInteger(seat.balance + amount) ||
+      !Number.isSafeInteger(nextState.bank.cash - amount)
+    ) {
+      return reject(
+        "INVALID_PAYLOAD",
+        "MATCHING_ONES_BONUS_OVERFLOW",
+        "The matching-ones bonus cannot be represented.",
+      );
+    }
+    const bonus = freezeEvent({
+      type: "BankPaymentCollected",
+      eventVersion: 1,
+      actorSeatId,
+      payload: {
+        seatId: actorSeatId,
+        amount,
+        reasonCode: "MATCHING_ONES_BONUS",
+      },
+    } satisfies EngineEvent);
+    events.push(bonus);
+    nextState = freezeState(applyEvent(nextState, bonus));
+  }
 
   // The third consecutive matching roll sends the player directly to
   // Detention and skips movement. Movement/queue resolution continues in A3.
@@ -5010,6 +5150,16 @@ function resolveDeclareBankruptcy(
   } satisfies EngineEvent);
   events.push(bankruptcy);
   working = freezeState(applyEvent(working, bankruptcy));
+  if (obligation.jackpotEligible && amountPaid > 0) {
+    const funded = freezeEvent({
+      type: "JackpotFunded",
+      eventVersion: 1,
+      actorSeatId,
+      payload: { amount: amountPaid, reasonCode: "JACKPOT_ELIGIBLE_FEE" },
+    } satisfies EngineEvent);
+    events.push(funded);
+    working = freezeState(applyEvent(working, funded));
+  }
   const eliminated = freezeEvent({
     type: "SeatEliminated",
     eventVersion: 1,
@@ -5228,11 +5378,23 @@ function resolvePayObligation(state: GameState, actorSeatId: SeatId, rules: Rule
         : { creditorSeatId: obligation.creditorSeatId }),
       amount: obligation.amount,
       reasonCode: obligation.reasonCode,
+      ...(obligation.jackpotEligible ? { jackpotEligible: true } : {}),
       remainingEffects: obligation.continuation,
     },
   } satisfies EngineEvent);
   let nextState = freezeState(applyEvent(state, settled));
   const events: EngineEvent[] = [settled];
+
+  if (obligation.jackpotEligible) {
+    const funded = freezeEvent({
+      type: "JackpotFunded",
+      eventVersion: 1,
+      actorSeatId,
+      payload: { amount: obligation.amount, reasonCode: "JACKPOT_ELIGIBLE_FEE" },
+    } satisfies EngineEvent);
+    events.push(funded);
+    nextState = freezeState(applyEvent(nextState, funded));
+  }
 
   // A11's final Detention-fee route resumes with the required roll only after
   // the fee itself has settled. It deliberately remains untimed. RULE-009.

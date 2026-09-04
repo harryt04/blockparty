@@ -556,12 +556,13 @@ recorded draws.
       Proves: contract rejection, lobby integration, lock, reconnect, and version-migration fixtures; TEST-002 contract/protocol/pure-engine layers.
       Enforced preset-consistent eight-toggle schemas, deterministic identity migration, first-start `RulesConfigured` capture, and immutable version checks across command/reconnect paths. `packages/contracts/test/variants.test.ts` and `apps/web/test/command-path.test.ts` prove rejection, migration, lock, event/hash capture, and idempotent replay-safe startup.
 
-- [ ] **D2 — VAR-001, VAR-002, VAR-005: money injection toggles**
+- [x] **D2 — VAR-001, VAR-002, VAR-005: money injection toggles**
       Blocked by: D1
       Requirements: VAR-001, VAR-002, VAR-005, VAR-014
       Read: docs/product/rule-variants.md, docs/product/rules.md
       Acceptance: jackpot Rest payout/reset, exact-Start double payment, and matching-ones bonus each follow recorded configuration and data, with documented stacking interactions and unchanged defaults.
       Proves: pure-engine tables cover default, each toggle alone, pairwise documented interactions, ledger conservation, and replay; TEST-002 pure-engine table layer.
+      Implemented jackpot funding/payout with debt and bankruptcy accounting, exact-Start stacking, and matching-ones bank payouts. `packages/game-engine/test/variant-money.test.ts` proves defaults, toggle interactions, partial payment, ledger transitions, and event replay.
 
 - [ ] **D3 — VAR-003, VAR-004: auction and income suppression**
       Blocked by: D1

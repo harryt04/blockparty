@@ -211,6 +211,7 @@ export function buildSeatProjection(
     ...(obligation === undefined ? {} : { obligation }),
     ...(pendingTrade === undefined ? {} : { pendingTrade }),
     recovery,
+    ...(context.configuration.restSpaceJackpot ? { jackpot: state.jackpot ?? 0 } : {}),
     legalActions:
       viewerSeatId === undefined ? [] : [...legalActions(state, viewerSeatId, context.rules)],
     actionAvailability:

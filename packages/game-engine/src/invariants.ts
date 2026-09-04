@@ -130,6 +130,8 @@ export function checkInvariants(state: GameState, rules?: RuleSet): readonly Inv
   }
   if (!Number.isSafeInteger(state.bank.cash))
     add("INVALID_BANK_CASH", "Bank cash must be a safe integer.");
+  if (state.jackpot !== undefined && !safeNonNegative(state.jackpot))
+    add("INVALID_JACKPOT", "The Rest-space jackpot must be a safe non-negative integer.");
   for (const [kind, quantity] of Object.entries(state.bank.improvementInventory)) {
     if (!safeNonNegative(quantity))
       add("INVALID_INVENTORY", `Inventory ${kind} has invalid quantity.`);
