@@ -7,6 +7,7 @@ import type {
 } from "@blockparty/contracts";
 import { VARIANT_KEYS } from "@blockparty/contracts";
 import { getBundle } from "@blockparty/game-content";
+import { DEED_CATEGORY_DISPLAY } from "@/components/display-names";
 import { LOBBY_VARIANT_COPY } from "./lobby-model";
 
 /** Keep route order explicit at the presentation boundary. */
@@ -95,6 +96,128 @@ export function commandForLegalAction(action: LegalAction, amount?: number): Com
       // surface in their later ticket and are not guessed from a projection.
       return undefined;
   }
+}
+
+export interface AcquisitionDecisionContext {
+  readonly deedId: string;
+  readonly spaceName: string;
+  readonly categoryLabel: string;
+  readonly price: number;
+  readonly balance: number;
+  readonly projectedBalance: number;
+  readonly canAcquire: boolean;
+  readonly baseRent?: number;
+}
+
+export interface AuctionDecisionContext {
+  readonly deedId: string;
+  readonly spaceName: string;
+  readonly categoryLabel: string;
+  readonly highBid: number;
+  readonly minimumNextBid: number;
+  readonly maximumBid: number;
+  readonly balance: number;
+  readonly prioritySeatId: string;
+  readonly priorityName: string;
+  readonly priorityConnected: boolean;
+  readonly leaderName?: string;
+  readonly passedNames: readonly string[];
+}
+
+function deedPresentation(
+  snapshot: GameSnapshotProjection,
+  deedId: string,
+): {
+  readonly space: BoardSpaceProjection | undefined;
+  readonly categoryLabel: string;
+  readonly baseRent: number | undefined;
+} {
+  const space = snapshot.board.find((candidate) => candidate.deedId === deedId);
+  const deed = getBundle(snapshot.versions.contentVersion)?.deeds.find(
+    (candidate) => candidate.deedId === deedId,
+  );
+  return {
+    space,
+    categoryLabel:
+      space?.deedCategory === undefined
+        ? "Address"
+        : DEED_CATEGORY_DISPLAY[space.deedCategory].label,
+    baseRent: deed?.baseRent,
+  };
+}
+
+function selfBalance(snapshot: GameSnapshotProjection): number {
+  return snapshot.seats.find((seat) => seat.isSelf)?.balance ?? 0;
+}
+
+function stringConstraint(action: LegalAction | undefined, key: string): string | undefined {
+  const value = action?.constraints?.[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+/** Display-only acquisition context. Authority remains in legalActions. See UX-014. */
+export function acquisitionDecisionContext(
+  snapshot: GameSnapshotProjection,
+): AcquisitionDecisionContext | undefined {
+  if (snapshot.phase !== "AwaitPurchase") return undefined;
+  const deedId = stringConstraint(
+    snapshot.legalActions.find(
+      (action) => action.type === "AcquireDeed" || action.type === "DeclineAcquisition",
+    ),
+    "deedId",
+  );
+  if (deedId === undefined) return undefined;
+  const presentation = deedPresentation(snapshot, deedId);
+  if (presentation.space?.name === undefined || presentation.space.price === undefined) {
+    return undefined;
+  }
+  const balance = selfBalance(snapshot);
+  return {
+    deedId,
+    spaceName: presentation.space.name,
+    categoryLabel: presentation.categoryLabel,
+    price: presentation.space.price,
+    balance,
+    projectedBalance: balance - presentation.space.price,
+    canAcquire: snapshot.legalActions.some((action) => action.type === "AcquireDeed"),
+    ...(presentation.baseRent === undefined ? {} : { baseRent: presentation.baseRent }),
+  };
+}
+
+/** Display-only auction context. It intentionally has no timer or client authority. See UX-014/RULE-009. */
+export function auctionDecisionContext(
+  snapshot: GameSnapshotProjection,
+): AuctionDecisionContext | undefined {
+  if (snapshot.phase !== "AwaitAuction" || snapshot.auction === undefined) return undefined;
+  const auction = snapshot.auction;
+  const presentation = deedPresentation(snapshot, auction.deedId);
+  if (presentation.space?.name === undefined) return undefined;
+  const priority = snapshot.seats.find((seat) => seat.seatId === auction.prioritySeatId);
+  if (priority === undefined) return undefined;
+  const leader = snapshot.seats.find((seat) => seat.seatId === auction.highBidderSeatId);
+  const passedNames = auction.passedSeatIds.flatMap((seatId) => {
+    const seat = snapshot.seats.find((candidate) => candidate.seatId === seatId);
+    return seat?.name === undefined ? [] : [seat.name];
+  });
+  const bidAction = snapshot.legalActions.find((action) => action.type === "PlaceAuctionBid");
+  const maximumBid =
+    typeof bidAction?.constraints?.maxBid === "number"
+      ? bidAction.constraints.maxBid
+      : selfBalance(snapshot);
+  return {
+    deedId: auction.deedId,
+    spaceName: presentation.space.name,
+    categoryLabel: presentation.categoryLabel,
+    highBid: auction.highBid ?? 0,
+    minimumNextBid: auction.minimumNextBid,
+    maximumBid,
+    balance: selfBalance(snapshot),
+    prioritySeatId: auction.prioritySeatId,
+    priorityName: priority.name ?? "Open seat",
+    priorityConnected: priority.connected,
+    ...(leader?.name === undefined ? {} : { leaderName: leader.name }),
+    passedNames,
+  };
 }
 
 export function latestDiceResult(

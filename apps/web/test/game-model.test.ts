@@ -3,6 +3,8 @@ import { STANDARD_CONFIGURATION, type GameSnapshotProjection } from "@blockparty
 import { PLACEHOLDER_BUNDLE } from "@blockparty/game-content";
 import {
   activeSpace,
+  acquisitionDecisionContext,
+  auctionDecisionContext,
   boardLayout,
   commandForLegalAction,
   districtNames,
@@ -116,6 +118,88 @@ describe("game presentation model", () => {
         constraints: { counterpartySeatId: "seat-b" },
       }),
     ).toBeUndefined();
+  });
+
+  it("builds acquisition context from the server deed constraint and projection", () => {
+    const value = snapshot({
+      phase: "AwaitPurchase",
+      board: [
+        {
+          ...snapshot().board[0]!,
+          price: 12_000,
+        },
+        snapshot().board[1]!,
+      ],
+      legalActions: [
+        { type: "AcquireDeed", constraints: { deedId: "d-sawhorse-lane" } },
+        { type: "DeclineAcquisition", constraints: { deedId: "d-sawhorse-lane" } },
+      ],
+    });
+
+    expect(acquisitionDecisionContext(value)).toMatchObject({
+      deedId: "d-sawhorse-lane",
+      spaceName: "Sawhorse Lane",
+      categoryLabel: "Block",
+      price: 12_000,
+      balance: 150_000,
+      projectedBalance: 138_000,
+      canAcquire: true,
+    });
+
+    expect(
+      acquisitionDecisionContext({
+        ...value,
+        seats: [{ ...value.seats[0]!, balance: 1_000 }],
+        legalActions: [{ type: "DeclineAcquisition", constraints: { deedId: "d-sawhorse-lane" } }],
+      }),
+    ).toMatchObject({
+      balance: 1_000,
+      price: 12_000,
+      projectedBalance: -11_000,
+      canAcquire: false,
+    });
+  });
+
+  it("exposes untimed auction leader, priority, passes, and bid bounds", () => {
+    const value = snapshot({
+      phase: "AwaitAuction",
+      paused: true,
+      seats: [
+        snapshot().seats[0]!,
+        {
+          ...snapshot().seats[0]!,
+          seatId: "seat-b",
+          name: "Maya",
+          isHost: false,
+          isSelf: false,
+          connected: false,
+        },
+      ],
+      auction: {
+        deedId: "d-sawhorse-lane",
+        highBid: 4_000,
+        highBidderSeatId: "seat-b",
+        minimumNextBid: 4_001,
+        prioritySeatId: "seat-b",
+        passedSeatIds: ["seat-a"],
+      },
+      legalActions: [{ type: "PassAuction" }],
+    });
+
+    expect(auctionDecisionContext(value)).toEqual({
+      deedId: "d-sawhorse-lane",
+      spaceName: "Sawhorse Lane",
+      categoryLabel: "Block",
+      highBid: 4_000,
+      minimumNextBid: 4_001,
+      maximumBid: 150_000,
+      balance: 150_000,
+      prioritySeatId: "seat-b",
+      priorityName: "Maya",
+      priorityConnected: false,
+      leaderName: "Maya",
+      passedNames: ["North Star"],
+    });
   });
 
   it("reads the latest authoritative dice event without inventing an outcome", () => {

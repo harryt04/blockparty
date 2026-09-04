@@ -9,9 +9,14 @@
  * On mobile this is a fixed bottom bar that opens a modal bottom sheet for the
  * decision itself. The sheet must not cover its invoker without a way to close.
  */
-import type { ActionAvailability, LegalAction } from "@blockparty/contracts";
+import type {
+  ActionAvailability,
+  GameSnapshotProjection,
+  LegalAction,
+} from "@blockparty/contracts";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { AcquisitionAuctionSummary } from "./acquisition-auction-summary";
 
 /** Verb + object labels. Never a vague "Confirm". DS-030. */
 const ACTION_LABELS: Partial<Record<LegalAction["type"], string>> = {
@@ -155,6 +160,7 @@ function ActionOptions({
 export function ActionBar({
   legalActions,
   actionAvailability,
+  decisionSnapshot,
   statusText,
   pending = false,
   disabled = false,
@@ -162,6 +168,7 @@ export function ActionBar({
 }: {
   legalActions: readonly LegalAction[];
   actionAvailability: readonly ActionAvailability[];
+  decisionSnapshot?: GameSnapshotProjection;
   statusText?: string;
   pending?: boolean;
   disabled?: boolean;
@@ -263,15 +270,20 @@ export function ActionBar({
               </Button>
             </div>
             <div className="mt-4">
-              <ActionOptions
-                legalActions={legalActions}
-                actionAvailability={actionAvailability}
-                disabled={disabled || pending}
-                onAction={(action, amount) => {
-                  submit(action, amount);
-                  setOpen(false);
-                }}
-              />
+              {decisionSnapshot === undefined ? null : (
+                <AcquisitionAuctionSummary snapshot={decisionSnapshot} compact />
+              )}
+              <div className={decisionSnapshot === undefined ? undefined : "mt-4"}>
+                <ActionOptions
+                  legalActions={legalActions}
+                  actionAvailability={actionAvailability}
+                  disabled={disabled || pending}
+                  onAction={(action, amount) => {
+                    submit(action, amount);
+                    setOpen(false);
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>

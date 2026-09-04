@@ -482,12 +482,14 @@ separate player contexts.
       Proves: two-player Playwright turn cases cover legal/illegal/stale/double-submit actions and plain-language unavailable reasons; TEST-002 browser layer.
       Implemented the sync-backed active-turn summary and accessible action sheet in `apps/web/src/components/game/game-client.tsx` and `apps/web/src/components/game/action-bar.tsx`; `apps/web/test/game-model.test.ts` proves server-constrained command mapping and authoritative dice-result presentation. The repository still has no Playwright harness or configured MongoDB, so the required two-player browser evidence remains follow-up evidence.
 
-- [ ] **C7 — Acquisition and auction**
+- [x] **C7 — Acquisition and auction**
       Blocked by: C6
-      Requirements: RULE-004, RULE-006, UX-015
+      Requirements: RULE-004, RULE-006, UX-014
       Read: docs/product/rules.md, docs/design/ux-spec.md
       Acceptance: purchase/decline and auction sheets show deed/cash/bid context, valid bounds, bidder/pass state and pause indefinitely for required disconnected actors without countdowns.
       Proves: multi-context Playwright acquisition/auction journeys cover affordance, bids, passes, disconnect/reconnect, winner, and no-sale; TEST-002 browser layer.
+      Implemented the projection-only acquisition and auction decision context in `apps/web/src/components/game/acquisition-auction-summary.tsx`, with server-bound actions, readable bid/pass state, and pause-safe controls in the live game shell.
+      `apps/web/test/game-model.test.ts` proves purchase balance/affordability mapping and auction leader, priority, pass, and bound mapping; full multi-context browser evidence remains planned because no Playwright harness or MongoDB is configured.
 
 - [ ] **C8 — Manage: improve, sell, mortgage, and redeem**
       Blocked by: C6

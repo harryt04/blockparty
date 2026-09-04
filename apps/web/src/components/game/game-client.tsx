@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConnectionStatus } from "@/components/shell/connection-status";
 import { ActiveSpaceDetail } from "./active-space-detail";
+import { AcquisitionAuctionSummary } from "./acquisition-auction-summary";
 import { BankAssets } from "./bank-assets";
 import { BoardList } from "./board-list";
 import { BoardView } from "./board-view";
@@ -248,6 +249,8 @@ export function GameClient({ gameId }: { gameId: string }) {
             currencyLabel="Tabs"
           />
 
+          <AcquisitionAuctionSummary snapshot={snapshot} />
+
           <section aria-labelledby="players-heading">
             <h2 id="players-heading" className="mb-2 font-serif text-xl">
               Players
@@ -288,9 +291,14 @@ export function GameClient({ gameId }: { gameId: string }) {
       <ActionBar
         legalActions={snapshot.legalActions}
         actionAvailability={snapshot.actionAvailability}
-        statusText={actionError ?? actionStatus}
+        decisionSnapshot={snapshot}
+        statusText={
+          actionError ??
+          actionStatus ??
+          (snapshot.paused ? "Play is paused until the required player reconnects." : undefined)
+        }
         pending={pendingAction !== undefined}
-        disabled={state.connection !== "live" || pendingAction !== undefined}
+        disabled={state.connection !== "live" || snapshot.paused || pendingAction !== undefined}
         onAction={(action, amount) => void submitAction(action, amount)}
       />
     </div>
