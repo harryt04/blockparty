@@ -243,3 +243,14 @@ live stream carry a player from `RollDice` through the authoritative
 `AwaitPurchase` projection and a canonical `AcquireDeed` command. This covers
 the action submission and live projection portions of PRD-FUN-006–010,
 PROTO-002, and UX-013–017; multi-context lifecycle evidence remains pending.
+
+Iteration 7 adds the join mutation CSRF boundary in
+`apps/web/src/components/entry/join-gate.tsx`; `apps/web/e2e/entry.spec.ts`
+proves a browser carrying an existing capability/CSRF cookie mirrors the token
+header before claiming a seat, covering SEC-003 and the C3 join flow.
+
+Iteration 7 also wires bot turns through
+`apps/web/src/server/commands/run-bot-turn.ts` after human command commits;
+the runner uses the public deterministic policy, persists
+`BotDecisionExplained` through `handleCommand`, and stops at human, paused, or
+terminal state boundaries, covering PRD-FUN-011, ENG-015, and ENG-026.

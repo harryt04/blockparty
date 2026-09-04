@@ -23,6 +23,7 @@ import {
 } from "@blockparty/contracts";
 import {
   assertInvariants,
+  type BotDecision,
   resolve,
   type EngineEvent,
   type GameState,
@@ -87,6 +88,8 @@ export interface CommandPathOptions {
   readonly transaction?: <T>(operation: (session: ClientSession) => Promise<T>) => Promise<T>;
   readonly now?: () => Date;
   readonly publish?: (gameId: string, events: readonly DomainEvent[]) => void | Promise<void>;
+  /** Internal server handoff for a deterministic bot decision. */
+  readonly botDecision?: BotDecision;
 }
 
 interface CommittedCommand {
@@ -563,6 +566,7 @@ async function transact(
   store: CommandStore,
   session: ClientSession,
   now: Date,
+  botDecision?: BotDecision,
 ): Promise<CommittedCommand> {
   // ENG-015 requires the receipt lookup to be the first aggregate read.
   const existing = await store.commandReceipts.findOne(
@@ -615,6 +619,19 @@ async function transact(
   }
 
   const nextVersion = priorVersion + 1;
+  const botDecisionEvent =
+    botDecision === undefined
+      ? undefined
+      : DomainEvent.parse({
+          gameId: game._id,
+          sequence: priorSequence + 1,
+          aggregateVersion: nextVersion,
+          type: botDecision.event.type,
+          eventVersion: botDecision.event.eventVersion,
+          actorSeatId: botDecision.event.actorSeatId,
+          occurredAt: now.toISOString(),
+          payload: botDecision.event.payload,
+        });
   const rulesConfiguredEvent =
     envelope.payload.type === "StartGame" && game.rulesConfigured !== true
       ? DomainEvent.parse({
@@ -632,10 +649,13 @@ async function transact(
         })
       : undefined;
   const journalEvents = [
+    ...(botDecisionEvent === undefined ? [] : [botDecisionEvent]),
     ...(rulesConfiguredEvent === undefined ? [] : [rulesConfiguredEvent]),
     ...toJournalEvents(
       game._id,
-      priorSequence + (rulesConfiguredEvent === undefined ? 0 : 1),
+      priorSequence +
+        (botDecisionEvent === undefined ? 0 : 1) +
+        (rulesConfiguredEvent === undefined ? 0 : 1),
       nextVersion,
       resolution.events,
       now,
@@ -750,7 +770,7 @@ export async function handleCommand(
         ? transactLobbyConfiguration(parsed.data, actor, store, session, now)
         : recoveryCommand(parsed.data.payload)
           ? transactRecovery(parsed.data, actor, store, session, now)
-          : transact(parsed.data, actor, store, session, now),
+          : transact(parsed.data, actor, store, session, now, options.botDecision),
     );
     const outcome = committed.outcome;
     transactionOutcome = outcome.ok ? "accepted" : "rejected";

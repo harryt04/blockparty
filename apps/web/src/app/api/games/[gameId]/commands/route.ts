@@ -6,6 +6,7 @@ import { CommandEnvelope, HOST_ONLY_COMMANDS, PROTOCOL_VERSION } from "@blockpar
 import type { CommandAckEnvelope } from "@blockparty/contracts";
 import { readHostCapability, readReclaimClaim, readSeatCapability } from "@/server/auth/session";
 import { handleCommand } from "@/server/commands/handle-command";
+import { runBotTurns } from "@/server/commands/run-bot-turn";
 import { COOKIE_NAMES, COOKIE_OPTIONS } from "@/server/auth/capabilities";
 import { checkJsonContentType, checkRequestBodySize, guardMutation } from "@/server/http/guards";
 import { jsonError, jsonOk } from "@/server/http/responses";
@@ -69,6 +70,12 @@ async function postCommand(request: Request, params: Promise<{ gameId: string }>
       requestId: envelope.requestId,
       reason: outcome.reason,
     });
+  }
+  try {
+    await runBotTurns(gameId);
+  } catch {
+    // The human command already committed. A later sync/reconnect can observe
+    // the bot's still-pending turn without converting that ACK into a 500.
   }
   const ack: CommandAckEnvelope = {
     protocolVersion: PROTOCOL_VERSION,

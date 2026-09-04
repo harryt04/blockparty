@@ -24,6 +24,15 @@ type GateState =
   | { readonly kind: "unavailable" }
   | { readonly kind: "error" };
 
+function csrfToken(): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const cookie = document.cookie
+    .split("; ")
+    .find((entry) => entry.startsWith("bp_csrf=") || entry.startsWith("__Host-bp_csrf="));
+  if (cookie === undefined) return undefined;
+  return cookie.slice(cookie.indexOf("=") + 1);
+}
+
 function fieldErrorId(field: JoinField): string {
   return `join-${field}-error`;
 }
@@ -70,10 +79,15 @@ function JoinForm({ inviteId, gameName }: { inviteId: string; gameName?: string 
     track("invite_join_started");
     setPending(true);
     try {
+      const csrf = csrfToken();
       const response = await fetch(`/api/invites/${encodeURIComponent(inviteId)}/join`, {
         method: "POST",
         credentials: "include",
-        headers: { "content-type": "application/json", accept: "application/json" },
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json",
+          ...(csrf === undefined ? {} : { "x-csrf-token": csrf }),
+        },
         body: JSON.stringify(result.request),
       });
       const body: unknown = await response.json();
