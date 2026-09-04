@@ -64,3 +64,20 @@ refreshing after the authoritative state becomes ACTIVE, avoiding a repeated
 409 loop while the route changes to the game. A single in-flight 409 can still
 occur during the intentional SSE handoff, but it does not block navigation or
 gameplay.
+
+## Iteration 6 follow-up
+
+The real browser flow reached the active game and exposed a React duplicate-key
+warning after a fee landing. The engine advertises repeated blocked
+`RequestScarceImprovement` actions without constraints in `ActionAvailability`,
+so the action sheet must namespace its legal and blocked render keys and include
+an occurrence index. The pure key helper now has a regression test in
+`apps/web/test/action-bar.test.ts`; a corrected live smoke run reaches `Your turn`
+after a persisted roll with no duplicate-key warning. The same run showed that
+the authoritative `DiceRolled` event uses its canonical `dice` array, so
+`latestDiceResult` now reads that payload while retaining legacy fixture support.
+The lobby client also aborts an in-flight lobby request when the game becomes
+ACTIVE, eliminating the transient 409 console error during the SSE handoff.
+Final live smoke evidence: both isolated player contexts created/joined/started
+a game and rolled through the UI; the active player saw `Your turn` and the
+latest roll, and no browser console errors were recorded.

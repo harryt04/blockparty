@@ -18,7 +18,10 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import { AcquisitionAuctionSummary } from "./acquisition-auction-summary";
+import { actionRenderKey } from "./action-bar-model";
 import { MANAGEMENT_ACTION_TYPES } from "./game-model";
+
+export { actionRenderKey } from "./action-bar-model";
 
 /** Verb + object labels. Never a vague "Confirm". DS-030. */
 const ACTION_LABELS: Partial<Record<LegalAction["type"], string>> = {
@@ -40,10 +43,6 @@ const ACTION_LABELS: Partial<Record<LegalAction["type"], string>> = {
 };
 
 export const actionLabel = (type: LegalAction["type"]) => ACTION_LABELS[type] ?? type;
-
-function actionKey(action: LegalAction): string {
-  return `${action.type}:${JSON.stringify(action.constraints ?? {})}`;
-}
 
 function constraintText(action: LegalAction): string | undefined {
   const constraints = action.constraints;
@@ -132,10 +131,13 @@ function ActionOptions({
       {visibleLegalActions.length === 0 && visibleAvailability.length === 0 ? (
         <p className="text-sm text-muted-ink">No action is required from you right now.</p>
       ) : null}
-      {visibleLegalActions.map((action) => {
+      {visibleLegalActions.map((action, index) => {
         if (action.type === "PlaceAuctionBid") {
           return (
-            <div key={actionKey(action)} className="rounded-(--radius-md) border border-line p-3">
+            <div
+              key={actionRenderKey(action, "legal", index)}
+              className="rounded-(--radius-md) border border-line p-3"
+            >
               <label htmlFor="auction-bid" className="font-medium">
                 {actionLabel(action.type)}
               </label>
@@ -168,7 +170,7 @@ function ActionOptions({
         }
         return (
           <Button
-            key={actionKey(action)}
+            key={actionRenderKey(action, "legal", index)}
             variant={action.type === "EndNoContest" ? "destructive" : "primary"}
             onClick={() => onAction(action)}
             disabled={disabled}
@@ -177,8 +179,8 @@ function ActionOptions({
           </Button>
         );
       })}
-      {visibleAvailability.map((blocked) => (
-        <div key={blocked.type} className="flex flex-col gap-1">
+      {visibleAvailability.map((blocked, index) => (
+        <div key={actionRenderKey(blocked, "blocked", index)} className="flex flex-col gap-1">
           <Button disabled aria-describedby={`reason-${blocked.type}`}>
             {actionLabel(blocked.type)}
           </Button>

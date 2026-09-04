@@ -65,13 +65,18 @@ export function LobbyClient({ gameId }: { gameId: string }) {
   const [commandError, setCommandError] = useState<string>();
   const [draftConfiguration, setDraftConfiguration] = useState<RulesConfiguration>();
   const activeGameRef = useRef(false);
+  const lobbyRequestRef = useRef<AbortController | null>(null);
 
   const loadLobby = useCallback(async () => {
     if (activeGameRef.current) return;
+    lobbyRequestRef.current?.abort();
+    const controller = new AbortController();
+    lobbyRequestRef.current = controller;
     try {
       const response = await fetch(lobbyUrl(gameId), {
         credentials: "include",
         headers: { Accept: "application/json" },
+        signal: controller.signal,
       });
       const body: unknown = await response.json();
       if (!response.ok) {
@@ -84,14 +89,19 @@ export function LobbyClient({ gameId }: { gameId: string }) {
       setDraftConfiguration((current) => current ?? parsed.data.configuration);
       setError(undefined);
     } catch (caught) {
+      if (controller.signal.aborted) return;
       setError(caught instanceof Error ? caught.message : "The lobby is unavailable.");
+    } finally {
+      if (lobbyRequestRef.current === controller) lobbyRequestRef.current = null;
     }
   }, [gameId]);
 
   const { state, retry } = useGameSync(gameId, { onPresence: loadLobby });
 
   useEffect(() => {
-    activeGameRef.current = state.snapshot?.status === "ACTIVE";
+    const active = state.snapshot?.status === "ACTIVE";
+    activeGameRef.current = active;
+    if (active) lobbyRequestRef.current?.abort();
   }, [state.snapshot?.status]);
 
   useEffect(() => {

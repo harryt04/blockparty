@@ -779,8 +779,9 @@ export function latestDiceResult(
     .sort((left, right) => right.sequence - left.sequence)
     .find((candidate) => candidate.type === "DiceRolled");
   if (event === undefined) return undefined;
-  const first = event.payload.first;
-  const second = event.payload.second;
+  const dice = event.payload.dice;
+  const first = Array.isArray(dice) ? dice[0] : event.payload.first;
+  const second = Array.isArray(dice) ? dice[1] : event.payload.second;
   return typeof first === "number" &&
     Number.isInteger(first) &&
     first >= 1 &&
