@@ -15,6 +15,7 @@ import {
   VARIANT_COPY,
   VARIANT_KEYS,
   VARIANT_SCHEMA_VERSION,
+  displayTermKey,
 } from "./rules-content";
 
 export const metadata: Metadata = { title: "Rules" };
@@ -87,8 +88,8 @@ export default function RulesPage() {
           </CardHeader>
           <CardContent>
             <dl className="flex flex-col gap-3">
-              {DISPLAY_TERM_GUIDE.map((term) => (
-                <div key={term.label}>
+              {DISPLAY_TERM_GUIDE.map((term, index) => (
+                <div key={displayTermKey(term.label, index)}>
                   <dt className="font-medium">{term.label}</dt>
                   <dd className="text-sm text-muted-ink">{term.explanation}</dd>
                 </div>

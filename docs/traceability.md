@@ -124,6 +124,10 @@ Rules and accessibility content is authored in `apps/web/src/app/rules/page.tsx`
 PRD-FUN-010, VAR-013, UX-003, UX-005, DS-060, and DS-070; Playwright navigation,
 storage inspection, and manual assistive-technology evidence remain required.
 
+Iteration 10 adds index-qualified render keys for intentionally repeated display terms and a
+regression assertion in `apps/web/test/settings-content.test.ts`, removing the duplicate-key
+runtime warning observed on `/rules` without changing canonical or display vocabulary.
+
 ## D4 variant evidence
 
 D4 implements VAR-006 through VAR-008 and CONTENT-007's starting-deed

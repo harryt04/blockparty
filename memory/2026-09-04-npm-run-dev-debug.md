@@ -81,3 +81,17 @@ ACTIVE, eliminating the transient 409 console error during the SSE handoff.
 Final live smoke evidence: both isolated player contexts created/joined/started
 a game and rolled through the UI; the active player saw `Your turn` and the
 latest roll, and no browser console errors were recorded.
+
+## Iteration 10 follow-up
+
+The real dev run exposed a React duplicate-key warning on `/rules`: the display-term guide has
+two intentional `Block` labels, while the renderer used the label as its key. `displayTermKey`
+now qualifies labels with their list index, and `apps/web/test/settings-content.test.ts` asserts
+the render keys stay unique. A fresh browser load of `/rules` produced no console errors.
+
+The first smoke attempt used `127.0.0.1:3200` while the configured development allowlist only
+contained `http://localhost:3000`; the resulting mutation rejection was `ORIGIN_NOT_ALLOWED`.
+The app remains correctly allowlist-based, so the live run was restarted with the explicit local
+origin rather than weakening origin validation. With that configuration, `npm run dev` created,
+started, rolled, resolved movement, ended a turn, and processed the deterministic bot turn with
+successful command acknowledgements and no browser console errors.

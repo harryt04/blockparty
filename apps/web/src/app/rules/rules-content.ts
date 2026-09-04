@@ -46,6 +46,11 @@ export const DISPLAY_TERM_GUIDE = [
   },
 ] as const;
 
+/** Display labels can intentionally repeat across categories (for example, Block). */
+export function displayTermKey(label: string, index: number): string {
+  return `${label}:${index}`;
+}
+
 export const INTERACTION_GUIDE = [
   {
     heading: "Take a turn",

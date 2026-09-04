@@ -4,6 +4,7 @@ import {
   DISPLAY_TERM_GUIDE,
   INTERACTION_GUIDE,
   VARIANT_COPY,
+  displayTermKey,
 } from "../src/app/rules/rules-content";
 import {
   DEFAULT_PRESENTATION_PREFERENCES,
@@ -58,5 +59,10 @@ describe("rules and accessibility content", () => {
     expect(INTERACTION_GUIDE.map((item) => item.heading)).toEqual(
       expect.arrayContaining(["Inspect the route", "Stay connected", "Resolve Owed"]),
     );
+  });
+
+  it("gives repeated display labels stable unique render keys", () => {
+    const keys = DISPLAY_TERM_GUIDE.map((term, index) => displayTermKey(term.label, index));
+    expect(new Set(keys).size).toBe(keys.length);
   });
 });
