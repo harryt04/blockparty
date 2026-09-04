@@ -31,6 +31,8 @@ import { assertInvariants } from "./invariants";
 
 export * from "./prng";
 export * from "./invariants";
+export * from "./bot";
+export * from "./soak";
 
 export const ENGINE_VERSION = "0.1.0";
 export const STATE_SCHEMA_VERSION = "1.0.0";

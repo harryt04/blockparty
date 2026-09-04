@@ -580,12 +580,13 @@ recorded draws.
       Proves: fixed-seed deal goldens and construction property tables cover default, each toggle, interactions, fairness, and invariants; TEST-002 pure-engine golden/property layer.
       Implemented content-declared starting-deed eligibility with deterministic round-robin event assignments, VAR-007 buy/sell relaxation, and VAR-008 inventory bypass. `packages/game-engine/test/variant-setup.test.ts` proves fixed-seed order, fairness for 2–6 seats, underfilled-pool rejection, construction tables, replay, and combined toggles; `packages/game-content/test/validate.test.ts` proves eligibility references are validated.
 
-- [ ] **D5 — Bot policy, explanations, and the soak harness**
+- [x] **D5 — Bot policy, explanations, and the soak harness**
       Blocked by: D4
       Requirements: PRD-FUN-011, ENG-026, CONTENT-010
       Read: docs/product/prd.md, docs/engineering/game-engine.md, docs/product/game-content.md, docs/delivery/test-strategy.md
       Acceptance: one bot policy chooses only from `legalActions`, uses public state plus recorded draws, is deterministic, and emits `BotDecisionExplained` with stable reason code/no free text; the harness runs reproducible 2–6-seat preset/toggle games.
       Proves: fixed-state policy tables and a 5,000-game deterministic soak recording seed, duration, elimination, supply, concentration, and stalls; TEST-002 bot-policy/soak layers.
+      Implemented pure public-state bot selection with stable rationale enums and a bounded deterministic soak matrix; `packages/game-engine/test/bot.test.ts` proves advertised-action selection, replay-safe tie-breaking, privacy, and the 5,000-game report.
 
 ---
 

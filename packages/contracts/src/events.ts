@@ -116,15 +116,47 @@ export const RulesConfiguredPayload = z
   .strict();
 export type RulesConfiguredPayload = z.infer<typeof RulesConfiguredPayload>;
 
+/** Stable bot explanation vocabulary. Never use display copy or free text. ENG-026. */
+export const BotActionCategory = z.enum([
+  "settle-obligation",
+  "acquire-deed",
+  "bid-auction",
+  "improve-district",
+  "propose-trade",
+  "resolve-choice",
+  "end-or-pass",
+  "safe-fallback",
+]);
+export type BotActionCategory = z.infer<typeof BotActionCategory>;
+
+export const BotDecisionReasonCode = z.enum([
+  "OBLIGATION_SETTLEMENT_READY",
+  "LIQUIDATE_FOR_OBLIGATION",
+  "ACQUIRE_WITH_RESERVE",
+  "DECLINE_BELOW_RESERVE",
+  "BID_BELOW_VALUATION",
+  "PASS_ABOVE_VALUATION",
+  "IMPROVE_WITH_RESERVE",
+  "IMMEDIATE_TRADE_AVAILABLE",
+  "DETENTION_RELEASE_CHOICE",
+  "SAFE_END_OR_PASS",
+  "SAFE_LEGAL_FALLBACK",
+]);
+export type BotDecisionReasonCode = z.infer<typeof BotDecisionReasonCode>;
+
+const BotFactorKey = z.enum(["balance", "reserve", "candidateCount", "valuation", "bid"]);
+
 /**
- * A bot rationale event. Bounded public numeric factors and a stable reason
- * code only: never free text, seed, deck order, or private capability. ENG-026.
+ * A bot rationale event. Bounded public numeric factors and stable enums only:
+ * never free text, seed, deck order, or private capability. ENG-026.
  */
 export const BotDecisionExplainedPayload = z
   .object({
-    actionCategory: z.string().max(64),
-    reasonCode: z.string().max(64),
-    factors: z.record(z.string().max(32), z.number()).optional(),
+    actionCategory: BotActionCategory,
+    reasonCode: BotDecisionReasonCode,
+    factors: z
+      .partialRecord(BotFactorKey, z.number().int().min(0).max(Number.MAX_SAFE_INTEGER))
+      .optional(),
   })
   .strict();
 export type BotDecisionExplainedPayload = z.infer<typeof BotDecisionExplainedPayload>;
