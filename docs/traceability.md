@@ -236,3 +236,10 @@ viewports with axe in Chromium, Firefox, and WebKit. The human keyboard,
 200%/400% zoom, VoiceOver, NVDA, iOS Safari, and Android Chrome record is
 `docs/delivery/accessibility-checklist.md`; it is intentionally pending human
 execution before release.
+
+Iteration 4 adds focused Chromium browser evidence in
+`apps/web/e2e/iteration4-gameplay.spec.ts`: a mocked authorized snapshot and
+live stream carry a player from `RollDice` through the authoritative
+`AwaitPurchase` projection and a canonical `AcquireDeed` command. This covers
+the action submission and live projection portions of PRD-FUN-006–010,
+PROTO-002, and UX-013–017; multi-context lifecycle evidence remains pending.
