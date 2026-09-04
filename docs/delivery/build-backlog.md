@@ -524,12 +524,13 @@ separate player contexts.
       Proves: multi-context Playwright disconnect/reload/replacement/reclaim/transfer/no-contest journeys; TEST-002 browser layer.
       Implemented the recovery projection and explicit game controls in `packages/contracts/src/projections.ts`, `apps/web/src/server/projections/authorize.ts`, and `apps/web/src/components/game/recovery-panel.tsx`; reclaim-authenticated devices can bootstrap, resync, and request host-approved control without exposing capabilities. `apps/web/test/game-model.test.ts`, `apps/web/test/projection.test.ts`, and the existing sync/route suites prove authority mapping and recovery preservation; the required separate-context browser journey remains planned.
 
-- [ ] **C12 — Completion, summary, and rematch**
+- [x] **C12 — Completion, summary, and rematch**
       Blocked by: C10
       Requirements: PRD-FUN-015, UX-019
       Read: docs/product/prd.md, docs/design/ux-spec.md
       Acceptance: winner or no-winner completion shows standings, variants, duration and read-only history until expiry; rematch creates a distinct game/invite/capability set without carrying authority or state.
       Proves: multi-context Playwright winner/no-winner/read-only/rematch/expiry journeys; TEST-002 browser layer.
+      Implemented the authorized terminal summary route/projection, automatic completion routing, read-only standings/history, and explicit rematch form/API backed by fresh capability issuance. `apps/web/test/summary-route.test.ts` and `apps/web/test/rematch-route.test.ts` prove terminal/no-winner handling, duration/history projection, authorization, and fresh-game inputs; Playwright/MongoDB evidence remains planned.
 
 - [ ] **C13 — Settings, rules, and accessibility content**
       Blocked by: C4

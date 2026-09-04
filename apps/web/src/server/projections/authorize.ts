@@ -320,6 +320,7 @@ export function buildSummaryProjection(source: {
   readonly durationSeconds: number;
   readonly expiresAt: Date | string;
   readonly seats: readonly ProjectionSeatSource[];
+  readonly publicEvents: readonly DomainEvent[];
 }): SummaryProjection {
   const sourceBySeatId = new Map(source.seats.map((seat) => [seat.seatId, seat]));
   const eliminationOrder = source.state.eliminationOrder ?? [];
@@ -358,6 +359,7 @@ export function buildSummaryProjection(source: {
     }),
     configuration: source.configuration,
     durationSeconds: source.durationSeconds,
+    publicEvents: [...source.publicEvents],
     expiresAt: toIsoDate(source.expiresAt),
   };
 }

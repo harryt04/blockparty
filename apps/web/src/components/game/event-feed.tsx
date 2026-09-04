@@ -52,12 +52,15 @@ function eventLabel(type: DomainEvent["type"]): string {
 function eventDescription(
   event: DomainEvent,
   seats: readonly SeatProjection[],
+  seatNames: Readonly<Record<string, string | undefined>> | undefined,
   currencyLabel: string,
 ): string {
   const actor =
     event.actorSeatId === undefined
       ? "The Committee"
-      : (seats.find((seat) => seat.seatId === event.actorSeatId)?.name ?? "A player");
+      : (seatNames?.[event.actorSeatId] ??
+        seats.find((seat) => seat.seatId === event.actorSeatId)?.name ??
+        "A player");
   const payload = event.payload;
   const amount =
     typeof payload.amount === "number"
@@ -71,11 +74,13 @@ function eventDescription(
 export function EventFeed({
   events,
   seats = [],
+  seatNames,
   currencyLabel = "Tabs",
   defaultOpen = false,
 }: {
   events: readonly DomainEvent[];
   seats?: readonly SeatProjection[];
+  seatNames?: Readonly<Record<string, string | undefined>>;
   currencyLabel?: string;
   defaultOpen?: boolean;
 }) {
@@ -98,7 +103,7 @@ export function EventFeed({
             {events.map((event) => (
               <li key={`${event.gameId}-${event.sequence}`} className="text-sm">
                 <span className="tabular text-muted-ink">#{event.sequence}</span>{" "}
-                <span>{eventDescription(event, seats, currencyLabel)}</span>
+                <span>{eventDescription(event, seats, seatNames, currencyLabel)}</span>
               </li>
             ))}
           </ol>

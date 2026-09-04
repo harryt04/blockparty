@@ -17,7 +17,12 @@ import {
   ServerTime,
 } from "./common";
 import { RulesConfiguration, RulesPreset } from "./variants";
-import { GameSnapshotProjection, LobbyProjection, SeatToken } from "./projections";
+import {
+  GameSnapshotProjection,
+  LobbyProjection,
+  SeatToken,
+  SummaryProjection,
+} from "./projections";
 
 // --- POST /api/games -------------------------------------------------------
 
@@ -103,6 +108,16 @@ export const BootstrapResponse = z
   })
   .strict();
 export type BootstrapResponse = z.infer<typeof BootstrapResponse>;
+
+// --- GET /api/games/[gameId]/summary --------------------------------------
+
+export const SummaryResponse = z
+  .object({
+    summary: SummaryProjection,
+    serverTime: ServerTime,
+  })
+  .strict();
+export type SummaryResponse = z.infer<typeof SummaryResponse>;
 
 // --- GET /api/games/[gameId]/sync ------------------------------------------
 

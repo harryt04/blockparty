@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   CommandAckEnvelope,
@@ -65,6 +66,7 @@ function csrfToken(): string | undefined {
 }
 
 export function GameClient({ gameId }: { gameId: string }) {
+  const router = useRouter();
   const { state, retry } = useGameSync(gameId);
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>();
   const [pendingAction, setPendingAction] = useState<LegalAction>();
@@ -103,6 +105,12 @@ export function GameClient({ gameId }: { gameId: string }) {
     }
   }, [active?.spaceId, selectedSpaceId, snapshot]);
 
+  useEffect(() => {
+    if (snapshot?.phase === "Finished") {
+      router.replace(`/game/${encodeURIComponent(gameId)}/summary`);
+    }
+  }, [gameId, router, snapshot?.phase]);
+
   if (snapshot === undefined) {
     if (state.connection === "closed") {
       return (
@@ -117,6 +125,29 @@ export function GameClient({ gameId }: { gameId: string }) {
       );
     }
     return <GameLoading />;
+  }
+
+  if (snapshot.phase === "Finished") {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Game complete</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p role="status" aria-live="polite">
+              The final result is ready. Opening the read-only summary…
+            </p>
+            <Link
+              className="mt-4 inline-block underline underline-offset-4"
+              href={`/game/${encodeURIComponent(gameId)}/summary`}
+            >
+              Open summary
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const waitingFor = activeSeat?.name ?? "another player";

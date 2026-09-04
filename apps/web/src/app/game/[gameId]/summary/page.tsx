@@ -1,10 +1,10 @@
-/**
- * Completed-game state must come from an authorized projection. Do not show a
- * fabricated result while the sync client is not yet wired (C1/C12).
- */
-import { notFound } from "next/navigation";
+/** Completion is fetched from the authorized terminal projection. See C12. */
+import type { Metadata } from "next";
+import { SummaryClient } from "@/components/game/summary-client";
+
+export const metadata: Metadata = { title: "Game summary" };
 
 export default async function SummaryPage({ params }: { params: Promise<{ gameId: string }> }) {
-  await params;
-  notFound();
+  const { gameId } = await params;
+  return <SummaryClient gameId={gameId} />;
 }

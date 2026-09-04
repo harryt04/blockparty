@@ -302,6 +302,8 @@ export const SummaryProjection = z
       .max(6),
     configuration: RulesConfiguration,
     durationSeconds: z.int().min(0),
+    /** Bounded, redacted history retained for the read-only summary. */
+    publicEvents: z.array(DomainEvent).max(256),
     expiresAt: ServerTime,
   })
   .strict();
