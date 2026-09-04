@@ -103,6 +103,14 @@ export class GameSyncClient {
     this.emit({ connection: "closed", resyncing: false });
   }
 
+  /** Reconciles immediately after a command or an explicit retry request. */
+  refresh(): void {
+    if (this.closed || !this.started) return;
+    this.streamClose?.();
+    this.streamClose = undefined;
+    void this.synchronize();
+  }
+
   private emit(change: Partial<GameSyncState>): void {
     this.state = { ...this.state, ...change };
     this.options.onState(this.state);

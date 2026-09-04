@@ -1,10 +1,6 @@
-/**
- * Lobby state must come from the authenticated sync client. B11 removes the
- * final fabricated server projection; C1/C4 restore this live surface.
- */
-import { notFound } from "next/navigation";
+import { LobbyClient } from "@/components/game/lobby-client";
 
 export default async function LobbyPage({ params }: { params: Promise<{ gameId: string }> }) {
-  await params;
-  notFound();
+  const { gameId } = await params;
+  return <LobbyClient gameId={gameId} />;
 }

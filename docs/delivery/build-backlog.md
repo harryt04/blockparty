@@ -458,12 +458,13 @@ separate player contexts.
       Implemented availability-gated join rendering, accessible pseudonym/token/age validation, one-submit claim handling, and neutral unavailable states in `apps/web/src/components/entry/join-gate.tsx`; `apps/web/test/join-form.test.ts` proves canonical normalization and credential-free request mapping.
       The repository has no Playwright harness or configured MongoDB, so the separate-context browser matrix remains follow-up evidence.
 
-- [ ] **C4 — Lobby: seats, invite share, variants, and start**
+- [x] **C4 — Lobby: seats, invite share, variants, and start**
       Blocked by: C3
       Requirements: PRD-FUN-002, PRD-FUN-005, UX-012, VAR-010, VAR-013
       Read: docs/product/prd.md, docs/design/ux-spec.md, docs/product/rule-variants.md
       Acceptance: live lobby shows 2–6 seats/presence, host-only safe invite sharing and variant controls/warnings, start eligibility, and atomic start while non-hosts remain read-only.
       Proves: multi-context Playwright lobby tests cover seat/presence changes, host authority, copied invite, variants, and start blockers; TEST-002 browser layer.
+      Implemented the authenticated lobby projection route and sync-backed lobby client with seat/presence states, invite copy/share feedback, host-only rules/start controls, and safe error/loading states; `apps/web/test/lobby-route.test.ts`, `apps/web/test/lobby-model.test.ts`, and `apps/web/test/command-path.test.ts` prove projection secrecy, readiness guards, invite safety, and atomic rules lock. The repository still has no Playwright harness or configured MongoDB, so the required multi-context browser evidence remains follow-up evidence.
 
 - [ ] **C5 — Board, player strip, and event feed on live state**
       Blocked by: C4

@@ -154,6 +154,25 @@ function endNoContestCommand(gameId: string, commandId: string, expectedVersion:
   };
 }
 
+function configureCommand(gameId: string, commandId: string, expectedVersion: number) {
+  return {
+    protocolVersion: 1 as const,
+    type: "game.command" as const,
+    requestId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    gameId,
+    commandId,
+    expectedVersion,
+    payload: {
+      type: "ConfigureRules" as const,
+      configuration: {
+        ...request.configuration,
+        preset: "custom" as const,
+        restSpaceJackpot: true,
+      },
+    },
+  };
+}
+
 describe("transactional command path", () => {
   it("extends active retention only on authoritative play and anchors completion", async () => {
     const fixtureState = await fixture();
@@ -297,5 +316,46 @@ describe("transactional command path", () => {
     expect(rollbackFixture.game.aggregateVersion).toBe(0);
     expect(rollbackFixture.game.lastSequence).toBe(0);
     expect(rollbackFixture.receipts).toHaveLength(0);
+  });
+
+  it("commits host-only lobby rules atomically and locks them after start", async () => {
+    const fixtureState = await fixture();
+    const host = {
+      gameId: fixtureState.game._id,
+      seatId: fixtureState.game.hostSeatId,
+      kind: "host" as const,
+    };
+    const configured = await handleCommand(
+      configureCommand(fixtureState.game._id, "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", 0),
+      host,
+      { database: fixtureState.commandStore, transaction: fixtureState.transaction },
+    );
+
+    expect(configured).toMatchObject({
+      ok: true,
+      aggregateVersion: 1,
+      firstSequence: 1,
+      lastSequence: 1,
+    });
+    expect(fixtureState.game.configuration.restSpaceJackpot).toBe(true);
+    expect(fixtureState.events[0]?.type).toBe("RulesConfigured");
+
+    const started = await handleCommand(
+      startCommand(fixtureState.game._id, "ffffffff-ffff-4fff-8fff-ffffffffffff", 1),
+      host,
+      { database: fixtureState.commandStore, transaction: fixtureState.transaction },
+    );
+    expect(started.ok).toBe(true);
+
+    const locked = await handleCommand(
+      configureCommand(fixtureState.game._id, "11111111-1111-4111-8111-111111111111", 2),
+      host,
+      { database: fixtureState.commandStore, transaction: fixtureState.transaction },
+    );
+    expect(locked).toEqual({
+      ok: false,
+      code: "PHASE_MISMATCH",
+      reason: "RULES_LOCKED_AFTER_START",
+    });
   });
 });

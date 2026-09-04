@@ -392,6 +392,84 @@ async function transactRecovery(
   };
 }
 
+/**
+ * Rules are a lobby aggregate concern, but still use the same receipt,
+ * version, journal, and post-commit publication path as gameplay commands.
+ * This keeps VAR-010 changes atomic without putting configuration in the
+ * pure gameplay state machine.
+ */
+async function transactLobbyConfiguration(
+  envelope: ParsedCommandEnvelope,
+  actor: AuthenticatedSeat,
+  store: CommandStore,
+  session: ClientSession,
+  now: Date,
+): Promise<CommittedCommand> {
+  const existing = await store.commandReceipts.findOne(
+    { gameId: envelope.gameId, commandId: envelope.commandId },
+    { session },
+  );
+  if (existing !== null) return { outcome: ackFromReceipt(existing), events: [] };
+
+  const game = await store.games.findOne({ _id: envelope.gameId }, { session });
+  if (game === null) throw new CommandPathError("NOT_FOUND", "GAME_NOT_FOUND");
+  if (game.expiresAt <= now) throw new CommandPathError("GAME_EXPIRED", "GAME_EXPIRED");
+  if (actor.kind !== "host" || actor.seatId !== game.hostSeatId) {
+    throw new CommandPathError("FORBIDDEN", "HOST_CAPABILITY_REQUIRED");
+  }
+  if (game.status !== "LOBBY" || game.snapshot.phase !== "Lobby") {
+    throw new CommandPathError("PHASE_MISMATCH", "RULES_LOCKED_AFTER_START");
+  }
+  if (envelope.expectedVersion !== game.aggregateVersion) {
+    throw new CommandPathError("STALE_VERSION", "STALE_VERSION");
+  }
+
+  const command = envelope.payload;
+  if (command.type !== "ConfigureRules") {
+    throw new CommandPathError("INTERNAL", "INVALID_LOBBY_COMMAND");
+  }
+  const nextVersion = game.aggregateVersion + 1;
+  const priorSequence = game.lastSequence;
+  const event = DomainEvent.parse({
+    gameId: game._id,
+    sequence: priorSequence + 1,
+    aggregateVersion: nextVersion,
+    type: "RulesConfigured",
+    eventVersion: 1,
+    actorSeatId: actor.seatId,
+    occurredAt: now.toISOString(),
+    payload: { configuration: command.configuration, contentHash: game.contentHash },
+  });
+  const nextState = Object.freeze({ ...game.snapshot, aggregateVersion: nextVersion });
+  await store.gameEvents.insertMany([event], { session, ordered: true });
+  const updated = await store.games.updateOne(
+    { _id: game._id, aggregateVersion: game.aggregateVersion, lastSequence: game.lastSequence },
+    {
+      $set: {
+        configuration: command.configuration,
+        snapshot: nextState,
+        lobby: { ...game.lobby, configuration: command.configuration },
+        aggregateVersion: nextVersion,
+        lastSequence: game.lastSequence + 1,
+      },
+    },
+    { session },
+  );
+  if (updated.matchedCount !== 1) throw new CommandPathError("STALE_VERSION", "STALE_VERSION");
+
+  const receipt: CommandReceiptDocument = {
+    gameId: game._id,
+    commandId: envelope.commandId,
+    accepted: true,
+    aggregateVersion: nextVersion,
+    firstSequence: priorSequence + 1,
+    lastSequence: priorSequence + 1,
+    createdAt: now,
+  };
+  await store.commandReceipts.insertOne(receipt, { session });
+  return { outcome: ackFromReceipt(receipt), events: [event] };
+}
+
 function gameStatus(state: GameState, previous: GameStatus): GameStatus {
   if (state.terminalReason === "NO_CONTEST") return "NO_CONTEST";
   if (state.terminalReason !== undefined || state.phase === "Finished") return "COMPLETED";
@@ -626,9 +704,11 @@ export async function handleCommand(
   const now = options.now?.() ?? new Date();
   try {
     const committed = await run((session) =>
-      recoveryCommand(parsed.data.payload)
-        ? transactRecovery(parsed.data, actor, store, session, now)
-        : transact(parsed.data, actor, store, session, now),
+      parsed.data.payload.type === "ConfigureRules"
+        ? transactLobbyConfiguration(parsed.data, actor, store, session, now)
+        : recoveryCommand(parsed.data.payload)
+          ? transactRecovery(parsed.data, actor, store, session, now)
+          : transact(parsed.data, actor, store, session, now),
     );
     const outcome = committed.outcome;
     if (outcome.ok && committed.events.length > 0) {
