@@ -9,12 +9,65 @@ import type {
 } from "@blockparty/contracts";
 import { VARIANT_KEYS } from "@blockparty/contracts";
 import { getBundle } from "@blockparty/game-content";
-import { DEED_CATEGORY_DISPLAY } from "@/components/display-names";
+import {
+  DEED_CATEGORY_DISPLAY,
+  SPACE_CATEGORY_DISPLAY,
+  formatMoney,
+} from "@/components/display-names";
 import { LOBBY_VARIANT_COPY } from "./lobby-model";
 
 /** Keep route order explicit at the presentation boundary. */
 export function orderedBoard(spaces: readonly BoardSpaceProjection[]): BoardSpaceProjection[] {
   return [...spaces].sort((left, right) => left.routeIndex - right.routeIndex);
+}
+
+/**
+ * Keep the complete board fact set in the inspect control name. `aria-label`
+ * replaces descendant text for assistive technology, so omitting a visible
+ * fact here would make the spatial board and its equivalent disagree. See
+ * UX-040 and DS-040.
+ */
+export function boardStopAccessibleLabel(
+  space: BoardSpaceProjection,
+  seats: readonly GameSnapshotProjection["seats"][number][],
+  currencyLabel: string,
+  districtNames: Readonly<Record<string, string>>,
+): string {
+  const seatName = (seatId: string) => seats.find((seat) => seat.seatId === seatId)?.name ?? seatId;
+  const category = SPACE_CATEGORY_DISPLAY[space.category];
+  const deedCategory =
+    space.deedCategory === undefined ? undefined : DEED_CATEGORY_DISPLAY[space.deedCategory];
+  const districtName = space.districtId === undefined ? undefined : districtNames[space.districtId];
+  const ownership =
+    space.ownerSeatId === undefined
+      ? space.price === undefined
+        ? "Available"
+        : `Available for ${formatMoney(space.price, currencyLabel)}`
+      : `Owned by ${seatName(space.ownerSeatId)}`;
+  const price =
+    space.ownerSeatId !== undefined && space.price !== undefined
+      ? `Price ${formatMoney(space.price, currencyLabel)}`
+      : undefined;
+  const occupants =
+    space.occupantSeatIds.length === 0
+      ? "No players here"
+      : `Here now: ${space.occupantSeatIds.map(seatName).join(", ")}`;
+
+  return [
+    `Stop ${space.routeIndex}`,
+    space.name,
+    deedCategory?.label ?? category.label,
+    districtName,
+    ownership,
+    price,
+    space.mortgaged === true ? "Mortgaged" : undefined,
+    space.improvementLevel !== undefined && space.improvementLevel > 0
+      ? `Improvement level ${space.improvementLevel}`
+      : undefined,
+    occupants,
+  ]
+    .filter((value): value is string => value !== undefined)
+    .join(", ");
 }
 
 export function boardLayout(snapshot: GameSnapshotProjection) {

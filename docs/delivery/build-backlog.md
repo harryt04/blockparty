@@ -592,12 +592,13 @@ recorded draws.
 
 ## Loop E — Accessibility and responsive behaviour
 
-- [ ] **E1 — Keyboard board navigation and the non-spatial list**
+- [x] **E1 — Keyboard board navigation and the non-spatial list**
       Blocked by: D5
       Requirements: PRD-NFR-005, UX-040, DS-040, DS-070
       Read: docs/design/ux-spec.md, docs/design/design-system.md
       Acceptance: every board fact/action is reachable by semantic non-spatial list, logical keyboard order, visible focus, and equivalent labels without requiring pointer precision or SVG geometry.
       Proves: Chromium/Firefox/WebKit keyboard journeys and semantic/accessible-name assertions; TEST-002 Playwright accessibility layer.
+      Implemented an always-visible ordered semantic board list with keyboard inspect controls, complete accessible stop names, and selected-detail relationships. `apps/web/test/game-model.test.ts` proves the accessible label carries public route, category, district, ownership, price, mortgage, improvement, and occupant facts; browser matrix evidence remains planned because Playwright is not configured.
 
 - [ ] **E2 — Live regions and restrained announcements**
       Blocked by: E1

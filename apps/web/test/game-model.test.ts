@@ -5,6 +5,7 @@ import {
   activeSpace,
   acquisitionDecisionContext,
   auctionDecisionContext,
+  boardStopAccessibleLabel,
   boardLayout,
   commandForLegalAction,
   districtNames,
@@ -91,6 +92,29 @@ describe("game presentation model", () => {
     expect(activeSpace(value)?.spaceId).toBe("s01");
     expect(boardLayout(value).s00).toEqual({ x: 2, y: 0 });
     expect(districtNames(value)["dist-north"]).toBe("North Kerb");
+  });
+
+  it("keeps every visible board fact in the keyboard stop name", () => {
+    const value = snapshot({
+      board: [
+        {
+          ...snapshot().board[0]!,
+          ownerSeatId: "seat-a",
+          price: 12_000,
+          mortgaged: true,
+          improvementLevel: 2,
+          occupantSeatIds: ["seat-a"],
+        },
+      ],
+    });
+
+    expect(
+      boardStopAccessibleLabel(value.board[0]!, value.seats, "Tabs", {
+        "dist-north": "North Kerb",
+      }),
+    ).toBe(
+      "Stop 1, Sawhorse Lane, Block, North Kerb, Owned by North Star, Price 120 Tabs, Mortgaged, Improvement level 2, Here now: North Star",
+    );
   });
 
   it("shows only enabled variant labels at the display boundary", () => {

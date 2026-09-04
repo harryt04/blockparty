@@ -13,6 +13,7 @@ import {
   SPACE_CATEGORY_DISPLAY,
   formatMoney,
 } from "@/components/display-names";
+import { boardStopAccessibleLabel, orderedBoard } from "./game-model";
 
 export function BoardList({
   spaces,
@@ -27,29 +28,25 @@ export function BoardList({
   currencyLabel?: string;
   districtNames?: Readonly<Record<string, string>>;
   selectedSpaceId?: string;
-  onSelect?: (spaceId: string) => void;
+  onSelect: (spaceId: string) => void;
 }) {
   const seatName = (seatId: string) => seats.find((seat) => seat.seatId === seatId)?.name ?? seatId;
+  const orderedSpaces = orderedBoard(spaces);
 
   return (
-    <ol aria-label="Board stops in route order" className="flex flex-col gap-2">
-      {spaces.map((space) => {
+    <ol
+      aria-label="Board stops in route order"
+      className="flex flex-col gap-2"
+      data-board-list="route-order"
+    >
+      {orderedSpaces.map((space) => {
         const category = SPACE_CATEGORY_DISPLAY[space.category];
         const deedCategory =
           space.deedCategory === undefined ? undefined : DEED_CATEGORY_DISPLAY[space.deedCategory];
         const districtName =
           space.districtId === undefined ? undefined : districtNames[space.districtId];
         const selected = space.spaceId === selectedSpaceId;
-        const details = [
-          `Stop ${space.routeIndex}`,
-          space.name,
-          deedCategory?.label ?? category.label,
-          districtName,
-          space.ownerSeatId === undefined ? "Available" : `Owned by ${seatName(space.ownerSeatId)}`,
-          space.mortgaged === true ? "Mortgaged" : undefined,
-        ]
-          .filter((value): value is string => value !== undefined)
-          .join(", ");
+        const details = boardStopAccessibleLabel(space, seats, currencyLabel, districtNames);
 
         return (
           <li
@@ -63,9 +60,11 @@ export function BoardList({
             <button
               type="button"
               className="min-h-11 w-full text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-              aria-label={details}
+              aria-label={`Inspect ${details}`}
               aria-pressed={selected}
-              onClick={() => onSelect?.(space.spaceId)}
+              aria-current={selected ? "location" : undefined}
+              aria-controls="active-space-detail"
+              onClick={() => onSelect(space.spaceId)}
             >
               <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                 <span className="tabular text-sm text-muted-ink">Stop {space.routeIndex}</span>
@@ -80,6 +79,9 @@ export function BoardList({
                     ? "Available."
                     : `Available for ${formatMoney(space.price, currencyLabel)}.`
                   : `Owned by ${seatName(space.ownerSeatId)}.`}
+                {space.ownerSeatId !== undefined && space.price !== undefined
+                  ? ` Price: ${formatMoney(space.price, currencyLabel)}.`
+                  : ""}
                 {space.mortgaged === true ? " Mortgaged." : ""}
                 {space.improvementLevel !== undefined && space.improvementLevel > 0
                   ? ` Improvement level ${space.improvementLevel}.`

@@ -296,21 +296,22 @@ export function GameClient({ gameId }: { gameId: string }) {
             </CardContent>
           </Card>
 
-          <details className="rounded-(--radius-lg) border border-line bg-surface-raised">
-            <summary className="min-h-11 cursor-pointer px-4 py-3 font-medium">
+          <section
+            aria-labelledby="board-list-heading"
+            className="rounded-(--radius-lg) border border-line bg-surface-raised p-4"
+          >
+            <h2 id="board-list-heading" className="mb-3 font-serif text-xl">
               Board list ({spaces.length} stops)
-            </summary>
-            <div className="p-4 pt-0">
-              <BoardList
-                spaces={spaces}
-                seats={snapshot.seats}
-                districtNames={districtMap}
-                selectedSpaceId={selectedSpace?.spaceId}
-                onSelect={setSelectedSpaceId}
-                currencyLabel="Tabs"
-              />
-            </div>
-          </details>
+            </h2>
+            <BoardList
+              spaces={spaces}
+              seats={snapshot.seats}
+              districtNames={districtMap}
+              selectedSpaceId={selectedSpace?.spaceId}
+              onSelect={setSelectedSpaceId}
+              currencyLabel="Tabs"
+            />
+          </section>
         </section>
 
         <aside className="min-w-0 space-y-5" aria-label="Game information">

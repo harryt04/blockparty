@@ -1,9 +1,8 @@
 /**
  * The board. See DS-040 and UX-040.
  *
- * Semantic DOM controls with SVG DECORATION. Never an opaque canvas: every
- * space is a real button with an accessible name, and the SVG route is
- * aria-hidden because BoardList carries the same information as text.
+ * The SVG is decoration only. It is aria-hidden because BoardList carries
+ * every stop fact and inspect action as ordered semantic DOM controls.
  *
  * The route is a winding, irregular neighborhood street. It is not a square
  * grid and not a familiar perimeter board. See the DS-001 grid guardrail.

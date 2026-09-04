@@ -29,7 +29,7 @@ export function ActiveSpaceDetail({
 }) {
   if (space === undefined) {
     return (
-      <Card>
+      <Card id="active-space-detail">
         <CardHeader>
           <CardTitle>No stop selected</CardTitle>
         </CardHeader>
@@ -48,7 +48,7 @@ export function ActiveSpaceDetail({
   const owner = seats.find((seat) => seat.seatId === space.ownerSeatId);
 
   return (
-    <Card>
+    <Card id="active-space-detail">
       <CardHeader>
         <CardTitle>{space.name}</CardTitle>
         <div className="flex flex-wrap gap-1">
