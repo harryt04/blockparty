@@ -40,18 +40,18 @@
   --color-surface: oklch(99% 0.004 85);
   --color-surface-raised: oklch(100% 0 0);
   --color-ink: oklch(23% 0.02 60);
-  --color-muted-ink: oklch(48% 0.02 60);
-  --color-line: oklch(88% 0.012 70);
+  --color-muted-ink: oklch(29% 0 60);
+  --color-line: oklch(40% 0.01 70);
 
-  --color-brand: oklch(58% 0.16 45);
-  --color-brand-ink: oklch(98% 0.01 45);
+  --color-brand: oklch(30% 0.08 45);
+  --color-brand-ink: oklch(98% 0 45);
 
-  --color-success: oklch(52% 0.13 155);
-  --color-warning: oklch(64% 0.15 75);
-  --color-danger: oklch(53% 0.19 27);
-  --color-info: oklch(55% 0.11 240);
+  --color-success: oklch(28% 0.06 155);
+  --color-warning: oklch(29% 0.06 75);
+  --color-danger: oklch(29% 0.06 27);
+  --color-info: oklch(28% 0.06 240);
 
-  --color-focus: oklch(52% 0.18 250);
+  --color-focus: oklch(28% 0.06 250);
   --color-selection: oklch(92% 0.05 250);
   --color-disabled: oklch(72% 0.01 70);
 
@@ -81,18 +81,18 @@
     --color-surface: oklch(23% 0.014 65);
     --color-surface-raised: oklch(27% 0.016 65);
     --color-ink: oklch(94% 0.008 80);
-    --color-muted-ink: oklch(72% 0.012 75);
-    --color-line: oklch(36% 0.014 68);
+    --color-muted-ink: oklch(82% 0 75);
+    --color-line: oklch(70% 0.01 68);
 
-    --color-brand: oklch(72% 0.14 60);
-    --color-brand-ink: oklch(20% 0.02 60);
+    --color-brand: oklch(75% 0.08 60);
+    --color-brand-ink: oklch(20% 0 60);
 
-    --color-success: oklch(70% 0.13 155);
-    --color-warning: oklch(78% 0.14 78);
-    --color-danger: oklch(68% 0.17 27);
-    --color-info: oklch(72% 0.1 240);
+    --color-success: oklch(82% 0.06 155);
+    --color-warning: oklch(84% 0.06 78);
+    --color-danger: oklch(82% 0.06 27);
+    --color-info: oklch(82% 0.06 240);
 
-    --color-focus: oklch(75% 0.14 250);
+    --color-focus: oklch(85% 0.06 250);
     --color-selection: oklch(32% 0.05 250);
     --color-disabled: oklch(42% 0.01 70);
 
@@ -118,15 +118,15 @@
   --color-surface: oklch(99% 0.004 85);
   --color-surface-raised: oklch(100% 0 0);
   --color-ink: oklch(23% 0.02 60);
-  --color-muted-ink: oklch(48% 0.02 60);
-  --color-line: oklch(88% 0.012 70);
-  --color-brand: oklch(58% 0.16 45);
-  --color-brand-ink: oklch(98% 0.01 45);
-  --color-success: oklch(52% 0.13 155);
-  --color-warning: oklch(64% 0.15 75);
-  --color-danger: oklch(53% 0.19 27);
-  --color-info: oklch(55% 0.11 240);
-  --color-focus: oklch(52% 0.18 250);
+  --color-muted-ink: oklch(29% 0 60);
+  --color-line: oklch(40% 0.01 70);
+  --color-brand: oklch(30% 0.08 45);
+  --color-brand-ink: oklch(98% 0 45);
+  --color-success: oklch(28% 0.06 155);
+  --color-warning: oklch(29% 0.06 75);
+  --color-danger: oklch(29% 0.06 27);
+  --color-info: oklch(28% 0.06 240);
+  --color-focus: oklch(28% 0.06 250);
   --color-selection: oklch(92% 0.05 250);
 }
 
@@ -136,15 +136,15 @@
   --color-surface: oklch(23% 0.014 65);
   --color-surface-raised: oklch(27% 0.016 65);
   --color-ink: oklch(94% 0.008 80);
-  --color-muted-ink: oklch(72% 0.012 75);
-  --color-line: oklch(36% 0.014 68);
-  --color-brand: oklch(72% 0.14 60);
-  --color-brand-ink: oklch(20% 0.02 60);
-  --color-success: oklch(70% 0.13 155);
-  --color-warning: oklch(78% 0.14 78);
-  --color-danger: oklch(68% 0.17 27);
-  --color-info: oklch(72% 0.1 240);
-  --color-focus: oklch(75% 0.14 250);
+  --color-muted-ink: oklch(82% 0 75);
+  --color-line: oklch(70% 0.01 68);
+  --color-brand: oklch(75% 0.08 60);
+  --color-brand-ink: oklch(20% 0 60);
+  --color-success: oklch(82% 0.06 155);
+  --color-warning: oklch(84% 0.06 78);
+  --color-danger: oklch(82% 0.06 27);
+  --color-info: oklch(82% 0.06 240);
+  --color-focus: oklch(85% 0.06 250);
   --color-selection: oklch(32% 0.05 250);
 }
 
@@ -160,12 +160,65 @@
   --color-focus: oklch(86% 0.14 250);
 }
 
+/*
+ * Forced-colours users replace the palette with their OS colours. Keep the
+ * semantic roles mapped to named system colours so borders, text, selection,
+ * and focus stay legible without relying on author colour values. DS-020,
+ * DS-060, and UX-040.
+ */
+@media (forced-colors: active) {
+  :root,
+  :root[data-theme="light"],
+  :root[data-theme="dark"] {
+    color-scheme: light;
+    --color-canvas: Canvas;
+    --color-surface: Canvas;
+    --color-surface-raised: Canvas;
+    --color-ink: CanvasText;
+    --color-muted-ink: GrayText;
+    --color-line: ButtonText;
+    --color-brand: Highlight;
+    --color-brand-ink: HighlightText;
+    --color-success: LinkText;
+    --color-warning: ButtonText;
+    --color-danger: ButtonText;
+    --color-info: LinkText;
+    --color-focus: Highlight;
+    --color-selection: Highlight;
+    --color-disabled: GrayText;
+    --color-player-1: CanvasText;
+    --color-player-2: CanvasText;
+    --color-player-3: CanvasText;
+    --color-player-4: CanvasText;
+    --color-player-5: CanvasText;
+    --color-player-6: CanvasText;
+    --color-asset-district-north: CanvasText;
+    --color-asset-district-east: CanvasText;
+    --color-asset-district-west: CanvasText;
+    --color-asset-transit: CanvasText;
+    --color-asset-utility: CanvasText;
+  }
+
+  [data-badge-variant] {
+    background-color: Canvas !important;
+    border-color: ButtonText !important;
+    color: CanvasText !important;
+  }
+
+  [data-token-pattern] {
+    color: CanvasText !important;
+  }
+
+  :focus-visible {
+    outline: 2px solid Highlight;
+  }
+}
+
 :root[data-reduced-motion="true"] *,
 :root[data-reduced-motion="true"] *::before,
 :root[data-reduced-motion="true"] *::after {
-  animation-duration: 0.01ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 0.01ms !important;
+  animation: none !important;
+  transition: none !important;
   scroll-behavior: auto !important;
 }
 
@@ -223,9 +276,8 @@
     *,
     *::before,
     *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
+      animation: none !important;
+      transition: none !important;
       scroll-behavior: auto !important;
     }
   }

@@ -81,6 +81,14 @@ closed or unmounted. This provides implementation evidence for PRD-NFR-005, UX-0
 DS-070; `apps/web/test/modal-dialog-model.test.ts` proves the keyboard boundary, while Playwright
 update, unmount, and cross-browser focus journeys remain planned.
 
+E4 completes the non-colour and motion token implementation for PRD-NFR-005–006, UX-040, DS-020,
+DS-041, DS-060, and DS-070. `apps/web/src/components/game/player-token.tsx` renders a visible
+pattern stroke alongside each token silhouette, `apps/web/src/components/ui/badge.tsx` exposes
+semantic status markers for forced-colour styling, and `apps/web/src/app/globals.css` supplies AA-
+checked light/dark tokens, named forced-colour fallbacks, and immediate reduced-motion overrides.
+`apps/web/test/accessibility-tokens.test.ts` proves token contrast and the CSS contracts; browser
+forced-colour/reduced-motion journeys and manual assistive-technology review remain planned.
+
 C13 adds the device-only presentation preference provider and settings panel in
 `apps/web/src/components/settings/presentation-preferences.tsx`, with local
 serialization/fallback evidence in `apps/web/test/settings-content.test.ts`.

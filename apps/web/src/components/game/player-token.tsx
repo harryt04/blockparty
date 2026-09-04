@@ -23,6 +23,20 @@ const COLOR_CLASS: Record<number, string> = {
   6: "text-player-6",
 };
 
+/**
+ * A visible stroke treatment gives every token a non-colour identity. The
+ * accessible label names the same shape and pattern for assistive technology.
+ * See DS-020, DS-041, and UX-040.
+ */
+export const PATTERN_STROKE: Record<SeatToken["pattern"], string | undefined> = {
+  solid: undefined,
+  stripe: "4 2",
+  dot: "0.5 2.5",
+  cross: "2 2",
+  chevron: "1 2 4 2",
+  grid: "1 1 1 3",
+};
+
 export function PlayerToken({
   token,
   name,
@@ -40,6 +54,8 @@ export function PlayerToken({
         COLOR_CLASS[token.colorIndex] ?? "text-ink",
         className,
       )}
+      data-token-pattern={token.pattern}
+      data-token-shape={token.shape}
     >
       <svg
         viewBox="0 0 20 20"
@@ -52,7 +68,7 @@ export function PlayerToken({
         role="img"
         aria-label={`${name ?? "Seat"} token: ${token.shape}, ${token.pattern}`}
       >
-        <path d={SHAPE_PATHS[token.shape]} />
+        <path d={SHAPE_PATHS[token.shape]} strokeDasharray={PATTERN_STROKE[token.pattern]} />
       </svg>
       <span aria-hidden="true" className="text-xs font-semibold">
         {initial}

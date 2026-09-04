@@ -616,12 +616,13 @@ recorded draws.
       Proves: keyboard Playwright matrix for every modal workflow, including update/unmount focus restoration; TEST-002 browser accessibility layer.
       Implemented a shared portal-backed modal/sheet focus boundary with inert background, keyboard trapping, Escape/backdrop dismissal rules, opener restoration, and controlled server-update persistence; `apps/web/test/modal-dialog-model.test.ts` proves the keyboard boundary and Escape contract. Playwright focus journeys and manual assistive-technology evidence remain planned because the browser harness is not configured.
 
-- [ ] **E4 — Non-colour encoding, contrast, forced colours, reduced motion**
+- [x] **E4 — Non-colour encoding, contrast, forced colours, reduced motion**
       Blocked by: E1
       Requirements: PRD-NFR-005, PRD-NFR-006, UX-040, DS-020, DS-041, DS-060, DS-070
       Read: docs/design/ux-spec.md, docs/design/design-system.md
       Acceptance: ownership/status use color+shape+pattern/text, all states meet contrast, forced-colors remain legible, and reduced motion removes decorative transitions without delaying/concealing outcomes.
       Proves: token contrast tests and Playwright visual/DOM assertions in forced-colors/reduced-motion/non-color modes; TEST-002 component/browser layer.
+      Implemented visible token stroke patterns and semantic status markers, AA-checked light/dark tokens, forced-colors system fallbacks, and immediate reduced-motion overrides; `apps/web/test/accessibility-tokens.test.ts` proves the token and CSS contracts, while Playwright/manual assistive-technology evidence remains planned because the browser harness is not configured.
 
 - [ ] **E5 — The responsive matrix at 375, 768, 1024, and landscape**
       Blocked by: E4

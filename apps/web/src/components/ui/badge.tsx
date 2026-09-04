@@ -28,5 +28,12 @@ export interface BadgeProps
   extends HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {}
 
 export function Badge({ className, variant, ...props }: BadgeProps) {
-  return <span className={cn(badgeVariants({ variant }), className)} {...props} />;
+  const resolvedVariant = variant ?? "neutral";
+  return (
+    <span
+      className={cn(badgeVariants({ variant: resolvedVariant }), className)}
+      data-badge-variant={resolvedVariant}
+      {...props}
+    />
+  );
 }
