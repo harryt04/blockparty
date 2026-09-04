@@ -433,12 +433,13 @@ seat. Each ticket removes the corresponding builder from
 Every screen after C1 renders sync-client state, never a stub. Browser tests use
 separate player contexts.
 
-- [ ] **C1 — Sync client and the connection state machine**
+- [x] **C1 — Sync client and the connection state machine**
       Blocked by: B11
       Requirements: PROTO-002, PROTO-003, PROTO-004, UX-001, UX-018
       Read: docs/engineering/realtime-and-data.md, docs/design/ux-spec.md
       Acceptance: the client bootstraps, validates frames, caches `lastSequence`/`aggregateVersion`, applies only contiguous data, resyncs gaps, reconnects with backoff, and exposes connecting/live/reconnecting/resyncing/closed without persisting capabilities or game state.
       Proves: client state-machine tests plus browser disconnect/out-of-order/reload cases; TEST-002 component and Playwright layers.
+      Implemented the credentialed bootstrap/SSE coordinator, contiguous cursor recovery, authoritative snapshot replacement, visibility resync, and jittered reconnect states; `apps/web/test/sync-client.test.ts` proves the component-layer state machine and frame boundaries.
 
 - [ ] **C2 — Landing and create, wired to the API**
       Blocked by: C1

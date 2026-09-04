@@ -3,12 +3,23 @@ import "client-only";
 /**
  * The browser SSE subscriber. See PROTO-003 and PROTO-004.
  *
- * The stream carries the seat cookie automatically; a capability is NEVER put
- * in the URL. The client applies an event range only when its first sequence
- * equals the local sequence + 1, and falls back to /sync on any gap, decode
- * failure, stale version, reconnect, or visibility resume.
+ * EventSource only delivers named SSE events through addEventListener. The
+ * server uses named transport events, so listening only to `onmessage` would
+ * silently drop every state frame.
  */
 import { ServerEnvelope } from "@blockparty/contracts";
+
+export interface EventSourceLike {
+  onerror: ((event: Event) => void) | null;
+  onopen: ((event: Event) => void) | null;
+  addEventListener: (type: string, listener: (event: Event) => void) => void;
+  close: () => void;
+}
+
+export type EventSourceFactory = (
+  url: string,
+  init: { readonly withCredentials: boolean },
+) => EventSourceLike;
 
 export interface GameStreamHandlers {
   readonly onEnvelope: (envelope: ServerEnvelope) => void;
@@ -16,39 +27,49 @@ export interface GameStreamHandlers {
   readonly onConnectionChange: (connected: boolean) => void;
 }
 
-/**
- * Opens the stream and returns a close function.
- *
- * TODO(PROTO-003): add exponential backoff with jitter on reconnect and the
- * visibility-resume resync.
- */
-export function openGameStream(gameId: string, handlers: GameStreamHandlers): () => void {
-  const source = new EventSource(`/api/games/${encodeURIComponent(gameId)}/events`, {
+const NAMED_EVENTS = [
+  "game.snapshot",
+  "game.events",
+  "game.commandAck",
+  "game.error",
+  "room.presence",
+  "game.closed",
+] as const;
+
+function parseFrame(message: Event): ServerEnvelope | undefined {
+  const data = (message as MessageEvent<string>).data;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(data);
+  } catch {
+    return undefined;
+  }
+  const envelope = ServerEnvelope.safeParse(parsed);
+  return envelope.success ? envelope.data : undefined;
+}
+
+/** Opens the authenticated stream and returns a close function. */
+export function openGameStream(
+  gameId: string,
+  handlers: GameStreamHandlers,
+  createEventSource: EventSourceFactory = (url, init) => new EventSource(url, init),
+): () => void {
+  const source = createEventSource(`/api/games/${encodeURIComponent(gameId)}/events`, {
     withCredentials: true,
   });
 
+  const handleMessage = (message: Event) => {
+    const envelope = parseFrame(message);
+    if (envelope === undefined || envelope.gameId !== gameId) {
+      handlers.onGap();
+      return;
+    }
+    handlers.onEnvelope(envelope);
+  };
+
   source.onopen = () => handlers.onConnectionChange(true);
   source.onerror = () => handlers.onConnectionChange(false);
-
-  source.onmessage = (message: MessageEvent<string>) => {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(message.data);
-    } catch {
-      // A decode failure is a gap: stop applying and resync.
-      handlers.onGap();
-      return;
-    }
-
-    // Validate the frame BEFORE applying it. An SSE frame is delivery, not
-    // authority, and a malformed frame must never mutate local state.
-    const envelope = ServerEnvelope.safeParse(parsed);
-    if (!envelope.success) {
-      handlers.onGap();
-      return;
-    }
-    handlers.onEnvelope(envelope.data);
-  };
+  for (const eventName of NAMED_EVENTS) source.addEventListener(eventName, handleMessage);
 
   return () => source.close();
 }

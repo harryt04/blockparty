@@ -2,27 +2,27 @@
  * Persistent connection status: icon plus text, never an icon alone.
  * See UX section 5 and UX-018.
  *
- * SCAFFOLD: the state is a prop today. The sync client drives it once
- * /api/games/[gameId]/events and /sync are real.
+ * The sync client drives this persistent status from bootstrap and SSE state.
  */
-import { Pause, Plug, RefreshCw, WifiOff } from "lucide-react";
+import { Plug, RefreshCw, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type ConnectionState = "connected" | "reconnecting" | "offline" | "paused";
+export type ConnectionState = "connecting" | "live" | "reconnecting" | "resyncing" | "closed";
 
 const STATES = {
-  connected: { label: "Connected", icon: Plug, tone: "text-success border-success" },
+  connecting: { label: "Connecting", icon: RefreshCw, tone: "text-warning border-warning" },
+  live: { label: "Connected", icon: Plug, tone: "text-success border-success" },
   reconnecting: {
     label: "Reconnecting",
     icon: RefreshCw,
     tone: "text-warning border-2 border-warning",
   },
-  offline: { label: "Offline", icon: WifiOff, tone: "text-danger border-2 border-danger" },
-  paused: { label: "Paused", icon: Pause, tone: "text-info border-info" },
+  resyncing: { label: "Resyncing", icon: RefreshCw, tone: "text-warning border-2 border-warning" },
+  closed: { label: "Unavailable", icon: WifiOff, tone: "text-danger border-2 border-danger" },
 } as const;
 
 export function ConnectionStatus({
-  state = "connected",
+  state = "connecting",
   className,
 }: {
   state?: ConnectionState;
