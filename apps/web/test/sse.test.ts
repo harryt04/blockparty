@@ -8,11 +8,13 @@ import { createGameInTransaction, type GameDocument } from "../src/server/games/
 import {
   canSubscribe,
   closeSseConnections,
+  PRESENCE_DISCONNECT_GRACE_MS,
   publishSnapshot,
   subscribe,
   subscriberCount,
   subscribedSeatAccess,
   subscribedSeatIds,
+  setPresenceRecoveryHandler,
 } from "../src/server/sse/registry";
 import {
   ensureChangeStream,
@@ -42,43 +44,78 @@ function snapshot(viewerSeatId: string, sequence: number) {
 
 describe("authenticated SSE delivery", () => {
   it("keeps presence ephemeral, bounds duplicate-seat connections, and preserves monotonic frames", () => {
-    const firstFrames: string[] = [];
-    const secondFrames: string[] = [];
-    const first = subscriber(GAME_ID, "seat-a", firstFrames);
-    const second = subscriber(GAME_ID, "seat-b", secondFrames);
-    const unsubscribeFirst = subscribe(first);
-    const unsubscribeSecond = subscribe(second);
+    vi.useFakeTimers();
+    try {
+      const firstFrames: string[] = [];
+      const secondFrames: string[] = [];
+      const first = subscriber(GAME_ID, "seat-a", firstFrames);
+      const second = subscriber(GAME_ID, "seat-b", secondFrames);
+      const unsubscribeFirst = subscribe(first);
+      const unsubscribeSecond = subscribe(second);
 
-    expect(subscriberCount(GAME_ID)).toBe(2);
-    expect(subscribedSeatIds(GAME_ID)).toEqual(["seat-a", "seat-b"]);
-    expect(firstFrames.some((frame) => frame.includes('"state":"connected"'))).toBe(true);
-    expect(firstFrames.some((frame) => frame.includes('"seatId":"seat-b"'))).toBe(true);
+      expect(subscriberCount(GAME_ID)).toBe(2);
+      expect(subscribedSeatIds(GAME_ID)).toEqual(["seat-a", "seat-b"]);
+      expect(firstFrames.some((frame) => frame.includes('"state":"connected"'))).toBe(true);
+      expect(firstFrames.some((frame) => frame.includes('"seatId":"seat-b"'))).toBe(true);
 
-    publishSnapshot(GAME_ID, "seat-a", snapshot("seat-a", 3));
-    publishSnapshot(GAME_ID, "seat-a", snapshot("seat-a", 3));
-    expect(firstFrames.filter((frame) => frame.startsWith("event: game.snapshot"))).toHaveLength(1);
-    expect(secondFrames.filter((frame) => frame.startsWith("event: game.snapshot"))).toHaveLength(
-      0,
-    );
-    expect(canSubscribe(GAME_ID, "seat-a")).toBe(true);
+      publishSnapshot(GAME_ID, "seat-a", snapshot("seat-a", 3));
+      publishSnapshot(GAME_ID, "seat-a", snapshot("seat-a", 3));
+      expect(firstFrames.filter((frame) => frame.startsWith("event: game.snapshot"))).toHaveLength(
+        1,
+      );
+      expect(secondFrames.filter((frame) => frame.startsWith("event: game.snapshot"))).toHaveLength(
+        0,
+      );
+      expect(canSubscribe(GAME_ID, "seat-a")).toBe(true);
 
-    unsubscribeFirst();
-    unsubscribeSecond();
-    expect(subscriberCount(GAME_ID)).toBe(0);
-    expect(firstFrames.some((frame) => frame.includes('"state":"disconnected"'))).toBe(false);
+      unsubscribeFirst();
+      unsubscribeSecond();
+      expect(subscriberCount(GAME_ID)).toBe(0);
+      expect(firstFrames.some((frame) => frame.includes('"state":"disconnected"'))).toBe(false);
 
-    const limited: Array<() => void> = [];
-    for (let index = 0; index < 8; index += 1) {
-      limited.push(subscribe(subscriber(GAME_ID, "seat-a", [])));
+      vi.advanceTimersByTime(PRESENCE_DISCONNECT_GRACE_MS);
+
+      const limited: Array<() => void> = [];
+      for (let index = 0; index < 8; index += 1) {
+        limited.push(subscribe(subscriber(GAME_ID, "seat-a", [])));
+      }
+      expect(canSubscribe(GAME_ID, "seat-a")).toBe(false);
+      expect(() => subscribe(subscriber(GAME_ID, "seat-a", []))).toThrow("SSE connection limit");
+      limited.forEach((unsubscribe) => unsubscribe());
+
+      const reconnectFrames: string[] = [];
+      const reconnect = subscribe(subscriber(GAME_ID, "seat-a", reconnectFrames));
+      expect(reconnectFrames.some((frame) => frame.includes('"state":"reconnected"'))).toBe(true);
+      reconnect();
+      vi.advanceTimersByTime(PRESENCE_DISCONNECT_GRACE_MS);
+    } finally {
+      vi.useRealTimers();
     }
-    expect(canSubscribe(GAME_ID, "seat-a")).toBe(false);
-    expect(() => subscribe(subscriber(GAME_ID, "seat-a", []))).toThrow("SSE connection limit");
-    limited.forEach((unsubscribe) => unsubscribe());
+  });
 
-    const reconnectFrames: string[] = [];
-    const reconnect = subscribe(subscriber(GAME_ID, "seat-a", reconnectFrames));
-    expect(reconnectFrames.some((frame) => frame.includes('"state":"reconnected"'))).toBe(true);
-    reconnect();
+  it("cancels disconnect recovery when a route handoff reconnects the same seat", () => {
+    vi.useFakeTimers();
+    const changes: string[] = [];
+    const gameId = "presence-handoff-test";
+    setPresenceRecoveryHandler((change) => {
+      changes.push(`${change.state}:${change.seatId}`);
+    });
+    try {
+      const first = subscribe(subscriber(gameId, "seat-a", []));
+      first();
+      vi.advanceTimersByTime(PRESENCE_DISCONNECT_GRACE_MS - 1);
+      const second = subscribe(subscriber(gameId, "seat-a", []));
+      vi.advanceTimersByTime(PRESENCE_DISCONNECT_GRACE_MS);
+
+      expect(changes).toEqual(["connected:seat-a"]);
+      second();
+      vi.advanceTimersByTime(PRESENCE_DISCONNECT_GRACE_MS);
+      expect(changes).toEqual(["connected:seat-a", "disconnected:seat-a"]);
+    } finally {
+      setPresenceRecoveryHandler(() => undefined);
+      closeSseConnections("SERVER_SHUTDOWN");
+      vi.useRealTimers();
+    }
   });
 
   it("builds a separate allowlisted projection for every subscribed seat", async () => {

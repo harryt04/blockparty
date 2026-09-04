@@ -44,10 +44,18 @@ const globalForSse = globalThis as unknown as {
   __blockpartySubscribers?: Map<string, Set<Subscriber>>;
   __blockpartyPresence?: Map<string, Map<string, number>>;
   __blockpartyPresenceTenure?: Map<string, Map<string, number>>;
+  __blockpartyPresenceDisconnectTimers?: Map<string, ReturnType<typeof setTimeout>>;
   __blockpartySeenSeats?: Map<string, Set<string>>;
   __blockpartyLastSequences?: WeakMap<Subscriber, number>;
   __blockpartyPresenceRecovery?: (event: PresenceChange) => void | Promise<void>;
 };
+
+/**
+ * Route transitions can close the old page's stream just before the new page
+ * opens its stream. Keep that handoff from looking like a real disconnect.
+ * This is transport recovery grace, not a gameplay timeout. See PROTO-003.
+ */
+export const PRESENCE_DISCONNECT_GRACE_MS = 1_000;
 
 export interface PresenceChange {
   readonly gameId: string;
@@ -68,6 +76,11 @@ function presence(): Map<string, Map<string, number>> {
 function presenceTenure(): Map<string, Map<string, number>> {
   globalForSse.__blockpartyPresenceTenure ??= new Map();
   return globalForSse.__blockpartyPresenceTenure;
+}
+
+function presenceDisconnectTimers(): Map<string, ReturnType<typeof setTimeout>> {
+  globalForSse.__blockpartyPresenceDisconnectTimers ??= new Map();
+  return globalForSse.__blockpartyPresenceDisconnectTimers;
 }
 
 function seenSeats(): Map<string, Set<string>> {
@@ -93,6 +106,43 @@ function notifyPresenceRecovery(event: PresenceChange): void {
   void Promise.resolve(handler(event)).catch(() => undefined);
 }
 
+function presenceKey(gameId: string, seatId: string): string {
+  return `${gameId}:${seatId}`;
+}
+
+function cancelPendingDisconnect(gameId: string, seatId: string): boolean {
+  const key = presenceKey(gameId, seatId);
+  const timer = presenceDisconnectTimers().get(key);
+  if (timer === undefined) return false;
+  clearTimeout(timer);
+  presenceDisconnectTimers().delete(key);
+  return true;
+}
+
+function scheduleDisconnect(gameId: string, seatId: string): void {
+  const timers = presenceDisconnectTimers();
+  const key = presenceKey(gameId, seatId);
+  cancelPendingDisconnect(gameId, seatId);
+  const timer = setTimeout(() => {
+    timers.delete(key);
+    if (subscriberCount(gameId, seatId) !== 0) return;
+
+    const bySeat = presence().get(gameId);
+    const counts = bySeat?.get(seatId);
+    if (counts !== undefined) bySeat?.delete(seatId);
+    presenceTenure().get(gameId)?.delete(seatId);
+    sendPresence(gameId, seatId, "disconnected");
+    notifyPresenceRecovery({ gameId, seatId, state: "disconnected" });
+
+    if (bySeat?.size === 0) {
+      presence().delete(gameId);
+      presenceTenure().delete(gameId);
+    }
+  }, PRESENCE_DISCONNECT_GRACE_MS);
+  timer.unref?.();
+  timers.set(key, timer);
+}
+
 function sendPresence(
   gameId: string,
   seatId: string,
@@ -116,6 +166,7 @@ function sendPresence(
 }
 
 export function subscribe(subscriber: Subscriber): () => void {
+  const handedOff = cancelPendingDisconnect(subscriber.gameId, subscriber.seatId);
   const byGame = registry();
   const set = byGame.get(subscriber.gameId) ?? new Set<Subscriber>();
   const seatConnections = [...set].filter((candidate) => candidate.seatId === subscriber.seatId);
@@ -144,7 +195,7 @@ export function subscribe(subscriber: Subscriber): () => void {
   known.add(subscriber.seatId);
   knownSeats.set(subscriber.gameId, known);
   sendPresence(subscriber.gameId, subscriber.seatId, presenceState);
-  if (priorCount === 0) {
+  if (priorCount === 0 && !handedOff) {
     notifyPresenceRecovery({
       gameId: subscriber.gameId,
       seatId: subscriber.seatId,
@@ -163,19 +214,9 @@ export function subscribe(subscriber: Subscriber): () => void {
     const currentCount = counts.get(subscriber.seatId) ?? 1;
     if (currentCount <= 1) {
       counts.delete(subscriber.seatId);
-      tenures.delete(subscriber.seatId);
-      sendPresence(subscriber.gameId, subscriber.seatId, "disconnected");
-      notifyPresenceRecovery({
-        gameId: subscriber.gameId,
-        seatId: subscriber.seatId,
-        state: "disconnected",
-      });
+      scheduleDisconnect(subscriber.gameId, subscriber.seatId);
     } else {
       counts.set(subscriber.seatId, currentCount - 1);
-    }
-    if (counts.size === 0) {
-      bySeat.delete(subscriber.gameId);
-      presenceTenure().delete(subscriber.gameId);
     }
     observeSseConnections(subscriberCount());
   };
@@ -225,6 +266,8 @@ export function closeSseConnections(reason: ClosedEnvelope["reason"]): void {
   registry().clear();
   presence().clear();
   presenceTenure().clear();
+  for (const timer of presenceDisconnectTimers().values()) clearTimeout(timer);
+  presenceDisconnectTimers().clear();
   observeSseConnections(0);
 }
 

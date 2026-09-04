@@ -22,6 +22,14 @@ transfer, and authenticated host capability claim in
 `apps/web/test/presence-recovery.test.ts` for PRD-FUN-014, RULE-009, and
 PROTO-003.
 
+Iteration 8 adds a bounded disconnect grace window in
+`apps/web/src/server/sse/registry.ts` so the lobby-to-game route handoff does
+not journal false `PlayPaused` or `HostTransferred` recovery events. The
+same-seat handoff cancellation is proven in `apps/web/test/sse.test.ts`, and a
+live two-context dev run reached the active turn with only the expected
+`GameStarted`, `TurnStarted`, `DiceRolled`, and `TokenMoved` events for
+PROTO-003 and UX-018.
+
 B2 implements the creation/lobby portion of PRD-FUN-001, PRD-FUN-002, and
 PRD-FUN-013 in `apps/web/src/server/games/create-game.ts`; B3 implements invite
 admission, seat claims, and pseudonym validation in

@@ -11,6 +11,7 @@ import {
   type RecoveryStore,
 } from "../src/server/recovery/presence-recovery";
 import {
+  PRESENCE_DISCONNECT_GRACE_MS,
   connectedSeatTenures,
   setPresenceRecoveryHandler,
   subscribe,
@@ -151,32 +152,38 @@ function run(
 
 describe("B8 presence recovery", () => {
   it("tracks one tenure per seat across tabs and emits recovery edges", () => {
-    const gameId = "presence-test-game";
-    const changes: string[] = [];
-    setPresenceRecoveryHandler((change) => {
-      changes.push(`${change.state}:${change.seatId}`);
-    });
-    const first = subscribe({
-      gameId,
-      seatId: "seat-a",
-      connectedAt: 100,
-      send: () => undefined,
-      close: () => undefined,
-    });
-    const second = subscribe({
-      gameId,
-      seatId: "seat-a",
-      connectedAt: 200,
-      send: () => undefined,
-      close: () => undefined,
-    });
+    vi.useFakeTimers();
+    try {
+      const gameId = "presence-test-game";
+      const changes: string[] = [];
+      setPresenceRecoveryHandler((change) => {
+        changes.push(`${change.state}:${change.seatId}`);
+      });
+      const first = subscribe({
+        gameId,
+        seatId: "seat-a",
+        connectedAt: 100,
+        send: () => undefined,
+        close: () => undefined,
+      });
+      const second = subscribe({
+        gameId,
+        seatId: "seat-a",
+        connectedAt: 200,
+        send: () => undefined,
+        close: () => undefined,
+      });
 
-    expect(connectedSeatTenures(gameId)).toEqual([{ seatId: "seat-a", connectedAt: 100 }]);
-    first();
-    expect(changes).toEqual(["connected:seat-a"]);
-    second();
-    expect(changes).toEqual(["connected:seat-a", "disconnected:seat-a"]);
-    setPresenceRecoveryHandler(() => undefined);
+      expect(connectedSeatTenures(gameId)).toEqual([{ seatId: "seat-a", connectedAt: 100 }]);
+      first();
+      expect(changes).toEqual(["connected:seat-a"]);
+      second();
+      vi.advanceTimersByTime(PRESENCE_DISCONNECT_GRACE_MS);
+      expect(changes).toEqual(["connected:seat-a", "disconnected:seat-a"]);
+    } finally {
+      setPresenceRecoveryHandler(() => undefined);
+      vi.useRealTimers();
+    }
   });
 
   it.each(["TurnStart", "AwaitRoll", "AwaitAuction", "AwaitDebt", "AwaitChoice"])(
