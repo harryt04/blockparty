@@ -37,6 +37,13 @@ export default defineConfig({
           include: ["test/**/*.test.ts"],
         },
       },
+      {
+        test: {
+          name: "load-harness",
+          root: "tools",
+          include: ["*.test.ts"],
+        },
+      },
     ],
     coverage: {
       provider: "v8",

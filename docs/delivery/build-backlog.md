@@ -684,12 +684,13 @@ recorded draws.
   Proves: completed restore drill and automated restored-dataset integrity suite; TEST-002 operations-drill/protocol layers.
   Added encrypted `mongodump`/`mongorestore` isolation procedure and aggregate-only `pnpm db:verify-restore` checks in `docs/delivery/backup-restore-drill.md` and `apps/web/src/server/backup/restore-integrity.ts`; `apps/web/test/backup-restore.test.ts` proves replay, receipt/index/reference integrity, capability-hash exclusion, corruption rejection, and completed-game readability. Real-environment restore execution and operator sign-off remain required.
 
-- [ ] **F6 — Load harness and the performance budgets**
-      Blocked by: F5
-      Requirements: PRD-NFR-007, OPS-010, TEST-006
-      Read: docs/product/prd.md, docs/delivery/operations.md, docs/delivery/test-strategy.md
-      Acceptance: a reproducible harness drives create/join/command/sync/SSE at recorded capacity against deployed topology, proves p75 usable lobby under 3s and p95 authoritative ACK under 1.5s, and documents limits/alerts without leaking data.
-      Proves: versioned raw load report, web-vitals evidence, threshold assertions, and saturation/recovery run; TEST-002 deployment/load layer.
+- [?] **F6 — Load harness and the performance budgets**
+  Blocked by: F5
+  Requirements: PRD-NFR-007, OPS-010, TEST-006
+  Read: docs/product/prd.md, docs/delivery/operations.md, docs/delivery/test-strategy.md
+  Acceptance: a reproducible harness drives create/join/command/sync/SSE at recorded capacity against deployed topology, proves p75 usable lobby under 3s and p95 authoritative ACK under 1.5s, and documents limits/alerts without leaking data.
+  Proves: versioned raw load report, web-vitals evidence, threshold assertions, and saturation/recovery run; TEST-002 deployment/load layer.
+  Added the cookie-safe `pnpm perf:load` harness with aggregate percentile gates, optional `/create` web-vitals capture, and target/saturation/recovery phases in `tools/load-harness.ts`; `tools/load-harness.test.ts` proves percentile, threshold, operation-coverage, and failure handling, while `docs/delivery/load-performance.md` records the topology, limits, privacy rules, and report procedure. Deployed load execution and operator sign-off remain required before public release.
 
 ---
 
