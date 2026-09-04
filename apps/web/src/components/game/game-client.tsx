@@ -40,6 +40,7 @@ import {
   latestDiceResult,
   managementDecisionContext,
   orderedBoard,
+  selectedSpaceAfterActiveChange,
   turnLabel,
 } from "./game-model";
 import { PlayerStrip } from "./player-strip";
@@ -76,6 +77,7 @@ export function GameClient({ gameId }: { gameId: string }) {
   const { state, retry } = useGameSync(gameId);
   const previousConnection = useRef(state.connection);
   const previousPhase = useRef(state.snapshot?.phase);
+  const previousActiveSpaceId = useRef<string | undefined>(undefined);
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>();
   const [pendingAction, setPendingAction] = useState<LegalAction>();
   const [actionStatus, setActionStatus] = useState<string>();
@@ -137,6 +139,16 @@ export function GameClient({ gameId }: { gameId: string }) {
     }
     previousPhase.current = snapshot?.phase;
   }, [snapshot, track]);
+
+  useEffect(() => {
+    const nextSelectedSpaceId = selectedSpaceAfterActiveChange(
+      previousActiveSpaceId.current,
+      active?.spaceId,
+      selectedSpaceId,
+    );
+    previousActiveSpaceId.current = active?.spaceId;
+    if (nextSelectedSpaceId !== selectedSpaceId) setSelectedSpaceId(nextSelectedSpaceId);
+  }, [active?.spaceId, selectedSpaceId]);
 
   useEffect(() => {
     if (

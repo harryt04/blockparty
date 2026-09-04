@@ -90,6 +90,43 @@ export function activeSpace(snapshot: GameSnapshotProjection): BoardSpaceProject
 }
 
 /**
+ * An authoritative move changes the active-space detail to the space reached
+ * by that move. Keep a deliberate board inspection while the active space is
+ * unchanged. See UX-013 and DS-040.
+ */
+export function selectedSpaceAfterActiveChange(
+  previousActiveSpaceId: string | undefined,
+  activeSpaceId: string | undefined,
+  selectedSpaceId: string | undefined,
+): string | undefined {
+  return activeSpaceId !== undefined && activeSpaceId !== previousActiveSpaceId
+    ? activeSpaceId
+    : selectedSpaceId;
+}
+
+/** Verb + object labels for server-advertised actions. Never leak wire names to players. DS-030. */
+const ACTION_LABELS: Partial<Record<LegalAction["type"], string>> = {
+  RollDice: "Roll and advance",
+  AcquireDeed: "Acquire this Address",
+  DeclineAcquisition: "Decline and open the auction",
+  EndTurn: "End turn",
+  PlaceAuctionBid: "Place bid",
+  PassAuction: "Pass on this auction",
+  PayObligation: "Pay what is Owed",
+  MortgageDeed: "Mortgage this Address",
+  RedeemMortgage: "Buy Back this Address",
+  BuyImprovement: "Buy a Stall",
+  SellImprovement: "Sell a Stall",
+  RequestScarceImprovement: "Request a Stall",
+  ProposeTrade: "Propose a trade",
+  DeclareBankruptcy: "Declare Packed Up",
+  StartGame: "Start the game",
+  EndNoContest: "End game without a result",
+};
+
+export const actionLabel = (type: LegalAction["type"]): string => ACTION_LABELS[type] ?? type;
+
+/**
  * Resolve the seat whose action is currently due for the turn heading. An
  * auction keeps the original active turn owner while rotating its own
  * priority, so the priority seat must drive the heading during auction
@@ -197,6 +234,7 @@ export interface AuctionDecisionContext {
 export const MANAGEMENT_ACTION_TYPES = [
   "BuyImprovement",
   "SellImprovement",
+  "RequestScarceImprovement",
   "MortgageDeed",
   "RedeemMortgage",
 ] as const satisfies readonly LegalAction["type"][];

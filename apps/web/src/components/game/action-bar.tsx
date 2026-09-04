@@ -19,30 +19,9 @@ import { Button } from "@/components/ui/button";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import { AcquisitionAuctionSummary } from "./acquisition-auction-summary";
 import { actionRenderKey } from "./action-bar-model";
-import { MANAGEMENT_ACTION_TYPES } from "./game-model";
+import { actionLabel, MANAGEMENT_ACTION_TYPES } from "./game-model";
 
-export { actionRenderKey } from "./action-bar-model";
-
-/** Verb + object labels. Never a vague "Confirm". DS-030. */
-const ACTION_LABELS: Partial<Record<LegalAction["type"], string>> = {
-  RollDice: "Roll and advance",
-  AcquireDeed: "Acquire this Address",
-  DeclineAcquisition: "Decline and open the auction",
-  EndTurn: "End turn",
-  PlaceAuctionBid: "Place bid",
-  PassAuction: "Pass on this auction",
-  PayObligation: "Pay what is Owed",
-  MortgageDeed: "Mortgage this Address",
-  RedeemMortgage: "Buy Back this Address",
-  BuyImprovement: "Buy a Stall",
-  SellImprovement: "Sell a Stall",
-  ProposeTrade: "Propose a trade",
-  DeclareBankruptcy: "Declare Packed Up",
-  StartGame: "Start the game",
-  EndNoContest: "End game without a result",
-};
-
-export const actionLabel = (type: LegalAction["type"]) => ACTION_LABELS[type] ?? type;
+export { actionLabel, actionRenderKey };
 
 function constraintText(action: LegalAction): string | undefined {
   const constraints = action.constraints;

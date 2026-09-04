@@ -288,3 +288,16 @@ covered by `apps/web/test/game-model.test.ts`, and a live `npm run dev` smoke
 run reached an auction with the bot as priority and rendered `Waiting for Bot
 1` while the auction controls remained correctly disabled. This extends the
 UX-013/014 evidence for current-turn and auction-priority presentation.
+
+Iteration 14 keeps the active-space detail aligned with the newly reached stop
+after an authoritative move while preserving deliberate inspection when the
+active stop is unchanged. `apps/web/test/board-selection.regression-1.test.ts`
+covers the selection transition, and the live dev run reproduced and then
+removed the stale inspected-stop presentation. This extends UX-013 and DS-040
+evidence for the board, focused stop, and live movement update.
+
+Iteration 14 also keeps `RequestScarceImprovement` inside the management
+surface and maps it to the player-facing `Request a Stall` label. The
+regression is covered by `apps/web/test/management-actions.regression-1.test.ts`,
+preventing the wire action name from appearing in the active action sheet;
+this extends UX-013, UX-016, and DS-030 evidence.

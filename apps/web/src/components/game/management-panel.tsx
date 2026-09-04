@@ -11,25 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import {
+  actionLabel,
   managementDecisionContext,
   type ManagementActionContext,
   type ManagementDeedContext,
 } from "./game-model";
-
-function actionLabel(type: LegalAction["type"]): string {
-  switch (type) {
-    case "BuyImprovement":
-      return "Buy a Stall";
-    case "SellImprovement":
-      return "Sell a Stall";
-    case "MortgageDeed":
-      return "Mortgage this Address";
-    case "RedeemMortgage":
-      return "Buy Back this Address";
-    default:
-      return type;
-  }
-}
 
 function actionPreview(
   action: ManagementActionContext["type"],
@@ -45,6 +31,10 @@ function actionPreview(
       return deed.improvementResaleValue === undefined
         ? "No improvement is available to sell."
         : `Receive ${formatMoney(deed.improvementResaleValue, "Tabs")}; balance becomes ${formatMoney(balance + deed.improvementResaleValue, "Tabs")}.`;
+    case "RequestScarceImprovement":
+      return deed.nextImprovementCost === undefined
+        ? "No next level is defined."
+        : `Request the next Stall for ${formatMoney(deed.nextImprovementCost, "Tabs")}; a contested request opens an untimed auction.`;
     case "MortgageDeed":
       return `Receive ${formatMoney(deed.mortgageValue, "Tabs")}; balance becomes ${formatMoney(balance + deed.mortgageValue, "Tabs")}.`;
     case "RedeemMortgage":
