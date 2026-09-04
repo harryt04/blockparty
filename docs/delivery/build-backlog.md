@@ -564,12 +564,13 @@ recorded draws.
       Proves: pure-engine tables cover default, each toggle alone, pairwise documented interactions, ledger conservation, and replay; TEST-002 pure-engine table layer.
       Implemented jackpot funding/payout with debt and bankruptcy accounting, exact-Start stacking, and matching-ones bank payouts. `packages/game-engine/test/variant-money.test.ts` proves defaults, toggle interactions, partial payment, ledger transitions, and event replay.
 
-- [ ] **D3 — VAR-003, VAR-004: auction and income suppression**
+- [x] **D3 — VAR-003, VAR-004: auction and income suppression**
       Blocked by: D1
       Requirements: VAR-003, VAR-004, VAR-014
       Read: docs/product/rule-variants.md, docs/product/rules.md
       Acceptance: declined/unaffordable acquisitions remain bank-owned when configured, and detained seats suppress only documented income while bank payments and default behavior remain intact.
       Proves: pure-engine acquisition/detention income tables cover each toggle and all documented interactions; TEST-002 pure-engine table layer.
+      Implemented variant-gated no-auction resolution for declined and unaffordable deeds, plus detained rent/card-income suppression that leaves bank payments and outgoing player payments intact. `packages/game-engine/test/variant-auction-income.test.ts` covers defaults, each toggle, combined configuration, replay, and mutation-sensitive boundaries.
 
 - [ ] **D4 — VAR-006, VAR-007, VAR-008: setup and construction toggles**
       Blocked by: D1

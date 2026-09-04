@@ -276,5 +276,18 @@ describe("A11 detention state machine", () => {
       balance: 100_000,
       deedIds: [deedId],
     });
+
+    const defaultResult = resolve(
+      before,
+      { actorSeatId: "seat-a", command: { type: "RollDice" } },
+      RULES,
+    );
+    expect(defaultResult).toMatchObject({ ok: true });
+    if (!defaultResult.ok) throw new Error("expected default detained-owner rent landing");
+    expect(defaultResult.events.at(-1)).toMatchObject({
+      type: "RentPaid",
+      payload: { deedId, amount: 1_000, creditorSeatId: "seat-b" },
+    });
+    expect(defaultResult.state.seats[1]?.balance).toBe(101_000);
   });
 });
