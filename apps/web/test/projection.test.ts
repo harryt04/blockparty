@@ -140,6 +140,24 @@ describe("authorized seat projections", () => {
     expect(projection).not.toHaveProperty("contentHash");
   });
 
+  it("treats legacy BSON null optionals as absent", () => {
+    const persistedNulls = {
+      ...state(),
+      pendingChoice: null,
+      obligation: null,
+      pendingAuction: null,
+      pendingTrade: null,
+    } as unknown as GameState;
+
+    const projection = buildSeatProjection(persistedNulls, "seat-a", projectionContext());
+
+    expect(GameSnapshotProjection.safeParse(projection).success).toBe(true);
+    expect(projection.auction).toBeUndefined();
+    expect(projection.obligation).toBeUndefined();
+    expect(projection.pendingTrade).toBeUndefined();
+    expect(projection.recovery.safeBoundary).toBe(true);
+  });
+
   it("shares a pending trade only with its named parties", () => {
     const pendingTrade = {
       tradeId: "trade:projection:1",

@@ -96,6 +96,11 @@ async function fixture() {
     },
     gameEvents: {
       insertMany: vi.fn(async (documents: readonly GameEventDocument[]) => {
+        // The MongoDB driver adds `_id` to inserted documents. Persistence
+        // must not mutate the domain events returned for publication.
+        for (const document of documents) {
+          Object.assign(document, { _id: "generated-by-mongodb" });
+        }
         events.push(...documents);
         return { acknowledged: true, insertedCount: documents.length, insertedIds: {} };
       }),

@@ -62,6 +62,7 @@ async function fixture(eventSequences: readonly number[] = [1, 2]) {
 }
 
 function database(game: GameDocument, events: readonly GameEventDocument[]) {
+  const persistedEvents = events.map((event) => ({ ...event, _id: "generated-by-mongodb" }));
   return {
     collection: (name: string) => {
       if (name === "games") return { findOne: vi.fn(async () => game) };
@@ -69,7 +70,7 @@ function database(game: GameDocument, events: readonly GameEventDocument[]) {
         find: vi.fn(() => ({
           sort: vi.fn(() => ({
             limit: vi.fn((amount: number) => ({
-              toArray: vi.fn(async () => [...events].slice(0, amount)),
+              toArray: vi.fn(async () => persistedEvents.slice(0, amount)),
             })),
           })),
         })),

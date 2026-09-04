@@ -13,6 +13,7 @@ interface LifecycleRuntime {
   activeCommands: number;
   drainPromise?: Promise<void>;
   resolveDrain?: () => void;
+  shutdownHandlers: Set<() => void | Promise<void>>;
 }
 
 const globalForLifecycle = globalThis as unknown as {
@@ -23,8 +24,40 @@ function runtime(): LifecycleRuntime {
   globalForLifecycle.__blockpartyLifecycle ??= {
     draining: false,
     activeCommands: 0,
+    shutdownHandlers: new Set(),
   };
   return globalForLifecycle.__blockpartyLifecycle;
+}
+
+/** Registers a process resource to close after admitted commands drain. */
+export function registerShutdownHandler(handler: () => void | Promise<void>): () => void {
+  const handlers = runtime().shutdownHandlers;
+  handlers.add(handler);
+  return () => handlers.delete(handler);
+}
+
+async function closeRegisteredResources(): Promise<void> {
+  for (const handler of [...runtime().shutdownHandlers].reverse()) {
+    await handler();
+  }
+}
+
+/** Installs the Node process hooks without importing any resource implementation. */
+export function installServerShutdownHandlers(): () => void {
+  const onSignal = () => {
+    void beginServerShutdown()
+      .then(() => closeRegisteredResources())
+      .then(
+        () => process.exit(0),
+        () => process.exit(1),
+      );
+  };
+  process.once("SIGTERM", onSignal);
+  process.once("SIGINT", onSignal);
+  return () => {
+    process.off("SIGTERM", onSignal);
+    process.off("SIGINT", onSignal);
+  };
 }
 
 /** Returns whether this process is draining and cannot accept new work. */

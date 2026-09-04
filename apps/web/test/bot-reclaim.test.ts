@@ -234,8 +234,8 @@ describe("B9 bot replacement and reclaim", () => {
     expect(replaced).toMatchObject({
       ok: true,
       aggregateVersion: 1,
-      firstSequence: 2,
-      lastSequence: 2,
+      firstSequence: 1,
+      lastSequence: 1,
     });
     expect(fixtureState.game.snapshot.seats[1]!.kind).toBe("bot");
     expect(fixtureState.game.snapshot.seats[1]!.balance).toBe(before.balance);

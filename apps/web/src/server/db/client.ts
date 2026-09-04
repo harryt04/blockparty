@@ -11,6 +11,7 @@ import "server-only";
  */
 import { MongoClient, type ClientSession, type Db } from "mongodb";
 import { env, isDatabaseConfigured } from "../env";
+import { registerShutdownHandler } from "../lifecycle";
 import { observeMongoPool, observeReadiness } from "../observability/telemetry";
 
 /** Cached across hot reloads in development so connections do not leak. */
@@ -60,9 +61,13 @@ export function getMongoClient(): MongoClient {
   if (!isDatabaseConfigured || env.MONGODB_URI === undefined) {
     throw new DatabaseNotConfiguredError();
   }
+  registerShutdownHandler(closeMongoClient);
   const state = runtime();
   if (state.closing) throw new DatabaseClosingError();
   state.client ??= new MongoClient(env.MONGODB_URI, {
+    // Preserve optional engine fields as absent fields instead of BSON null.
+    // The engine uses `undefined` for fields that are not active. See ENG-022.
+    ignoreUndefined: true,
     // Bounded pool and timeouts, so a slow database cannot exhaust the process.
     maxPoolSize: 20,
     minPoolSize: 0,
@@ -144,29 +149,6 @@ export async function withMongoTransaction<T>(
 /** Number of in-flight adapter-owned sessions, useful for lifecycle evidence. */
 export function activeMongoSessionCount(): number {
   return runtime().activeSessions;
-}
-
-/**
- * Installs the Node lifecycle hook used by the web image. Route handlers that
- * use `withMongoTransaction` stop admitting work as soon as SIGTERM/SIGINT is
- * received, then the adapter drains sessions before closing the driver.
- */
-export function installMongoShutdownHandlers(): () => void {
-  const onSignal = () => {
-    void import("../lifecycle")
-      .then(({ beginServerShutdown }) => beginServerShutdown())
-      .then(() => closeMongoClient())
-      .then(
-        () => process.exit(0),
-        () => process.exit(1),
-      );
-  };
-  process.once("SIGTERM", onSignal);
-  process.once("SIGINT", onSignal);
-  return () => {
-    process.off("SIGTERM", onSignal);
-    process.off("SIGINT", onSignal);
-  };
 }
 
 /**

@@ -37,6 +37,7 @@ import { connectedSeatTenures } from "../sse/registry";
 import type { AuditDocument, CapabilityDocument } from "../games/create-game";
 import { generateCapability, hashCapability } from "../auth/capabilities";
 import { capturedRuleSet } from "../games/captured-rules";
+import { normalizeGameState } from "../games/normalize-state";
 import { admitCommand } from "../lifecycle";
 import { observeTransaction, type TransactionOutcome } from "../observability/telemetry";
 
@@ -127,7 +128,7 @@ function recoveryCommand(command: ParsedCommandEnvelope["payload"]): boolean {
 }
 
 function safeBoundary(game: GameDocument): boolean {
-  return game.snapshot.effectQueue.length === 0 && game.snapshot.pendingChoice === undefined;
+  return game.snapshot.effectQueue.length === 0 && game.snapshot.pendingChoice == null;
 }
 
 function connected(game: GameDocument, seatId: string): boolean {
@@ -187,8 +188,9 @@ async function transactRecovery(
   );
   if (existing !== null) return { outcome: ackFromReceipt(existing), events: [] };
 
-  const game = await store.games.findOne({ _id: envelope.gameId }, { session });
-  if (game === null) throw new CommandPathError("NOT_FOUND", "GAME_NOT_FOUND");
+  const persistedGame = await store.games.findOne({ _id: envelope.gameId }, { session });
+  if (persistedGame === null) throw new CommandPathError("NOT_FOUND", "GAME_NOT_FOUND");
+  const game = { ...persistedGame, snapshot: normalizeGameState(persistedGame.snapshot) };
   if (game.expiresAt <= now) throw new CommandPathError("GAME_EXPIRED", "GAME_EXPIRED");
   if (game.status !== "ACTIVE") throw new CommandPathError("ILLEGAL_ACTION", "GAME_TERMINAL");
   const command = envelope.payload;
@@ -356,7 +358,7 @@ async function transactRecovery(
     pendingSeatReclaimId: nextPendingReclaim,
   });
   const journalEvent = DomainEvent.parse({ ...event, aggregateVersion: nextVersion });
-  await store.gameEvents.insertMany([journalEvent], { session, ordered: true });
+  await store.gameEvents.insertMany([{ ...journalEvent }], { session, ordered: true });
   const updated = await store.games.updateOne(
     { _id: game._id, aggregateVersion: game.aggregateVersion, lastSequence: game.lastSequence },
     {
@@ -411,8 +413,9 @@ async function transactLobbyConfiguration(
   );
   if (existing !== null) return { outcome: ackFromReceipt(existing), events: [] };
 
-  const game = await store.games.findOne({ _id: envelope.gameId }, { session });
-  if (game === null) throw new CommandPathError("NOT_FOUND", "GAME_NOT_FOUND");
+  const persistedGame = await store.games.findOne({ _id: envelope.gameId }, { session });
+  if (persistedGame === null) throw new CommandPathError("NOT_FOUND", "GAME_NOT_FOUND");
+  const game = { ...persistedGame, snapshot: normalizeGameState(persistedGame.snapshot) };
   if (game.expiresAt <= now) throw new CommandPathError("GAME_EXPIRED", "GAME_EXPIRED");
   if (actor.kind !== "host" || actor.seatId !== game.hostSeatId) {
     throw new CommandPathError("FORBIDDEN", "HOST_CAPABILITY_REQUIRED");
@@ -441,7 +444,7 @@ async function transactLobbyConfiguration(
     payload: { configuration: command.configuration, contentHash: game.contentHash },
   });
   const nextState = Object.freeze({ ...game.snapshot, aggregateVersion: nextVersion });
-  await store.gameEvents.insertMany([event], { session, ordered: true });
+  await store.gameEvents.insertMany([{ ...event }], { session, ordered: true });
   const updated = await store.games.updateOne(
     { _id: game._id, aggregateVersion: game.aggregateVersion, lastSequence: game.lastSequence },
     {
@@ -479,10 +482,13 @@ function gameStatus(state: GameState, previous: GameStatus): GameStatus {
 }
 
 /** Removes server-only replay facts before a domain event crosses the wire. */
-export function publicEvent(event: DomainEvent): DomainEvent {
+export type PublicEventInput = DomainEvent & { readonly _id?: string };
+
+export function publicEvent(event: PublicEventInput): DomainEvent {
   // Replay continuations and future deck state are intentionally absent from
   // public event ranges; the seat-scoped snapshot carries the current result.
   // ENG-022, PROTO-004.
+  const { _id: _storageId, ...domainEvent } = event;
   const privateKeys = new Set([
     "deckOrders",
     "remainingCardIds",
@@ -491,15 +497,15 @@ export function publicEvent(event: DomainEvent): DomainEvent {
     "resolvingCardStack",
   ]);
   const payload = Object.fromEntries(
-    Object.entries(event.payload).filter(([key]) => !privateKeys.has(key)),
+    Object.entries(domainEvent.payload).filter(([key]) => !privateKeys.has(key)),
   );
   let nestedPayloadChanged = false;
-  if (event.type === "CardDrawn" || event.type === "DetentionReleaseCardGranted") {
+  if (domainEvent.type === "CardDrawn" || domainEvent.type === "DetentionReleaseCardGranted") {
     delete payload.cardId;
     delete payload.retainable;
     delete payload.deckId;
   }
-  if (event.type === "TradeProposed" || event.type === "TradeAccepted") {
+  if (domainEvent.type === "TradeProposed" || domainEvent.type === "TradeAccepted") {
     for (const key of ["offered", "requested"]) {
       const side = payload[key];
       if (typeof side !== "object" || side === null || Array.isArray(side)) continue;
@@ -510,9 +516,13 @@ export function publicEvent(event: DomainEvent): DomainEvent {
       nestedPayloadChanged = true;
     }
   }
-  if (Object.keys(payload).length === Object.keys(event.payload).length && !nestedPayloadChanged)
-    return event;
-  return DomainEvent.parse({ ...event, payload });
+  if (
+    Object.keys(payload).length === Object.keys(domainEvent.payload).length &&
+    !nestedPayloadChanged &&
+    _storageId === undefined
+  )
+    return domainEvent;
+  return DomainEvent.parse({ ...domainEvent, payload });
 }
 
 function toJournalEvents(
@@ -561,8 +571,9 @@ async function transact(
   );
   if (existing !== null) return { outcome: ackFromReceipt(existing), events: [] };
 
-  const game = await store.games.findOne({ _id: envelope.gameId }, { session });
-  if (game === null) throw new CommandPathError("NOT_FOUND", "GAME_NOT_FOUND");
+  const persistedGame = await store.games.findOne({ _id: envelope.gameId }, { session });
+  if (persistedGame === null) throw new CommandPathError("NOT_FOUND", "GAME_NOT_FOUND");
+  const game = { ...persistedGame, snapshot: normalizeGameState(persistedGame.snapshot) };
   if (game.expiresAt <= now) throw new CommandPathError("GAME_EXPIRED", "GAME_EXPIRED");
   if (game.status === "COMPLETED" || game.status === "NO_CONTEST" || game.status === "EXPIRED") {
     throw new CommandPathError("ILLEGAL_ACTION", "GAME_TERMINAL");
@@ -636,7 +647,10 @@ async function transact(
     aggregateVersion: nextVersion,
   });
   assertInvariants(nextState, rules, game.snapshot);
-  await store.gameEvents.insertMany(journalEvents, { session, ordered: true });
+  await store.gameEvents.insertMany(
+    journalEvents.map((event) => ({ ...event })),
+    { session, ordered: true },
+  );
 
   const update: UpdateFilter<GameDocument> = {
     $set: {

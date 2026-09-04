@@ -209,6 +209,12 @@ projections; subsequent screens must use authenticated sync-client state.
 There is no service worker until F1 proves an app-shell-only cache, and no font
 files until licensed, provenanced self-hosted faces exist.
 
+Iteration 1 runtime evidence: `npm run dev` starts with the Node-only
+instrumentation boundary, and a local replica-set smoke flow created a game,
+started it, loaded the authorized bootstrap, rolled dice, and advanced through
+acquisition. The evidence exercises ENG-001–004, ENG-006, ENG-015, ENG-022,
+and PROTO-004; browser journey evidence remains pending.
+
 ## Completion rule
 
 Code alone never makes a requirement `Verified`. Link implementation, required

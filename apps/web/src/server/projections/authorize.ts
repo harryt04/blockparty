@@ -29,6 +29,7 @@ import {
   type GameState,
   type RuleSet,
 } from "@blockparty/game-engine";
+import { normalizeGameState } from "../games/normalize-state";
 
 export interface ProjectionSeatSource {
   readonly seatId: string;
@@ -70,6 +71,7 @@ export function buildSeatProjection(
   viewerSeatId: string | undefined,
   context: ProjectionContext,
 ): GameSnapshotProjection {
+  state = normalizeGameState(state);
   const sourceBySeatId = new Map(context.seats.map((seat) => [seat.seatId, seat]));
   const seats: SeatProjection[] = state.seats.map((seat) => {
     const source = sourceBySeatId.get(seat.seatId);
@@ -130,7 +132,7 @@ export function buildSeatProjection(
 
   const auction = auctionProjection(state);
   const obligation =
-    state.obligation === undefined
+    state.obligation == null
       ? undefined
       : {
           debtorSeatId: state.obligation.debtorSeatId,
@@ -143,7 +145,7 @@ export function buildSeatProjection(
         };
 
   const pendingTrade =
-    state.pendingTrade === undefined ||
+    state.pendingTrade == null ||
     (viewerSeatId !== state.pendingTrade.proposerSeatId &&
       viewerSeatId !== state.pendingTrade.counterpartySeatId)
       ? undefined
@@ -167,7 +169,7 @@ export function buildSeatProjection(
         };
 
   const safeBoundary =
-    context.safeBoundary ?? (state.effectQueue.length === 0 && state.pendingChoice === undefined);
+    context.safeBoundary ?? (state.effectQueue.length === 0 && state.pendingChoice == null);
   const replacementSeatIds = safeBoundary
     ? context.seats
         .filter((seat) => !seat.connected && seat.kind === "human")
@@ -228,7 +230,7 @@ function toIsoDate(value: Date | string): string {
 
 function auctionProjection(state: GameState): GameSnapshotProjection["auction"] {
   const auction = state.pendingAuction;
-  if (auction !== undefined) {
+  if (auction != null) {
     return {
       deedId: auction.deedId,
       ...(auction.highBidderSeatId === undefined
@@ -242,7 +244,7 @@ function auctionProjection(state: GameState): GameSnapshotProjection["auction"] 
   }
   const improvementAuction = state.pendingImprovementAuction;
   const firstDemand = improvementAuction?.demands[0];
-  if (improvementAuction === undefined || firstDemand === undefined) return undefined;
+  if (improvementAuction == null || firstDemand === undefined) return undefined;
   return {
     deedId: firstDemand.deedId,
     ...(improvementAuction.highBidderSeatId === undefined

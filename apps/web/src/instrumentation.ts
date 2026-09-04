@@ -4,6 +4,5 @@
  */
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
-  const { installMongoShutdownHandlers } = await import("./server/db/client");
-  installMongoShutdownHandlers();
+  await import("./instrumentation.node");
 }

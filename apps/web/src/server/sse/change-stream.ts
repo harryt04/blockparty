@@ -109,8 +109,7 @@ export async function publishCommittedProjection(
       paused: game.paused ?? false,
       publicEvents,
       viewerCapabilityKind: capabilityKind,
-      safeBoundary:
-        game.snapshot.effectQueue.length === 0 && game.snapshot.pendingChoice === undefined,
+      safeBoundary: game.snapshot.effectQueue.length === 0 && game.snapshot.pendingChoice == null,
       pendingSeatReclaimId: game.pendingSeatReclaimId,
       pendingHostClaimSeatId: game.pendingHostClaimSeatId,
     });
