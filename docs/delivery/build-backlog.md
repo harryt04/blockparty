@@ -474,12 +474,13 @@ separate player contexts.
       Proves: Playwright multi-seat state/event updates plus projection-to-display component cases; TEST-002 browser/component layers.
       Implemented the authorized sync-backed game shell, winding SVG route with keyboard-inspectable board list, live player/turn/detail/bank/variant panels, and bounded redacted public history; `apps/web/test/game-model.test.ts` and `apps/web/test/projection.test.ts` prove route/display mapping, bank projection, and history ordering/redaction. The repository still has no Playwright harness or configured MongoDB, so multi-seat browser evidence remains follow-up evidence.
 
-- [ ] **C6 — Active turn and the action sheet**
+- [x] **C6 — Active turn and the action sheet**
       Blocked by: C5
-      Requirements: PRD-FUN-006, PRD-FUN-007, PRD-FUN-009, UX-014, UX-015
+      Requirements: PRD-FUN-006, PRD-FUN-007, PRD-FUN-009, UX-013
       Read: docs/product/prd.md, docs/design/ux-spec.md
       Acceptance: the required actor and resolved dice/outcome dominate the UI; the action sheet renders server legal actions/bounds and unavailable reasons, submits once with pending/ack/error recovery, and never grants client authority.
       Proves: two-player Playwright turn cases cover legal/illegal/stale/double-submit actions and plain-language unavailable reasons; TEST-002 browser layer.
+      Implemented the sync-backed active-turn summary and accessible action sheet in `apps/web/src/components/game/game-client.tsx` and `apps/web/src/components/game/action-bar.tsx`; `apps/web/test/game-model.test.ts` proves server-constrained command mapping and authoritative dice-result presentation. The repository still has no Playwright harness or configured MongoDB, so the required two-player browser evidence remains follow-up evidence.
 
 - [ ] **C7 — Acquisition and auction**
       Blocked by: C6

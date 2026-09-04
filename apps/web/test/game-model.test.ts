@@ -4,8 +4,10 @@ import { PLACEHOLDER_BUNDLE } from "@blockparty/game-content";
 import {
   activeSpace,
   boardLayout,
+  commandForLegalAction,
   districtNames,
   enabledVariantLabels,
+  latestDiceResult,
   orderedBoard,
 } from "../src/components/game/game-model";
 
@@ -89,5 +91,50 @@ describe("game presentation model", () => {
       "Jackpot on The Stoop",
       "Build without the even-spread rule",
     ]);
+  });
+
+  it("derives only bounded command payloads from server legal actions", () => {
+    expect(commandForLegalAction({ type: "RollDice" })).toEqual({ type: "RollDice" });
+    expect(
+      commandForLegalAction({
+        type: "PlaceAuctionBid",
+        constraints: { minBid: 4001, maxBid: 20_000 },
+      }),
+    ).toEqual({ type: "PlaceAuctionBid", amount: 4001 });
+    expect(
+      commandForLegalAction(
+        { type: "PlaceAuctionBid", constraints: { minBid: 4001, maxBid: 20_000 } },
+        5000,
+      ),
+    ).toEqual({ type: "PlaceAuctionBid", amount: 5000 });
+    expect(
+      commandForLegalAction({ type: "MortgageDeed", constraints: { deedId: "d-sawhorse-lane" } }),
+    ).toEqual({ type: "MortgageDeed", deedId: "d-sawhorse-lane" });
+    expect(
+      commandForLegalAction({
+        type: "ProposeTrade",
+        constraints: { counterpartySeatId: "seat-b" },
+      }),
+    ).toBeUndefined();
+  });
+
+  it("reads the latest authoritative dice event without inventing an outcome", () => {
+    expect(
+      latestDiceResult(
+        snapshot({
+          publicEvents: [
+            {
+              gameId: "00000000-0000-4000-8000-000000000099",
+              sequence: 2,
+              aggregateVersion: 2,
+              type: "DiceRolled",
+              eventVersion: 1,
+              occurredAt: "2026-09-03T15:00:02.000Z",
+              payload: { first: 3, second: 5 },
+            },
+          ],
+        }),
+      ),
+    ).toEqual({ first: 3, second: 5 });
   });
 });

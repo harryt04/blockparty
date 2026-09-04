@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { CommandAckEnvelope, ErrorEnvelope, type LegalAction } from "@blockparty/contracts";
 import { useGameSync } from "@/client/sync/use-game-sync";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -14,11 +15,14 @@ import { BankAssets } from "./bank-assets";
 import { BoardList } from "./board-list";
 import { BoardView } from "./board-view";
 import { EventFeed } from "./event-feed";
+import { ActionBar } from "./action-bar";
 import {
   activeSpace,
   boardLayout,
+  commandForLegalAction,
   districtNames,
   enabledVariantLabels,
+  latestDiceResult,
   orderedBoard,
 } from "./game-model";
 import { PlayerStrip } from "./player-strip";
@@ -39,9 +43,16 @@ function phaseLabel(phase: string): string {
   return phase.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (value) => value.toUpperCase());
 }
 
+function commandUrl(gameId: string): string {
+  return `/api/games/${encodeURIComponent(gameId)}/commands`;
+}
+
 export function GameClient({ gameId }: { gameId: string }) {
   const { state, retry } = useGameSync(gameId);
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>();
+  const [pendingAction, setPendingAction] = useState<LegalAction>();
+  const [actionStatus, setActionStatus] = useState<string>();
+  const [actionError, setActionError] = useState<string>();
 
   const snapshot = state.snapshot;
   const spaces = useMemo(
@@ -54,6 +65,7 @@ export function GameClient({ gameId }: { gameId: string }) {
   const activeSeat = snapshot?.seats.find((seat) => seat.seatId === snapshot.activeSeatId);
   const districtMap = snapshot === undefined ? {} : districtNames(snapshot);
   const variants = snapshot === undefined ? [] : enabledVariantLabels(snapshot.configuration);
+  const diceResult = snapshot === undefined ? undefined : latestDiceResult(snapshot);
 
   useEffect(() => {
     if (
@@ -86,6 +98,63 @@ export function GameClient({ gameId }: { gameId: string }) {
   const history = [...(snapshot.publicEvents ?? [])].sort(
     (left, right) => left.sequence - right.sequence,
   );
+
+  async function submitAction(action: LegalAction, amount?: number) {
+    if (snapshot === undefined || state.connection !== "live" || pendingAction !== undefined)
+      return;
+    const payload = commandForLegalAction(action, amount);
+    if (payload === undefined) {
+      setActionError("This action needs its own decision details and is not ready here.");
+      return;
+    }
+    setPendingAction(action);
+    setActionError(undefined);
+    setActionStatus(`Submitting ${action.type.replace(/([a-z])([A-Z])/g, "$1 $2")}…`);
+    try {
+      const response = await fetch(commandUrl(gameId), {
+        method: "POST",
+        credentials: "include",
+        headers: { Accept: "application/json", "content-type": "application/json" },
+        body: JSON.stringify({
+          protocolVersion: 1,
+          type: "game.command",
+          requestId: crypto.randomUUID(),
+          gameId,
+          commandId: crypto.randomUUID(),
+          expectedVersion: snapshot.aggregateVersion,
+          payload,
+        }),
+      });
+      const body: unknown = await response.json();
+      if (!response.ok) {
+        const parsed = ErrorEnvelope.safeParse(body);
+        setActionError(
+          parsed.success
+            ? parsed.data.error.message
+            : "The action was not accepted. Refresh and try again.",
+        );
+        setActionStatus(undefined);
+        setPendingAction(undefined);
+        if (parsed.success && parsed.data.error.code === "STALE_VERSION") retry();
+        return;
+      }
+      const ack = CommandAckEnvelope.safeParse(body);
+      if (!ack.success) {
+        setActionError("The action acknowledgement was not understood. Refresh and try again.");
+        setActionStatus(undefined);
+        setPendingAction(undefined);
+        retry();
+        return;
+      }
+      setActionStatus("Action accepted. Waiting for the authoritative result.");
+      setPendingAction(undefined);
+      retry();
+    } catch {
+      setActionError("The action could not be sent. Check your connection and try again.");
+      setActionStatus(undefined);
+      setPendingAction(undefined);
+    }
+  }
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-6">
@@ -160,6 +229,14 @@ export function GameClient({ gameId }: { gameId: string }) {
             <p className="mt-1 text-sm text-muted-ink">
               {active === undefined ? "No stop is selected yet." : `Current stop: ${active.name}.`}
             </p>
+            {diceResult === undefined ? null : (
+              <p className="mt-3 rounded-(--radius-md) border border-brand bg-brand/10 p-3 text-lg font-medium">
+                Latest roll:{" "}
+                <span className="tabular">
+                  {diceResult.first} + {diceResult.second} = {diceResult.first + diceResult.second}
+                </span>
+              </p>
+            )}
           </section>
 
           <ActiveSpaceDetail
@@ -208,6 +285,14 @@ export function GameClient({ gameId }: { gameId: string }) {
           </p>
         </aside>
       </div>
+      <ActionBar
+        legalActions={snapshot.legalActions}
+        actionAvailability={snapshot.actionAvailability}
+        statusText={actionError ?? actionStatus}
+        pending={pendingAction !== undefined}
+        disabled={state.connection !== "live" || pendingAction !== undefined}
+        onAction={(action, amount) => void submitAction(action, amount)}
+      />
     </div>
   );
 }

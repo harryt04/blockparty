@@ -6,7 +6,7 @@
  * See DS-030 and UX-040.
  */
 import { cva, type VariantProps } from "class-variance-authority";
-import type { ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, Ref } from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
@@ -39,12 +39,15 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {}
+  extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
+  ref?: Ref<HTMLButtonElement>;
+}
 
-export function Button({ className, variant, size, type, ...props }: ButtonProps) {
+export function Button({ className, variant, size, type, ref, ...props }: ButtonProps) {
   return (
     <button
       type={type ?? "button"}
+      ref={ref}
       className={cn(buttonVariants({ variant, size }), className)}
       {...props}
     />
