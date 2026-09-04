@@ -268,24 +268,30 @@ test.describe("accessibility release matrix", () => {
     });
   }
 
-  test("keeps the core-play surface inside the viewport at zoom-equivalent widths", async ({
-    page,
-  }) => {
-    await mockGameApi(page, "AwaitRoll");
-    for (const width of [320, 375, 768, 1024]) {
-      await page.setViewportSize({ width, height: 900 });
-      await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
-      await expect(page.locator('[data-responsive-region="board"]')).toBeVisible({
-        timeout: 10_000,
-      });
-      const dimensions = await page.evaluate(() => ({
-        clientWidth: document.documentElement.clientWidth,
-        scrollWidth: document.documentElement.scrollWidth,
-      }));
-      expect(dimensions.scrollWidth, `${width}px page overflow`).toBeLessThanOrEqual(
-        dimensions.clientWidth + 1,
-      );
-    }
+  test.describe("responsive gameplay layout", () => {
+    // WebKit service workers bypass page.route() on the second navigation.
+    // This layout-only check must keep the mocked game API authoritative.
+    test.use({ serviceWorkers: "block" });
+
+    test("keeps the core-play surface inside the viewport at zoom-equivalent widths", async ({
+      page,
+    }) => {
+      await mockGameApi(page, "AwaitRoll");
+      for (const width of [320, 375, 768, 1024]) {
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+        await expect(page.locator('[data-responsive-region="board"]')).toBeVisible({
+          timeout: 10_000,
+        });
+        const dimensions = await page.evaluate(() => ({
+          clientWidth: document.documentElement.clientWidth,
+          scrollWidth: document.documentElement.scrollWidth,
+        }));
+        expect(dimensions.scrollWidth, `${width}px page overflow`).toBeLessThanOrEqual(
+          dimensions.clientWidth + 1,
+        );
+      }
+    });
   });
 
   test("honors reduced-motion media preference without hiding the outcome", async ({ page }) => {

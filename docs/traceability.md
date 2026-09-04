@@ -7,6 +7,10 @@ This register maps each normative family to its owner, required evidence, and
 delivery loop. Ranges include every ID. A ticket updates its rows in the same
 commit; a scaffold alone is never evidence.
 
+The F1/F2 browser evidence also covers the concurrent first-visit notices:
+`apps/web/e2e/pwa.spec.ts` verifies that the install dismissal remains
+actionable while the analytics consent banner is visible.
+
 ## Product and rules
 
 B8 protocol evidence covers safe-boundary pause/resume, deterministic host

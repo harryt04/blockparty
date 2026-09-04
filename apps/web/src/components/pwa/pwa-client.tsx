@@ -165,9 +165,10 @@ export function PwaClient() {
         canPrompt: installEvent !== undefined,
         isIos: ios,
       }) ? (
+        /* Keep the install action above the optional consent notice when both are present. PRD-FUN-017. */
         <aside
           aria-label="Install Blockparty"
-          className="fixed inset-x-4 bottom-4 z-30 mx-auto max-w-lg rounded-(--radius-lg) border-2 border-line bg-surface-raised p-4 shadow-lg"
+          className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-lg rounded-(--radius-lg) border-2 border-line bg-surface-raised p-4 shadow-lg"
         >
           <Alert className="border-0 p-0">
             <div>
