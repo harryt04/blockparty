@@ -237,6 +237,49 @@ export interface TradeComposerContext {
   readonly proposeAction: LegalAction;
 }
 
+export interface RecoveryDecisionContext {
+  readonly safeBoundary: boolean;
+  readonly replacementSeats: readonly {
+    readonly seatId: string;
+    readonly name: string;
+  }[];
+  readonly pendingReclaimName?: string;
+  readonly pendingHostName?: string;
+  readonly viewerCanRequestReclaim: boolean;
+  readonly viewerCanClaimHost: boolean;
+  readonly viewerIsHost: boolean;
+  readonly canEndNoContest: boolean;
+}
+
+/**
+ * Maps server-advertised recovery authority to named UI context. The browser
+ * never infers permission from connection state alone. See UX-018.
+ */
+export function recoveryDecisionContext(snapshot: GameSnapshotProjection): RecoveryDecisionContext {
+  const self = snapshot.seats.find((seat) => seat.isSelf);
+  const nameFor = (seatId: string | undefined): string | undefined =>
+    seatId === undefined ? undefined : snapshot.seats.find((seat) => seat.seatId === seatId)?.name;
+  return {
+    safeBoundary: snapshot.recovery.safeBoundary,
+    replacementSeats: snapshot.recovery.replacementSeatIds.map((seatId) => ({
+      seatId,
+      name: nameFor(seatId) ?? "Disconnected player",
+    })),
+    ...(nameFor(snapshot.recovery.pendingSeatReclaimId) === undefined
+      ? {}
+      : { pendingReclaimName: nameFor(snapshot.recovery.pendingSeatReclaimId) }),
+    ...(nameFor(snapshot.recovery.pendingHostClaimSeatId) === undefined
+      ? {}
+      : { pendingHostName: nameFor(snapshot.recovery.pendingHostClaimSeatId) }),
+    viewerCanRequestReclaim: snapshot.recovery.viewerCanRequestReclaim,
+    viewerCanClaimHost: snapshot.recovery.viewerCanClaimHost,
+    viewerIsHost: self?.isHost === true,
+    canEndNoContest:
+      self?.isHost === true &&
+      snapshot.legalActions.some((action) => action.type === "EndNoContest"),
+  };
+}
+
 /**
  * Builds current Noise Complaint release choices from server legalActions.
  * Attempts and the fee come from the captured content bundle, while buttons

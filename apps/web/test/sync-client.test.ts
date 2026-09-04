@@ -39,6 +39,12 @@ function snapshot(sequence: number, aggregateVersion = sequence): GameSnapshotPr
     board: [],
     legalActions: [{ type: "StartGame" }],
     actionAvailability: [],
+    recovery: {
+      safeBoundary: true,
+      replacementSeatIds: [],
+      viewerCanRequestReclaim: false,
+      viewerCanClaimHost: false,
+    },
     paused: false,
     expiresAt: "2026-10-03T15:00:00.000Z",
     configuration: STANDARD_CONFIGURATION,

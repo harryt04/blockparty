@@ -25,6 +25,7 @@ import { ActionBar } from "./action-bar";
 import { ManagementPanel } from "./management-panel";
 import { TradePanel } from "./trade-panel";
 import { DetentionDebtPanel } from "./detention-debt-panel";
+import { RecoveryPanel } from "./recovery-panel";
 import {
   activeSpace,
   boardLayout,
@@ -57,6 +58,12 @@ function commandUrl(gameId: string): string {
   return `/api/games/${encodeURIComponent(gameId)}/commands`;
 }
 
+function csrfToken(): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const cookie = document.cookie.split("; ").find((entry) => entry.includes("bp_csrf="));
+  return cookie?.split("=").slice(1).join("=");
+}
+
 export function GameClient({ gameId }: { gameId: string }) {
   const { state, retry } = useGameSync(gameId);
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>();
@@ -64,6 +71,7 @@ export function GameClient({ gameId }: { gameId: string }) {
   const [actionStatus, setActionStatus] = useState<string>();
   const [actionError, setActionError] = useState<string>();
   const [managementOpen, setManagementOpen] = useState(false);
+  const [recoveryStatus, setRecoveryStatus] = useState<string>();
 
   const snapshot = state.snapshot;
   const spaces = useMemo(
@@ -124,10 +132,15 @@ export function GameClient({ gameId }: { gameId: string }) {
     setActionError(undefined);
     setActionStatus(`Submitting ${payload.type.replace(/([a-z])([A-Z])/g, "$1 $2")}…`);
     try {
+      const csrf = csrfToken();
       const response = await fetch(commandUrl(gameId), {
         method: "POST",
         credentials: "include",
-        headers: { Accept: "application/json", "content-type": "application/json" },
+        headers: {
+          Accept: "application/json",
+          "content-type": "application/json",
+          ...(csrf === undefined ? {} : { "x-csrf-token": csrf }),
+        },
         body: JSON.stringify({
           protocolVersion: 1,
           type: "game.command",
@@ -168,6 +181,33 @@ export function GameClient({ gameId }: { gameId: string }) {
       setActionStatus(undefined);
       setPendingAction(undefined);
       return false;
+    }
+  }
+
+  async function claimHost(): Promise<void> {
+    if (state.connection !== "live" || pendingAction !== undefined) return;
+    setRecoveryStatus("Claiming host controls…");
+    try {
+      const csrf = csrfToken();
+      const response = await fetch(`/api/games/${encodeURIComponent(gameId)}/host/claim`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          ...(csrf === undefined ? {} : { "x-csrf-token": csrf }),
+        },
+      });
+      if (!response.ok) {
+        setRecoveryStatus(
+          "Host transfer is no longer available. Refresh to see the current authority.",
+        );
+        retry();
+        return;
+      }
+      setRecoveryStatus("Host controls claimed. Refreshing authoritative state…");
+      retry();
+    } catch {
+      setRecoveryStatus("Host controls could not be claimed. Check your connection and try again.");
     }
   }
 
@@ -296,6 +336,19 @@ export function GameClient({ gameId }: { gameId: string }) {
             pending={pendingAction !== undefined}
             onAction={(action) => void submitAction(action)}
           />
+
+          <RecoveryPanel
+            snapshot={snapshot}
+            disabled={state.connection !== "live" || pendingAction !== undefined}
+            pending={pendingAction !== undefined}
+            onCommand={(command) => void submitCommand(command)}
+            onClaimHost={() => void claimHost()}
+          />
+          {recoveryStatus === undefined ? null : (
+            <p role="status" className="text-sm text-muted-ink">
+              {recoveryStatus}
+            </p>
+          )}
 
           <AcquisitionAuctionSummary snapshot={snapshot} />
 

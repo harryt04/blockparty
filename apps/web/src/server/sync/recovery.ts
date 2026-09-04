@@ -81,6 +81,7 @@ export function authorizedSnapshot(
   game: GameDocument,
   seatId: string,
   publicEvents: readonly DomainEventType[] = [],
+  viewerCapabilityKind: "seat" | "reclaim" = "seat",
 ): GameSnapshotProjection | undefined {
   if (!game.seats.some((seat) => seat.seatId === seatId)) return undefined;
   const bundle = getBundle(game.contentVersion, { production: isProduction });
@@ -103,6 +104,11 @@ export function authorizedSnapshot(
     seats: projectionSeats(game),
     paused: game.paused ?? false,
     publicEvents,
+    viewerCapabilityKind,
+    safeBoundary:
+      game.snapshot.effectQueue.length === 0 && game.snapshot.pendingChoice === undefined,
+    pendingSeatReclaimId: game.pendingSeatReclaimId,
+    pendingHostClaimSeatId: game.pendingHostClaimSeatId,
   });
 }
 
@@ -153,9 +159,10 @@ export async function recover(
   seatId: string,
   lastSequence: number,
   aggregateVersion: number,
+  viewerCapabilityKind: "seat" | "reclaim" = "seat",
 ): Promise<RecoveryEnvelope | undefined> {
   const publicEvents = await readPublicEvents(store.gameEvents, game._id);
-  const snapshot = authorizedSnapshot(game, seatId, publicEvents);
+  const snapshot = authorizedSnapshot(game, seatId, publicEvents, viewerCapabilityKind);
   if (snapshot === undefined) return undefined;
 
   const needsSnapshot =

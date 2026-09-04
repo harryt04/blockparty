@@ -14,6 +14,7 @@ import {
   detentionDecisionContext,
   obligationDecisionContext,
   orderedBoard,
+  recoveryDecisionContext,
   latestTradeOutcome,
   tradeComposerContext,
   tradeDecisionContext,
@@ -72,6 +73,12 @@ const snapshot = (overrides: Partial<GameSnapshotProjection> = {}): GameSnapshot
   ],
   legalActions: [],
   actionAvailability: [],
+  recovery: {
+    safeBoundary: true,
+    replacementSeatIds: [],
+    viewerCanRequestReclaim: false,
+    viewerCanClaimHost: false,
+  },
   paused: false,
   expiresAt: "2026-10-03T15:00:00.000Z",
   ...overrides,
@@ -246,6 +253,53 @@ describe("game presentation model", () => {
       ],
       blocked: [{ type: "RedeemMortgage", reasonCode: "DEED_NOT_MORTGAGED" }],
     });
+  });
+
+  it("maps recovery authority without guessing from a disconnected badge", () => {
+    const value = snapshot({
+      paused: true,
+      recovery: {
+        safeBoundary: true,
+        replacementSeatIds: ["seat-b"],
+        pendingSeatReclaimId: "seat-b",
+        pendingHostClaimSeatId: "seat-a",
+        viewerCanRequestReclaim: false,
+        viewerCanClaimHost: true,
+      },
+      seats: [
+        snapshot().seats[0]!,
+        {
+          ...snapshot().seats[0]!,
+          seatId: "seat-b",
+          name: "Side Street",
+          isHost: false,
+          isSelf: false,
+          connected: false,
+          kind: "human",
+        },
+      ],
+    });
+
+    expect(recoveryDecisionContext(value)).toMatchObject({
+      safeBoundary: true,
+      replacementSeats: [{ seatId: "seat-b", name: "Side Street" }],
+      pendingReclaimName: "Side Street",
+      pendingHostName: "North Star",
+      viewerCanClaimHost: true,
+      viewerIsHost: true,
+    });
+
+    expect(
+      recoveryDecisionContext({
+        ...value,
+        recovery: { ...value.recovery, viewerCanRequestReclaim: true, viewerCanClaimHost: false },
+        seats: value.seats.map((seat) =>
+          seat.seatId === "seat-a"
+            ? { ...seat, kind: "bot" as const, isHost: false, isSelf: true }
+            : { ...seat, isSelf: false },
+        ),
+      }).viewerCanRequestReclaim,
+    ).toBe(true);
   });
 
   it("reads the latest authoritative dice event without inventing an outcome", () => {

@@ -10,6 +10,7 @@ import {
   publishSnapshot,
   subscribe,
   subscriberCount,
+  subscribedSeatAccess,
   subscribedSeatIds,
 } from "../src/server/sse/registry";
 import {
@@ -146,6 +147,21 @@ describe("authenticated SSE delivery", () => {
 
     firstUnsubscribe();
     secondUnsubscribe();
+  });
+
+  it("preserves reclaim projection authority across committed SSE snapshots", () => {
+    const frames: string[] = [];
+    const unsubscribe = subscribe({
+      ...subscriber(GAME_ID, "seat-a", frames),
+      capabilityKind: "reclaim",
+    });
+    expect(subscribedSeatAccess(GAME_ID)).toEqual([
+      { seatId: "seat-a", capabilityKind: "reclaim" },
+    ]);
+
+    publishSnapshot(GAME_ID, "seat-a", snapshot("seat-a", 9), "reclaim");
+    expect(frames.filter((frame) => frame.startsWith("event: game.snapshot"))).toHaveLength(1);
+    unsubscribe();
   });
 
   it("opens one MongoDB event cursor and closes it cleanly", async () => {

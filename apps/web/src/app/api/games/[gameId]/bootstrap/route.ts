@@ -2,13 +2,13 @@
  * GET /api/games/[gameId]/bootstrap - the authorized current state.
  * See ENG-003.
  *
- * Authenticates the seat FIRST, then returns the authorized snapshot, the
+ * Authenticates the seat or separate reclaim claim FIRST, then returns the authorized snapshot, the
  * captured versions, `legalActions`, and `actionAvailability`. The game ID
  * locates the resource; it grants no authority. See SEC-002.
  */
 import type { BootstrapResponse } from "@blockparty/contracts";
 import { canonicalHashBundle, getBundle } from "@blockparty/game-content";
-import { readSeatCapability } from "@/server/auth/session";
+import { readGameCapability } from "@/server/auth/session";
 import { getDb } from "@/server/db/client";
 import { COLLECTIONS } from "@/server/db/collections";
 import { isProduction } from "@/server/env";
@@ -27,9 +27,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ gam
   const { gameId } = await params;
 
   try {
-    // The game ID locates the aggregate; the seat cookie supplies authority.
+    // The game ID locates the aggregate; the seat or reclaim cookie supplies authority.
     // See SEC-002 and PROTO-004.
-    const actor = await readSeatCapability(gameId);
+    const actor = await readGameCapability(gameId);
     if (actor === undefined) return jsonError("UNAUTHENTICATED", { gameId });
 
     const database = getDb();
@@ -79,6 +79,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ gam
       })),
       paused: game.paused ?? false,
       publicEvents,
+      viewerCapabilityKind: actor.kind === "reclaim" ? "reclaim" : "seat",
+      safeBoundary:
+        game.snapshot.effectQueue.length === 0 && game.snapshot.pendingChoice === undefined,
+      pendingSeatReclaimId: game.pendingSeatReclaimId,
+      pendingHostClaimSeatId: game.pendingHostClaimSeatId,
     });
     const response: BootstrapResponse = {
       snapshot,

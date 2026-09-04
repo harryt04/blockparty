@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
   checkOrigin: vi.fn(() => ({ ok: true as const })),
   checkRateLimit: vi.fn(() => ({ ok: true as const })),
   corsHeaders: vi.fn(() => ({})),
-  readSeatCapability: vi.fn(),
+  readGameCapability: vi.fn(),
   getDb: vi.fn(),
   ensureChangeStream: vi.fn(),
   subscribe: vi.fn(),
@@ -24,7 +24,7 @@ vi.mock("@/server/http/guards", () => ({
   checkRateLimit: mocks.checkRateLimit,
   corsHeaders: mocks.corsHeaders,
 }));
-vi.mock("@/server/auth/session", () => ({ readSeatCapability: mocks.readSeatCapability }));
+vi.mock("@/server/auth/session", () => ({ readGameCapability: mocks.readGameCapability }));
 vi.mock("@/server/db/client", () => ({ getDb: mocks.getDb }));
 vi.mock("@/server/sse/change-stream", () => ({ ensureChangeStream: mocks.ensureChangeStream }));
 vi.mock("@/server/sync/recovery", () => ({
@@ -48,20 +48,20 @@ const GAME_ID = "00000000-0000-4000-8000-000000000025";
 
 describe("GET /api/games/[gameId]/events", () => {
   it("requires the game-seat cookie and never uses a URL capability", async () => {
-    mocks.readSeatCapability.mockResolvedValue(undefined);
+    mocks.readGameCapability.mockResolvedValue(undefined);
     const response = await GET(
       new Request(`http://localhost/api/games/${GAME_ID}/events?capability=raw-secret`),
       { params: Promise.resolve({ gameId: GAME_ID }) },
     );
     expect(response.status).toBe(401);
-    expect(mocks.readSeatCapability).toHaveBeenCalledWith(GAME_ID);
+    expect(mocks.readGameCapability).toHaveBeenCalledWith(GAME_ID);
     expect(mocks.ensureChangeStream).not.toHaveBeenCalled();
     expect(JSON.stringify(await response.json())).not.toContain("raw-secret");
   });
 
   it("authenticates before opening the bounded stream and emits keep-alives", async () => {
     const unsubscribe = vi.fn();
-    mocks.readSeatCapability.mockResolvedValue({
+    mocks.readGameCapability.mockResolvedValue({
       gameId: GAME_ID,
       seatId: "seat-a",
       kind: "seat",
@@ -89,7 +89,7 @@ describe("GET /api/games/[gameId]/events", () => {
 
   it("sends an authorized bounded recovery envelope when reconnecting with a position", async () => {
     const unsubscribe = vi.fn();
-    mocks.readSeatCapability.mockResolvedValue({
+    mocks.readGameCapability.mockResolvedValue({
       gameId: GAME_ID,
       seatId: "seat-a",
       kind: "seat",
@@ -134,6 +134,7 @@ describe("GET /api/games/[gameId]/events", () => {
       "seat-a",
       2,
       1,
+      "seat",
     );
     await reader.cancel();
   });

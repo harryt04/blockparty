@@ -3,7 +3,7 @@
  * See ENG-003 and PROTO-003.
  *
  * SSE is DELIVERY, never an authorization mechanism. The request authenticates
- * the secure seat cookie before subscribing, and a capability is never accepted
+ * the secure seat/reclaim cookie before subscribing, and a capability is never accepted
  * in a query parameter. A subscriber receives only its seat's authorized
  * projection.
  *
@@ -16,7 +16,7 @@ import type { GameDocument } from "@/server/games/create-game";
 import { recover, recoveryStore, type RecoveryEnvelope } from "@/server/sync/recovery";
 import { canSubscribe, formatFrame, KEEP_ALIVE_FRAME, subscribe } from "@/server/sse/registry";
 import { ensureChangeStream } from "@/server/sse/change-stream";
-import { readSeatCapability } from "@/server/auth/session";
+import { readGameCapability } from "@/server/auth/session";
 import { checkOrigin, checkRateLimit, corsHeaders } from "@/server/http/guards";
 import { jsonError } from "@/server/http/responses";
 import { SseConnectionLimitError } from "@/server/sse/registry";
@@ -56,7 +56,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ game
   }
 
   try {
-    const actor = await readSeatCapability(gameId);
+    const actor = await readGameCapability(gameId);
     if (actor === undefined) return jsonError("UNAUTHENTICATED", { gameId });
     if (!canSubscribe(gameId, actor.seatId)) {
       return jsonError("RATE_LIMITED", { gameId, reason: "SSE_CONNECTION_LIMIT" });
@@ -83,6 +83,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ game
         actor.seatId,
         recoveryQuery.lastSequence,
         recoveryQuery.aggregateVersion,
+        actor.kind === "reclaim" ? "reclaim" : "seat",
       );
       if (recovery === undefined) return jsonError("CONTENT_UNSUPPORTED", { gameId });
     }
@@ -106,6 +107,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ game
         unsubscribe = subscribe({
           gameId,
           seatId,
+          capabilityKind: actor.kind === "reclaim" ? "reclaim" : "seat",
           send: write,
           close: () => controller.close(),
         });

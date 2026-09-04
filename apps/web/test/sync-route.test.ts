@@ -4,12 +4,12 @@ vi.mock("server-only", () => ({}));
 
 const mocks = vi.hoisted(() => ({
   checkRateLimit: vi.fn(() => ({ ok: true as const })),
-  readSeatCapability: vi.fn(),
+  readGameCapability: vi.fn(),
   getDb: vi.fn(),
 }));
 
 vi.mock("@/server/http/guards", () => ({ checkRateLimit: mocks.checkRateLimit }));
-vi.mock("@/server/auth/session", () => ({ readSeatCapability: mocks.readSeatCapability }));
+vi.mock("@/server/auth/session", () => ({ readGameCapability: mocks.readGameCapability }));
 vi.mock("@/server/db/client", () => ({ getDb: mocks.getDb }));
 vi.mock("@/server/env", () => ({ isProduction: false }));
 
@@ -81,7 +81,7 @@ function database(game: GameDocument, events: readonly GameEventDocument[]) {
 describe("GET /api/games/[gameId]/sync", () => {
   it("returns one authorized contiguous range bounded by the protocol cap", async () => {
     const { game, events } = await fixture();
-    mocks.readSeatCapability.mockResolvedValue({
+    mocks.readGameCapability.mockResolvedValue({
       gameId: GAME_ID,
       seatId: game.hostSeatId,
       kind: "seat",
@@ -114,7 +114,7 @@ describe("GET /api/games/[gameId]/sync", () => {
         resolvingCardStack: [{ cardId: "private-card" }],
       },
     });
-    mocks.readSeatCapability.mockResolvedValue({
+    mocks.readGameCapability.mockResolvedValue({
       gameId: GAME_ID,
       seatId: game.hostSeatId,
       kind: "seat",
@@ -136,7 +136,7 @@ describe("GET /api/games/[gameId]/sync", () => {
     const cases = [[2], [1, 1], []] as const;
     for (const sequences of cases) {
       const { game, events } = await fixture(sequences);
-      mocks.readSeatCapability.mockResolvedValue({
+      mocks.readGameCapability.mockResolvedValue({
         gameId: GAME_ID,
         seatId: game.hostSeatId,
         kind: "seat",
@@ -157,7 +157,7 @@ describe("GET /api/games/[gameId]/sync", () => {
 
   it("never returns more than the bounded recovery range", async () => {
     const { game, events } = await fixture(Array.from({ length: 300 }, (_, index) => index + 1));
-    mocks.readSeatCapability.mockResolvedValue({
+    mocks.readGameCapability.mockResolvedValue({
       gameId: GAME_ID,
       seatId: game.hostSeatId,
       kind: "seat",
@@ -175,14 +175,14 @@ describe("GET /api/games/[gameId]/sync", () => {
   });
 
   it("requires the seat capability and filters seats outside the aggregate", async () => {
-    mocks.readSeatCapability.mockResolvedValue(undefined);
+    mocks.readGameCapability.mockResolvedValue(undefined);
     const unauthenticated = await GET(new Request(`http://localhost/api/games/${GAME_ID}/sync`), {
       params: Promise.resolve({ gameId: GAME_ID }),
     });
     expect(unauthenticated.status).toBe(401);
 
     const { game, events } = await fixture();
-    mocks.readSeatCapability.mockResolvedValue({
+    mocks.readGameCapability.mockResolvedValue({
       gameId: GAME_ID,
       seatId: "seat-not-in-game",
       kind: "seat",
@@ -200,6 +200,6 @@ describe("GET /api/games/[gameId]/sync", () => {
       { params: Promise.resolve({ gameId: GAME_ID }) },
     );
     expect(response.status).toBe(400);
-    expect(mocks.readSeatCapability).not.toHaveBeenCalled();
+    expect(mocks.readGameCapability).not.toHaveBeenCalled();
   });
 });

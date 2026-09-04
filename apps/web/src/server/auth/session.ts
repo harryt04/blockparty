@@ -104,3 +104,12 @@ export async function readReclaimClaim(gameId: string): Promise<AuthenticatedSea
   if (capability === null || !safeEqual(capability.tokenHash, hash)) return undefined;
   return { gameId, seatId: capability.seatId, kind: "reclaim" };
 }
+
+/**
+ * Reads the game-view authority held by this device. A reclaim claim can view
+ * the replaced seat's state long enough to request host-approved control, but
+ * it is never treated as a seat command capability. See UX-018/SEC-002.
+ */
+export async function readGameCapability(gameId: string): Promise<AuthenticatedSeat | undefined> {
+  return (await readSeatCapability(gameId)) ?? (await readReclaimClaim(gameId));
+}

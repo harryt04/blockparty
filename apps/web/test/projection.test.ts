@@ -108,6 +108,10 @@ describe("authorized seat projections", () => {
     expect(GameSnapshotProjection.safeParse(projection).success).toBe(true);
     expect(projection.sequence).toBe(17);
     expect(projection.legalActions).toEqual([{ type: "RollDice" }, { type: "EndNoContest" }]);
+    expect(projection.recovery).toMatchObject({
+      safeBoundary: true,
+      replacementSeatIds: ["seat-b"],
+    });
     expect(projection.seats[0]).toMatchObject({
       seatId: "seat-a",
       balance: 145000,
@@ -164,6 +168,30 @@ describe("authorized seat projections", () => {
     expect(counterparty.pendingTrade).toMatchObject({ tradeId: pendingTrade.tradeId });
     expect(anonymous.pendingTrade).toBeUndefined();
     expect(JSON.stringify(anonymous)).not.toContain("card-other-secret");
+  });
+
+  it("exposes reclaim authority only to the separate reclaim projection", () => {
+    const replaced = {
+      ...state(),
+      seats: state().seats.map((seat) =>
+        seat.seatId === "seat-a" ? { ...seat, kind: "bot" as const } : seat,
+      ),
+    };
+    const projection = buildSeatProjection(replaced, "seat-a", {
+      ...projectionContext(),
+      viewerCapabilityKind: "reclaim",
+      pendingSeatReclaimId: "seat-a",
+      pendingHostClaimSeatId: "seat-a",
+    });
+    expect(projection.recovery).toEqual({
+      safeBoundary: true,
+      replacementSeatIds: ["seat-b"],
+      pendingSeatReclaimId: "seat-a",
+      pendingHostClaimSeatId: "seat-a",
+      viewerCanRequestReclaim: true,
+      viewerCanClaimHost: true,
+    });
+    expect(JSON.stringify(projection)).not.toContain("tokenHash");
   });
 
   it("does not publish held card identities in trade history", () => {

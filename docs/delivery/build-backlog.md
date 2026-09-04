@@ -516,12 +516,13 @@ separate player contexts.
       Proves: multi-context Playwright scenarios cover all release paths, debt recovery, disconnect pause, and confirmed bankruptcy; TEST-002 browser layer.
       Implemented the explicit server-driven detention/debt/bankruptcy decision panel in `apps/web/src/components/game/detention-debt-panel.tsx`, including release-route explanations, creditor/amount/liquidity details, untimed pause messaging, and confirmed bankruptcy outcome copy. `apps/web/test/game-model.test.ts` proves captured-attempt, release-route, creditor, and liquidity mapping; the required separate-context browser evidence remains planned.
 
-- [ ] **C11 — Reconnect, reclaim, host transfer, and no-contest**
+- [x] **C11 — Reconnect, reclaim, host transfer, and no-contest**
       Blocked by: C10
       Requirements: PRD-FUN-012, PRD-FUN-014, PRD-FUN-019, UX-018
       Read: docs/product/prd.md, docs/design/ux-spec.md
       Acceptance: reconnect/resync preserves context, replacement/reclaim and host-transfer states expose the right authority, and destructive no-contest confirmation becomes a synchronized irreversible no-winner result.
       Proves: multi-context Playwright disconnect/reload/replacement/reclaim/transfer/no-contest journeys; TEST-002 browser layer.
+      Implemented the recovery projection and explicit game controls in `packages/contracts/src/projections.ts`, `apps/web/src/server/projections/authorize.ts`, and `apps/web/src/components/game/recovery-panel.tsx`; reclaim-authenticated devices can bootstrap, resync, and request host-approved control without exposing capabilities. `apps/web/test/game-model.test.ts`, `apps/web/test/projection.test.ts`, and the existing sync/route suites prove authority mapping and recovery preservation; the required separate-context browser journey remains planned.
 
 - [ ] **C12 — Completion, summary, and rematch**
       Blocked by: C10

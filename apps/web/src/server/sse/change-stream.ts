@@ -16,7 +16,7 @@ import type { GameEventDocument } from "../commands/handle-command";
 import type { GameDocument } from "../games/create-game";
 import { buildSeatProjection, type ProjectionSeatSource } from "../projections/authorize";
 import { readPublicEvents } from "../sync/recovery";
-import { publishSnapshot, subscriberCount, subscribedSeatIds } from "./registry";
+import { publishSnapshot, subscriberCount, subscribedSeatAccess } from "./registry";
 
 interface ChangeDocument {
   readonly operationType?: string;
@@ -89,7 +89,7 @@ export async function publishCommittedProjection(
     game._id,
   );
 
-  for (const seatId of subscribedSeatIds(game._id)) {
+  for (const { seatId, capabilityKind } of subscribedSeatAccess(game._id)) {
     const snapshot = buildSeatProjection(game.snapshot, seatId, {
       rules: { content: bundle, configuration: game.configuration },
       status: game.status,
@@ -107,8 +107,13 @@ export async function publishCommittedProjection(
       seats: projectionSeats(game),
       paused: game.paused ?? false,
       publicEvents,
+      viewerCapabilityKind: capabilityKind,
+      safeBoundary:
+        game.snapshot.effectQueue.length === 0 && game.snapshot.pendingChoice === undefined,
+      pendingSeatReclaimId: game.pendingSeatReclaimId,
+      pendingHostClaimSeatId: game.pendingHostClaimSeatId,
     });
-    publishSnapshot(game._id, seatId, snapshot);
+    publishSnapshot(game._id, seatId, snapshot, capabilityKind);
   }
 }
 

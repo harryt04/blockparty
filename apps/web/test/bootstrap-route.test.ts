@@ -3,11 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 const mocks = vi.hoisted(() => ({
-  readSeatCapability: vi.fn(),
+  readGameCapability: vi.fn(),
   getDb: vi.fn(),
 }));
 
-vi.mock("@/server/auth/session", () => ({ readSeatCapability: mocks.readSeatCapability }));
+vi.mock("@/server/auth/session", () => ({ readGameCapability: mocks.readGameCapability }));
 vi.mock("@/server/db/client", () => ({ getDb: mocks.getDb }));
 vi.mock("@/server/env", () => ({ isProduction: false }));
 
@@ -104,7 +104,7 @@ function game(): GameDocument {
 describe("GET /api/games/[gameId]/bootstrap", () => {
   it("authenticates the seat and returns only the authorized projection", async () => {
     const storedGame = game();
-    mocks.readSeatCapability.mockResolvedValue({
+    mocks.readGameCapability.mockResolvedValue({
       gameId: GAME_ID,
       seatId: "seat-a",
       kind: "seat",
@@ -134,11 +134,11 @@ describe("GET /api/games/[gameId]/bootstrap", () => {
     expect(JSON.stringify(body)).not.toContain("secretSeed");
     expect(JSON.stringify(body)).not.toContain("prng");
     expect(JSON.stringify(body)).not.toContain("contentHash");
-    expect(mocks.readSeatCapability).toHaveBeenCalledWith(GAME_ID);
+    expect(mocks.readGameCapability).toHaveBeenCalledWith(GAME_ID);
   });
 
   it("does not bootstrap without a valid seat capability", async () => {
-    mocks.readSeatCapability.mockResolvedValue(undefined);
+    mocks.readGameCapability.mockResolvedValue(undefined);
     const response = await GET(new Request(`http://localhost/api/games/${GAME_ID}/bootstrap`), {
       params: Promise.resolve({ gameId: GAME_ID }),
     });

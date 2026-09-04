@@ -51,6 +51,11 @@ export interface ProjectionContext {
   readonly paused?: boolean;
   /** Already-redacted journal entries for the public history panel. */
   readonly publicEvents?: readonly DomainEvent[];
+  /** Recovery metadata is advisory UI state; capabilities remain cookie-only. */
+  readonly viewerCapabilityKind?: "seat" | "reclaim";
+  readonly safeBoundary?: boolean;
+  readonly pendingSeatReclaimId?: string;
+  readonly pendingHostClaimSeatId?: string;
 }
 
 /**
@@ -161,6 +166,28 @@ export function buildSeatProjection(
           aggregateVersion: state.pendingTrade.aggregateVersion,
         };
 
+  const safeBoundary =
+    context.safeBoundary ?? (state.effectQueue.length === 0 && state.pendingChoice === undefined);
+  const replacementSeatIds = safeBoundary
+    ? context.seats
+        .filter((seat) => !seat.connected && seat.kind === "human")
+        .map((seat) => seat.seatId)
+    : [];
+  const viewerSeat = state.seats.find((seat) => seat.seatId === viewerSeatId);
+  const recovery = {
+    safeBoundary,
+    replacementSeatIds,
+    ...(context.pendingSeatReclaimId === undefined
+      ? {}
+      : { pendingSeatReclaimId: context.pendingSeatReclaimId }),
+    ...(context.pendingHostClaimSeatId === undefined
+      ? {}
+      : { pendingHostClaimSeatId: context.pendingHostClaimSeatId }),
+    viewerCanRequestReclaim:
+      context.viewerCapabilityKind === "reclaim" && viewerSeat?.kind === "bot",
+    viewerCanClaimHost: context.pendingHostClaimSeatId === viewerSeatId,
+  };
+
   const projection: GameSnapshotProjection = {
     gameId: state.gameId,
     status: context.status,
@@ -183,6 +210,7 @@ export function buildSeatProjection(
     ...(auction === undefined ? {} : { auction }),
     ...(obligation === undefined ? {} : { obligation }),
     ...(pendingTrade === undefined ? {} : { pendingTrade }),
+    recovery,
     legalActions:
       viewerSeatId === undefined ? [] : [...legalActions(state, viewerSeatId, context.rules)],
     actionAvailability:

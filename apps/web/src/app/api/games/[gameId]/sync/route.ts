@@ -10,7 +10,7 @@
 import { SyncQuery } from "@blockparty/contracts";
 import { getDb } from "@/server/db/client";
 import { COLLECTIONS } from "@/server/db/collections";
-import { readSeatCapability } from "@/server/auth/session";
+import { readGameCapability } from "@/server/auth/session";
 import { checkRateLimit } from "@/server/http/guards";
 import { jsonError, jsonOk } from "@/server/http/responses";
 import type { GameDocument } from "@/server/games/create-game";
@@ -36,7 +36,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ game
   if (!parsed.success) return jsonError("INVALID_PAYLOAD", { gameId });
 
   try {
-    const actor = await readSeatCapability(gameId);
+    const actor = await readGameCapability(gameId);
     if (actor === undefined) return jsonError("UNAUTHENTICATED", { gameId });
 
     const database = getDb();
@@ -57,6 +57,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ game
       actor.seatId,
       parsed.data.lastSequence,
       parsed.data.aggregateVersion,
+      actor.kind === "reclaim" ? "reclaim" : "seat",
     );
     if (envelope === undefined) return jsonError("CONTENT_UNSUPPORTED", { gameId });
     return jsonOk(envelope);

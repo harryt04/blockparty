@@ -22,6 +22,8 @@ import { env } from "../env";
 export interface Subscriber {
   readonly gameId: string;
   readonly seatId: string;
+  /** Read authority used to preserve reclaim-only projection affordances. */
+  readonly capabilityKind?: "seat" | "reclaim";
   /** Writes one already-serialized SSE frame. */
   readonly send: (frame: string) => void;
   readonly close: () => void;
@@ -191,6 +193,20 @@ export function subscribedSeatIds(gameId: string): readonly string[] {
   return [...new Set([...(registry().get(gameId) ?? [])].map((subscriber) => subscriber.seatId))];
 }
 
+/** Returns each subscribed seat/access pair for projection rebuilding. */
+export function subscribedSeatAccess(
+  gameId: string,
+): readonly { readonly seatId: string; readonly capabilityKind: "seat" | "reclaim" }[] {
+  const seen = new Set<string>();
+  return [...(registry().get(gameId) ?? [])].flatMap((subscriber) => {
+    const capabilityKind = subscriber.capabilityKind ?? "seat";
+    const key = `${subscriber.seatId}:${capabilityKind}`;
+    if (seen.has(key)) return [];
+    seen.add(key);
+    return [{ seatId: subscriber.seatId, capabilityKind }];
+  });
+}
+
 /** Connected seat tenure used by deterministic host transfer. */
 export function connectedSeatTenures(
   gameId: string,
@@ -210,6 +226,7 @@ export function publishSnapshot(
   gameId: string,
   seatId: string,
   snapshot: GameSnapshotProjection,
+  capabilityKind: "seat" | "reclaim" = "seat",
 ): void {
   const subscribers = registry().get(gameId);
   if (subscribers === undefined || snapshot.viewerSeatId !== seatId) return;
@@ -223,7 +240,8 @@ export function publishSnapshot(
     snapshot,
   });
   for (const subscriber of subscribers) {
-    if (subscriber.seatId !== seatId) continue;
+    if (subscriber.seatId !== seatId || (subscriber.capabilityKind ?? "seat") !== capabilityKind)
+      continue;
     const priorSequence = lastSequences().get(subscriber) ?? -1;
     if (snapshot.sequence <= priorSequence) continue;
     lastSequences().set(subscriber, snapshot.sequence);

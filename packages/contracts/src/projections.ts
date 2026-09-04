@@ -205,6 +205,23 @@ export const PendingTradeProjection = z
 export type PendingTradeProjection = z.infer<typeof PendingTradeProjection>;
 
 /**
+ * Server-advertised recovery authority. These are booleans and seat IDs only;
+ * capability material never crosses the projection boundary. See PRD-FUN-012,
+ * PRD-FUN-014, PRD-FUN-019, and UX-018.
+ */
+export const RecoveryProjection = z
+  .object({
+    safeBoundary: z.boolean(),
+    replacementSeatIds: z.array(SeatId).max(6),
+    pendingSeatReclaimId: SeatId.optional(),
+    pendingHostClaimSeatId: SeatId.optional(),
+    viewerCanRequestReclaim: z.boolean(),
+    viewerCanClaimHost: z.boolean(),
+  })
+  .strict();
+export type RecoveryProjection = z.infer<typeof RecoveryProjection>;
+
+/**
  * The complete authorized snapshot for one seat. The database snapshot is
  * always authoritative; this is a projection of it.
  */
@@ -230,6 +247,7 @@ export const GameSnapshotProjection = z
     auction: AuctionProjection.optional(),
     obligation: ObligationProjection.optional(),
     pendingTrade: PendingTradeProjection.optional(),
+    recovery: RecoveryProjection,
     /** Present only when a variant enables it. See VAR-001. */
     jackpot: NonNegativeMoney.optional(),
     legalActions: z.array(LegalAction).max(64),
