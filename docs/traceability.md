@@ -62,40 +62,42 @@ E1 adds the keyboard-accessible board route in `apps/web/src/components/game/gam
 each stop is an inspect control with selected-state and active-detail relationships, and its
 accessible name contains the complete public stop facts. `boardStopAccessibleLabel` and its
 fixed-state coverage live in `apps/web/src/components/game/game-model.ts` and
-`apps/web/test/game-model.test.ts`; cross-browser keyboard and assistive-technology evidence
-remains planned for the TEST-002 Playwright layer.
+`apps/web/test/game-model.test.ts`; E6 adds the TEST-002 cross-browser route/phase/axe layer, while
+dedicated keyboard and assistive-technology execution remains pending in the release checklist.
 
 E2 adds `LiveAnnouncements` in `apps/web/src/components/game/live-announcements.tsx` and the
 allowlisted event/connection decision model in
 `apps/web/src/components/game/live-announcements-model.ts`. Only authoritative turn, dice,
 decision, Owed, auction, pause, reconnect, elimination, and terminal transitions enter a live
 region; routine feed events, presence churn, and focus remain silent/stable. Evidence is in
-`apps/web/test/live-announcements.test.ts`; browser sequence and manual assistive-technology
-evidence remains planned.
+`apps/web/test/live-announcements.test.ts`; E6 adds cross-browser axe coverage, while browser
+sequence and manual assistive-technology evidence remains pending.
 
 E3 adds the shared `ModalDialog` shell in `apps/web/src/components/ui/modal-dialog.tsx` and
 keyboard rules in `apps/web/src/components/ui/modal-dialog-model.ts`. The action sheet and
 management, bankruptcy, bot-replacement, and no-contest confirmations now label their dialogs,
 trap keyboard focus, inert the background, dismiss safely, and restore the invoking control when
 closed or unmounted. This provides implementation evidence for PRD-NFR-005, UX-040, DS-030, and
-DS-070; `apps/web/test/modal-dialog-model.test.ts` proves the keyboard boundary, while Playwright
-update, unmount, and cross-browser focus journeys remain planned.
+DS-070; `apps/web/test/modal-dialog-model.test.ts` proves the keyboard boundary, while E6 adds
+cross-browser axe coverage and update, unmount, focus, and manual assistive-technology journeys
+remain pending.
 
 E4 completes the non-colour and motion token implementation for PRD-NFR-005–006, UX-040, DS-020,
 DS-041, DS-060, and DS-070. `apps/web/src/components/game/player-token.tsx` renders a visible
 pattern stroke alongside each token silhouette, `apps/web/src/components/ui/badge.tsx` exposes
 semantic status markers for forced-colour styling, and `apps/web/src/app/globals.css` supplies AA-
 checked light/dark tokens, named forced-colour fallbacks, and immediate reduced-motion overrides.
-`apps/web/test/accessibility-tokens.test.ts` proves token contrast and the CSS contracts; browser
-forced-colour/reduced-motion journeys and manual assistive-technology review remain planned.
+`apps/web/test/accessibility-tokens.test.ts` proves token contrast and the CSS contracts; E6 adds
+cross-browser reduced-motion/axe coverage, while forced-colour journeys and manual
+assistive-technology review remain pending.
 
 E5 implements the responsive game shell for PRD-FUN-016, UX-030–033, and DS-050 in
 `apps/web/src/app/globals.css` and `apps/web/src/components/game/game-client.tsx`. The base mode
 supports 320–767px focused-board play with a safe-area-aware fixed action bar; 768–1023px uses a
 320–400px contextual panel; 1024px and wider uses a persistent sidebar; and short landscape uses
 a board-first split with independently scrollable context. `apps/web/test/responsive-layout.test.ts`
-proves the breakpoint, overflow, safe-area, and action-order contracts. Playwright screenshot and
-interaction evidence remains planned because the repository has no browser harness.
+proves the breakpoint, overflow, safe-area, and action-order contracts. E6 adds cross-browser
+axe and responsive overflow evidence; screenshot and interaction capture remains pending.
 
 C13 adds the device-only presentation preference provider and settings panel in
 `apps/web/src/components/settings/presentation-preferences.tsx`, with local
@@ -205,3 +207,12 @@ files until licensed, provenanced self-hosted faces exist.
 Code alone never makes a requirement `Verified`. Link implementation, required
 automated/manual evidence, applicable migration/operations evidence, and every
 release-gate approval first.
+
+E6 adds the cross-browser accessibility evidence harness in
+`playwright.config.ts` and `apps/web/e2e/accessibility.spec.ts`. The suite
+audits all public routes, protected lobby/game/summary surfaces, each supported
+gameplay decision phase, reduced motion, and zoom-equivalent 320/375/768/1024
+viewports with axe in Chromium, Firefox, and WebKit. The human keyboard,
+200%/400% zoom, VoiceOver, NVDA, iOS Safari, and Android Chrome record is
+`docs/delivery/accessibility-checklist.md`; it is intentionally pending human
+execution before release.

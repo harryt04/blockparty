@@ -58,7 +58,7 @@ export function LiveAnnouncements({
   }, [command, connection, snapshot]);
 
   return (
-    <div className="sr-only" aria-label="Game announcements">
+    <div className="sr-only" role="group" aria-label="Game announcements">
       <p key={polite?.key} role="status" aria-live="polite" aria-atomic="true">
         {polite?.message ?? ""}
       </p>

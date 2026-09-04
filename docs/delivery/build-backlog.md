@@ -598,7 +598,7 @@ recorded draws.
       Read: docs/design/ux-spec.md, docs/design/design-system.md
       Acceptance: every board fact/action is reachable by semantic non-spatial list, logical keyboard order, visible focus, and equivalent labels without requiring pointer precision or SVG geometry.
       Proves: Chromium/Firefox/WebKit keyboard journeys and semantic/accessible-name assertions; TEST-002 Playwright accessibility layer.
-      Implemented an always-visible ordered semantic board list with keyboard inspect controls, complete accessible stop names, and selected-detail relationships. `apps/web/test/game-model.test.ts` proves the accessible label carries public route, category, district, ownership, price, mortgage, improvement, and occupant facts; browser matrix evidence remains planned because Playwright is not configured.
+      Implemented an always-visible ordered semantic board list with keyboard inspect controls, complete accessible stop names, and selected-detail relationships. `apps/web/test/game-model.test.ts` proves the accessible label carries public route, category, district, ownership, price, mortgage, improvement, and occupant facts; E6 adds cross-browser route/phase/axe coverage, while dedicated keyboard and human assistive-technology execution remains pending.
 
 - [x] **E2 — Live regions and restrained announcements**
       Blocked by: E1
@@ -606,7 +606,7 @@ recorded draws.
       Read: docs/design/ux-spec.md, docs/design/design-system.md
       Acceptance: turn-critical actor, decision, dice, debt, pause, reconnect, and terminal changes announce once with suitable priority while routine feed/presence churn stays silent and focus remains stable.
       Proves: component mutation cases and Playwright live-region sequence assertions; TEST-002 component/browser accessibility layer.
-      Implemented one-shot priority-aware live regions backed by an authoritative event allowlist; `apps/web/test/live-announcements.test.ts` proves critical event context, routine-event silence, decision deduplication, and reconnect transitions. Playwright and manual assistive-technology evidence remains planned because the browser harness is not configured.
+      Implemented one-shot priority-aware live regions backed by an authoritative event allowlist; `apps/web/test/live-announcements.test.ts` proves critical event context, routine-event silence, decision deduplication, and reconnect transitions. E6 adds cross-browser axe coverage, while live-region sequence and manual assistive-technology execution remain pending.
 
 - [x] **E3 — Dialog and sheet focus management**
       Blocked by: E1
@@ -614,7 +614,7 @@ recorded draws.
       Read: docs/design/ux-spec.md, docs/design/design-system.md
       Acceptance: dialogs/sheets label themselves, trap and restore focus, support Escape except destructive required choices, prevent background interaction, and preserve decision context across server updates.
       Proves: keyboard Playwright matrix for every modal workflow, including update/unmount focus restoration; TEST-002 browser accessibility layer.
-      Implemented a shared portal-backed modal/sheet focus boundary with inert background, keyboard trapping, Escape/backdrop dismissal rules, opener restoration, and controlled server-update persistence; `apps/web/test/modal-dialog-model.test.ts` proves the keyboard boundary and Escape contract. Playwright focus journeys and manual assistive-technology evidence remain planned because the browser harness is not configured.
+      Implemented a shared portal-backed modal/sheet focus boundary with inert background, keyboard trapping, Escape/backdrop dismissal rules, opener restoration, and controlled server-update persistence; `apps/web/test/modal-dialog-model.test.ts` proves the keyboard boundary and Escape contract. E6 adds cross-browser axe coverage, while modal focus journeys and manual assistive-technology execution remain pending.
 
 - [x] **E4 — Non-colour encoding, contrast, forced colours, reduced motion**
       Blocked by: E1
@@ -622,7 +622,7 @@ recorded draws.
       Read: docs/design/ux-spec.md, docs/design/design-system.md
       Acceptance: ownership/status use color+shape+pattern/text, all states meet contrast, forced-colors remain legible, and reduced motion removes decorative transitions without delaying/concealing outcomes.
       Proves: token contrast tests and Playwright visual/DOM assertions in forced-colors/reduced-motion/non-color modes; TEST-002 component/browser layer.
-      Implemented visible token stroke patterns and semantic status markers, AA-checked light/dark tokens, forced-colors system fallbacks, and immediate reduced-motion overrides; `apps/web/test/accessibility-tokens.test.ts` proves the token and CSS contracts, while Playwright/manual assistive-technology evidence remains planned because the browser harness is not configured.
+      Implemented visible token stroke patterns and semantic status markers, AA-checked light/dark tokens, forced-colors system fallbacks, and immediate reduced-motion overrides; `apps/web/test/accessibility-tokens.test.ts` proves the token and CSS contracts, while E6 adds cross-browser axe/reduced-motion coverage and forced-colors/manual assistive-technology execution remains pending.
 
 - [x] **E5 — The responsive matrix at 375, 768, 1024, and landscape**
       Blocked by: E4
@@ -630,14 +630,15 @@ recorded draws.
       Read: docs/product/prd.md, docs/design/ux-spec.md, docs/design/design-system.md
       Acceptance: required decisions/cash/dice/position work without page-level horizontal scrolling across named widths and landscape, with documented board/panel/sidebar modes and 320px core-play fallback.
       Proves: Playwright screenshot/interaction matrix at 320, 375, 768, 1024 and phone/tablet landscape; TEST-002 browser-responsive layer.
-      Implemented CSS-defined focused-board, tablet-context-panel, desktop-context-sidebar, and short-landscape modes with safe-area spacing, 320px overflow protection, and a phone-first player/context order in `apps/web/src/app/globals.css` and `apps/web/src/components/game/game-client.tsx`; `apps/web/test/responsive-layout.test.ts` proves the responsive contract, while Playwright screenshot evidence remains planned because the browser harness is not configured.
+      Implemented CSS-defined focused-board, tablet-context-panel, desktop-context-sidebar, and short-landscape modes with safe-area spacing, 320px overflow protection, and a phone-first player/context order in `apps/web/src/app/globals.css` and `apps/web/src/components/game/game-client.tsx`; `apps/web/test/responsive-layout.test.ts` proves the responsive contract, and E6 adds cross-browser axe plus 320/375/768/1024 overflow evidence. Screenshot capture remains planned.
 
-- [ ] **E6 — axe coverage and the manual assistive-technology checklist**
-      Blocked by: E5
-      Requirements: PRD-NFR-002, PRD-NFR-005, UX-040, TEST-005
-      Read: docs/delivery/test-strategy.md, docs/design/ux-spec.md
-      Acceptance: axe covers every route and major phase with no serious/critical findings, and a release checklist records keyboard, 200%/400% zoom, VoiceOver, NVDA, iOS Safari, and Android Chrome results with issue links.
-      Proves: automated cross-browser axe/zoom suite plus completed human assistive-technology records; TEST-002 browser/human-review layers.
+- [?] **E6 — axe coverage and the manual assistive-technology checklist**
+  Blocked by: E5
+  Requirements: PRD-NFR-002, PRD-NFR-005, UX-040, TEST-005
+  Read: docs/delivery/test-strategy.md, docs/design/ux-spec.md
+  Acceptance: axe covers every route and major phase with no serious/critical findings, and a release checklist records keyboard, 200%/400% zoom, VoiceOver, NVDA, iOS Safari, and Android Chrome results with issue links.
+  Proves: automated cross-browser axe/zoom suite plus completed human assistive-technology records; TEST-002 browser/human-review layers.
+  Added `playwright.config.ts` and `apps/web/e2e/accessibility.spec.ts` for Chromium/Firefox/WebKit route, phase, axe, reduced-motion, and zoom-equivalent viewport coverage. `docs/delivery/accessibility-checklist.md` records the human execution packet; human execution and sign-off are required before release.
 
 ---
 

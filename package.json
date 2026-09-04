@@ -16,11 +16,14 @@
     "format:check": "prettier --check .",
     "test": "vitest run --coverage",
     "build": "pnpm --filter @blockparty/web build",
+    "test:browser": "playwright test",
     "db:maintain": "pnpm --filter @blockparty/web db:maintain"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "^9.37.0",
     "@next/eslint-plugin-next": "^15.5.4",
+    "@playwright/test": "^1.62.1",
     "@vitest/coverage-v8": "^5.0.0",
     "eslint": "^9.37.0",
     "eslint-plugin-react-hooks": "^5.2.0",

@@ -3,19 +3,22 @@ import type { NextConfig } from "next";
 /**
  * Security headers. See SEC-003.
  *
- * CSP starts deny-by-default. `unsafe-inline` for styles is the documented
- * framework exception: Next.js injects inline style tags for streamed CSS.
- * `unsafe-eval` is allowed in development only, for React Refresh.
+ * CSP starts deny-by-default. Next's streamed App Router payload uses inline
+ * bootstrap scripts, so `unsafe-inline` is the documented framework exception
+ * until the nonce-based middleware migration lands. `unsafe-eval` is allowed
+ * in development only, for React Refresh. E6 browser tests prove the app
+ * still renders real document content under this policy. SEC-003.
  *
  * TODO(SEC-003): replace `unsafe-inline` on script-src with a nonce once the
  * app has interactive routes, and add the consented PostHog endpoints to
  * connect-src behind the ANA-001 consent gate.
  */
 const isDevelopment = process.env.NODE_ENV === "development";
+const isLocalHttpTest = process.env.BLOCKPARTY_LOCAL_HTTP_TEST === "1";
 
 const contentSecurityPolicy = [
   "default-src 'self'",
-  `script-src 'self'${isDevelopment ? " 'unsafe-eval' 'unsafe-inline'" : ""}`,
+  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self'",
@@ -26,7 +29,7 @@ const contentSecurityPolicy = [
   "form-action 'self'",
   "frame-ancestors 'none'",
   "manifest-src 'self'",
-  "upgrade-insecure-requests",
+  ...(isLocalHttpTest ? [] : ["upgrade-insecure-requests"]),
 ].join("; ");
 
 const securityHeaders = [
