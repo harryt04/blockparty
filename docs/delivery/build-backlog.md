@@ -532,12 +532,13 @@ separate player contexts.
       Proves: multi-context Playwright winner/no-winner/read-only/rematch/expiry journeys; TEST-002 browser layer.
       Implemented the authorized terminal summary route/projection, automatic completion routing, read-only standings/history, and explicit rematch form/API backed by fresh capability issuance. `apps/web/test/summary-route.test.ts` and `apps/web/test/rematch-route.test.ts` prove terminal/no-winner handling, duration/history projection, authorization, and fresh-game inputs; Playwright/MongoDB evidence remains planned.
 
-- [ ] **C13 — Settings, rules, and accessibility content**
+- [x] **C13 — Settings, rules, and accessibility content**
       Blocked by: C4
       Requirements: PRD-FUN-010, VAR-013, UX-003, UX-005, DS-060, DS-070
       Read: docs/design/ux-spec.md, docs/design/design-system.md, docs/product/rule-variants.md
       Acceptance: settings/rules/accessibility pages explain current variants/interactions and display terms, expose persisted local presentation preferences only, and provide equivalent non-audio/non-motion information without game authority.
       Proves: component and Playwright navigation/preference/content cases including storage inspection; TEST-002 component/browser layer.
+      Implemented device-only persisted presentation preferences, complete variant/interaction/display-term rules content, and non-audio/non-motion accessibility guidance. `apps/web/test/settings-content.test.ts` proves local preference serialization/fallback and complete content coverage; browser and manual assistive-technology evidence remain planned.
 
 ---
 

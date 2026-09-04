@@ -4,7 +4,6 @@
  */
 import type { Metadata } from "next";
 import { AppShell } from "@/components/shell/app-shell";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const metadata: Metadata = { title: "Accessibility" };
@@ -19,6 +18,29 @@ const COMMITMENTS = [
   "Sound and haptics are off unless you turn them on, and no information is sound-only.",
   "Announcements are restrained: turns, results, required decisions, and connection changes only.",
 ];
+
+const EQUIVALENTS = [
+  [
+    "Rolls and movement",
+    "The event log states the authoritative result; movement animation is optional.",
+  ],
+  [
+    "Turn and urgency",
+    "The turn heading, player status, and action region name whose choice is required.",
+  ],
+  [
+    "Ownership and status",
+    "Each board stop includes owner, availability, mortgage, improvement, category, and price text.",
+  ],
+  [
+    "Sound and haptics",
+    "They are optional cues only. The same result is visible, readable, and announced without them.",
+  ],
+  [
+    "Motion",
+    "Reduced motion skips transitions and leaves the final authoritative state available immediately.",
+  ],
+] as const;
 
 export default function AccessibilityPage() {
   return (
@@ -40,12 +62,25 @@ export default function AccessibilityPage() {
           </CardContent>
         </Card>
 
-        <Alert variant="warning">
-          <AlertDescription>
-            Scaffolding build. The accessibility test record is not complete, so this is a statement
-            of intent rather than a verified claim.
-          </AlertDescription>
-        </Alert>
+        <Card>
+          <CardHeader>
+            <CardTitle>Information without sound or motion</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4 text-sm text-muted-ink">
+              Presentation effects are never the authority. Use the readable board list, action
+              region, connection status, and event log for the complete player-facing information.
+            </p>
+            <dl className="flex flex-col gap-3">
+              {EQUIVALENTS.map(([feature, equivalent]) => (
+                <div key={feature}>
+                  <dt className="font-medium">{feature}</dt>
+                  <dd className="text-sm text-muted-ink">{equivalent}</dd>
+                </div>
+              ))}
+            </dl>
+          </CardContent>
+        </Card>
       </div>
     </AppShell>
   );

@@ -6,41 +6,15 @@ import {
   type RulesConfiguration,
   type VariantKey,
 } from "@blockparty/contracts";
+import { VARIANT_COPY } from "./variant-copy";
 
-export const LOBBY_VARIANT_COPY: Record<VariantKey, { label: string; warning: string }> = {
-  restSpaceJackpot: {
-    label: "Jackpot on The Stoop",
-    warning: "Fees build a pot that one landing collects.",
-  },
-  doubleStartOnExactLanding: {
-    label: "Double pay for landing exactly on Sunup",
-    warning: "Exact landings put more money into play.",
-  },
-  noAuctionAfterDeclinedAcquisition: {
-    label: "No auction after a declined Address",
-    warning: "Declined Addresses return to the Committee instead.",
-  },
-  noIncomeWhileDetained: {
-    label: "No income during a Noise Complaint",
-    warning: "Detained players do not collect income.",
-  },
-  bonusForMatchingOnes: {
-    label: "Bonus for rolling double ones",
-    warning: "Matching ones add a rare bonus payment.",
-  },
-  startingAssetsDealt: {
-    label: "Deal Addresses at the start",
-    warning: "Starting ownership is quicker and less even.",
-  },
-  relaxedEvenBuilding: {
-    label: "Build without the even-spread rule",
-    warning: "Improvements can be concentrated in one Block.",
-  },
-  unlimitedImprovementInventory: {
-    label: "Unlimited Stalls and Block Stages",
-    warning: "Improvement scarcity no longer limits purchases.",
-  },
-};
+export const LOBBY_VARIANT_COPY: Record<VariantKey, { label: string; warning: string }> =
+  Object.fromEntries(
+    VARIANT_KEYS.map((key) => [
+      key,
+      { label: VARIANT_COPY[key].label, warning: VARIANT_COPY[key].warning },
+    ]),
+  ) as Record<VariantKey, { label: string; warning: string }>;
 
 export function lobbyIsReady(lobby: LobbyProjection): boolean {
   return lobby.canStart && lobby.seats.every((seat) => seat.kind !== "open");

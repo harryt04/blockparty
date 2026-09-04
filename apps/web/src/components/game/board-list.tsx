@@ -69,7 +69,7 @@ export function BoardList({
             >
               <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                 <span className="tabular text-sm text-muted-ink">Stop {space.routeIndex}</span>
-                <span className="font-medium">{space.name}</span>
+                <span className="board-stop-name font-medium">{space.name}</span>
                 <Badge>{deedCategory?.label ?? category.label}</Badge>
                 {districtName === undefined ? null : <Badge variant="info">{districtName}</Badge>}
               </span>

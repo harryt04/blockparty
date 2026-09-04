@@ -111,6 +111,75 @@
   }
 }
 
+/* Explicit device preferences override the system hint. UX-005, DS-060. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-canvas: oklch(97.5% 0.008 85);
+  --color-surface: oklch(99% 0.004 85);
+  --color-surface-raised: oklch(100% 0 0);
+  --color-ink: oklch(23% 0.02 60);
+  --color-muted-ink: oklch(48% 0.02 60);
+  --color-line: oklch(88% 0.012 70);
+  --color-brand: oklch(58% 0.16 45);
+  --color-brand-ink: oklch(98% 0.01 45);
+  --color-success: oklch(52% 0.13 155);
+  --color-warning: oklch(64% 0.15 75);
+  --color-danger: oklch(53% 0.19 27);
+  --color-info: oklch(55% 0.11 240);
+  --color-focus: oklch(52% 0.18 250);
+  --color-selection: oklch(92% 0.05 250);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-canvas: oklch(19% 0.012 65);
+  --color-surface: oklch(23% 0.014 65);
+  --color-surface-raised: oklch(27% 0.016 65);
+  --color-ink: oklch(94% 0.008 80);
+  --color-muted-ink: oklch(72% 0.012 75);
+  --color-line: oklch(36% 0.014 68);
+  --color-brand: oklch(72% 0.14 60);
+  --color-brand-ink: oklch(20% 0.02 60);
+  --color-success: oklch(70% 0.13 155);
+  --color-warning: oklch(78% 0.14 78);
+  --color-danger: oklch(68% 0.17 27);
+  --color-info: oklch(72% 0.1 240);
+  --color-focus: oklch(75% 0.14 250);
+  --color-selection: oklch(32% 0.05 250);
+}
+
+:root[data-contrast="high"] {
+  --color-muted-ink: oklch(36% 0.02 60);
+  --color-line: oklch(62% 0.02 65);
+  --color-focus: oklch(42% 0.2 250);
+}
+
+:root[data-theme="dark"][data-contrast="high"] {
+  --color-muted-ink: oklch(84% 0.012 75);
+  --color-line: oklch(58% 0.018 68);
+  --color-focus: oklch(86% 0.14 250);
+}
+
+:root[data-reduced-motion="true"] *,
+:root[data-reduced-motion="true"] *::before,
+:root[data-reduced-motion="true"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Keep the stop name in its aria-label while allowing visual labels to be
+ * compacted on small boards. DS-040. */
+:root[data-board-labels="false"] .board-stop-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 @layer base {
   * {
     border-color: var(--color-line);

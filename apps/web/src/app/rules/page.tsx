@@ -2,15 +2,20 @@
  * `/rules` - versioned rules, variants, and the keyboard guide.
  * Linked from every shell footer. See UX section 2.
  *
- * TODO(VAR-013): render the enabled toggles, their warnings, and the
- * interaction notes for the active game from the captured configuration.
+ * This page is an explanation surface only. A live game's captured
+ * configuration remains authoritative in its projection and is never changed
+ * by this page. See VAR-013.
  */
 import type { Metadata } from "next";
-import { VARIANT_KEYS } from "@blockparty/contracts";
-import { PLACEHOLDER_BUNDLE } from "@blockparty/game-content";
 import { AppShell } from "@/components/shell/app-shell";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DISPLAY_TERM_GUIDE,
+  INTERACTION_GUIDE,
+  VARIANT_COPY,
+  VARIANT_KEYS,
+  VARIANT_SCHEMA_VERSION,
+} from "./rules-content";
 
 export const metadata: Metadata = { title: "Rules" };
 
@@ -28,24 +33,67 @@ export default function RulesPage() {
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
         <h1 className="font-serif text-2xl">Rules</h1>
         <p className="text-muted-ink">
-          Content version {PLACEHOLDER_BUNDLE.contentVersion}. A game keeps the rules and content it
-          started with, so an update never changes a game in progress.
+          Rules reference version {VARIANT_SCHEMA_VERSION}. A game keeps the configuration and
+          content it started with, so an update never changes a game in progress.
         </p>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>How play works</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col gap-3">
+              {INTERACTION_GUIDE.map((item) => (
+                <li key={item.heading}>
+                  <h3 className="font-medium">{item.heading}</h3>
+                  <p className="text-sm text-muted-ink">{item.text}</p>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
             <CardTitle>Optional rules</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="mb-2 text-sm text-muted-ink">
+            <p className="mb-4 text-sm text-muted-ink">
               There are exactly eight. The host picks them before the game starts, and they lock at
-              start.
+              start. A live game shows its enabled options in the game view; this page cannot change
+              them.
             </p>
-            <ul className="flex flex-col gap-1 text-sm">
-              {VARIANT_KEYS.map((key) => (
-                <li key={key}>{key}</li>
-              ))}
+            <ul className="flex flex-col gap-4">
+              {VARIANT_KEYS.map((key) => {
+                const variant = VARIANT_COPY[key];
+                return (
+                  <li key={key} className="border-t border-line pt-3 first:border-t-0 first:pt-0">
+                    <h3 className="font-medium">{variant.label}</h3>
+                    <p className="text-sm">{variant.effect}</p>
+                    <p className="mt-1 text-sm text-muted-ink">
+                      <span className="font-medium text-ink">Watch for:</span> {variant.warning}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-ink">{variant.interaction}</p>
+                  </li>
+                );
+              })}
             </ul>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Words on the board</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="flex flex-col gap-3">
+              {DISPLAY_TERM_GUIDE.map((term) => (
+                <div key={term.label}>
+                  <dt className="font-medium">{term.label}</dt>
+                  <dd className="text-sm text-muted-ink">{term.explanation}</dd>
+                </div>
+              ))}
+            </dl>
           </CardContent>
         </Card>
 
@@ -64,12 +112,6 @@ export default function RulesPage() {
             </dl>
           </CardContent>
         </Card>
-
-        <Alert variant="warning">
-          <AlertDescription>
-            Scaffolding build. The full rules text is not written yet.
-          </AlertDescription>
-        </Alert>
       </div>
     </AppShell>
   );
