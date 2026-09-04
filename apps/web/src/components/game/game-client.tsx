@@ -40,6 +40,7 @@ import {
   latestDiceResult,
   managementDecisionContext,
   orderedBoard,
+  turnLabel,
 } from "./game-model";
 import { PlayerStrip } from "./player-strip";
 
@@ -91,7 +92,6 @@ export function GameClient({ gameId }: { gameId: string }) {
   const selectedSpace = spaces.find((space) => space.spaceId === selectedSpaceId);
   const active = snapshot === undefined ? undefined : activeSpace(snapshot);
   const detailSpace = selectedSpace ?? active;
-  const activeSeat = snapshot?.seats.find((seat) => seat.seatId === snapshot.activeSeatId);
   const districtMap = snapshot === undefined ? {} : districtNames(snapshot);
   const variants = snapshot === undefined ? [] : enabledVariantLabels(snapshot.configuration);
   const diceResult = snapshot === undefined ? undefined : latestDiceResult(snapshot);
@@ -198,8 +198,7 @@ export function GameClient({ gameId }: { gameId: string }) {
     );
   }
 
-  const waitingFor = activeSeat?.name ?? "another player";
-  const turnText = activeSeat?.isSelf ? "Your turn" : `Waiting for ${waitingFor}`;
+  const turnText = turnLabel(snapshot);
   const history = [...(snapshot.publicEvents ?? [])].sort(
     (left, right) => left.sequence - right.sequence,
   );

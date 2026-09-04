@@ -89,6 +89,21 @@ export function activeSpace(snapshot: GameSnapshotProjection): BoardSpaceProject
     : snapshot.board.find((space) => space.routeIndex === activeSeat.position);
 }
 
+/**
+ * Resolve the seat whose action is currently due for the turn heading. An
+ * auction keeps the original active turn owner while rotating its own
+ * priority, so the priority seat must drive the heading during auction
+ * phases. See UX-013 and UX-014.
+ */
+export function turnLabel(snapshot: GameSnapshotProjection): string {
+  const seatId =
+    snapshot.phase === "AwaitAuction" || snapshot.phase === "ImprovementAuction"
+      ? (snapshot.prioritySeatId ?? snapshot.activeSeatId)
+      : snapshot.activeSeatId;
+  const seat = snapshot.seats.find((candidate) => candidate.seatId === seatId);
+  return seat?.isSelf ? "Your turn" : `Waiting for ${seat?.name ?? "another player"}`;
+}
+
 export function enabledVariantLabels(
   configuration: GameSnapshotProjection["configuration"],
 ): readonly string[] {

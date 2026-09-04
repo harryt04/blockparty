@@ -280,3 +280,11 @@ per-seat connection cap during ordinary bot-assisted play; `apps/web/test/sync-c
 records the regression. The StartGame handoff also suppresses stale lobby reads
 until the authoritative ACTIVE snapshot arrives, preventing a transient
 409 response during navigation.
+
+Iteration 13 keeps the gameplay heading aligned with the authoritative actor
+during `AwaitAuction` and `ImprovementAuction`: `turnLabel` uses the priority
+seat for those phases instead of the enclosing turn owner. The regression is
+covered by `apps/web/test/game-model.test.ts`, and a live `npm run dev` smoke
+run reached an auction with the bot as priority and rendered `Waiting for Bot
+1` while the auction controls remained correctly disabled. This extends the
+UX-013/014 evidence for current-turn and auction-priority presentation.

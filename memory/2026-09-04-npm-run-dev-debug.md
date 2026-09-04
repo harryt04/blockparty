@@ -125,3 +125,25 @@ disposable MongoDB replica set created a lobby, started the game, and completed 
 action-sheet commands with no API failures or browser console errors. Final CI passed with
 63 test files and 270 passing tests (2 intentional skips); the no-Mongo production build
 also passed.
+
+## Iteration 13 follow-up
+
+**DEBUG REPORT**
+
+- **Symptom:** After a live host declined an unowned Address, `AwaitAuction`
+  rendered `Your turn` even though the bot held auction priority and both bid
+  and pass controls were disabled with a wait reason.
+- **Root cause:** `GameClient` derived the heading only from `activeSeatId`.
+  The engine intentionally keeps that enclosing turn owner while auctions
+  rotate the independent `prioritySeatId`.
+- **Fix:** Added the pure `turnLabel` presentation helper and used the
+  authoritative priority seat during `AwaitAuction` and
+  `ImprovementAuction`; normal phases continue to use `activeSeatId`.
+- **Evidence:** A fresh `npm run dev` flow created a bot game, reached a
+  declined purchase, opened `AwaitAuction`, and rendered `Waiting for Bot 1`.
+  The run recorded no console errors or API responses at or above HTTP 400.
+- **Regression test:** `apps/web/test/game-model.test.ts` covers auction,
+  self-priority, and normal-phase labels.
+- **Related:** The auction summary already used its priority projection; the
+  defect was limited to the shared turn heading.
+- **Status:** DONE

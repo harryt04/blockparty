@@ -17,6 +17,7 @@ import {
   obligationDecisionContext,
   orderedBoard,
   recoveryDecisionContext,
+  turnLabel,
   latestTradeOutcome,
   tradeComposerContext,
   tradeDecisionContext,
@@ -116,6 +117,28 @@ describe("game presentation model", () => {
     ).toBe(
       "Stop 1, Sawhorse Lane, Block, North Kerb, Owned by North Star, Price 120 Tabs, Mortgaged, Improvement level 2, Here now: North Star",
     );
+  });
+
+  it("labels the auction priority seat instead of the enclosing turn owner", () => {
+    const value = snapshot({
+      phase: "AwaitAuction",
+      activeSeatId: "seat-a",
+      prioritySeatId: "seat-b",
+      seats: [
+        snapshot().seats[0]!,
+        {
+          ...snapshot().seats[0]!,
+          seatId: "seat-b",
+          name: "Maya",
+          isHost: false,
+          isSelf: false,
+        },
+      ],
+    });
+
+    expect(turnLabel(value)).toBe("Waiting for Maya");
+    expect(turnLabel({ ...value, prioritySeatId: "seat-a" })).toBe("Your turn");
+    expect(turnLabel({ ...value, phase: "AwaitRoll", prioritySeatId: "seat-b" })).toBe("Your turn");
   });
 
   it("shows only enabled variant labels at the display boundary", () => {
