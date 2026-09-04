@@ -4,8 +4,9 @@
  */
 import { CommandEnvelope, HOST_ONLY_COMMANDS, PROTOCOL_VERSION } from "@blockparty/contracts";
 import type { CommandAckEnvelope } from "@blockparty/contracts";
-import { readHostCapability, readSeatCapability } from "@/server/auth/session";
+import { readHostCapability, readReclaimClaim, readSeatCapability } from "@/server/auth/session";
 import { handleCommand } from "@/server/commands/handle-command";
+import { COOKIE_NAMES, COOKIE_OPTIONS } from "@/server/auth/capabilities";
 import { checkPayloadSize, guardMutation } from "@/server/http/guards";
 import { jsonError, jsonOk } from "@/server/http/responses";
 
@@ -40,7 +41,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ gam
   const requiresHost = (HOST_ONLY_COMMANDS as readonly string[]).includes(envelope.payload.type);
   let actor;
   try {
-    actor = requiresHost ? await readHostCapability(gameId) : await readSeatCapability(gameId);
+    actor = requiresHost
+      ? await readHostCapability(gameId)
+      : envelope.payload.type === "RequestSeatReclaim"
+        ? await readReclaimClaim(gameId)
+        : await readSeatCapability(gameId);
   } catch {
     return jsonError("SERVER_BUSY", { gameId, requestId: envelope.requestId });
   }
@@ -68,5 +73,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ gam
     firstSequence: outcome.firstSequence,
     lastSequence: outcome.lastSequence,
   };
-  return jsonOk(ack, { status: 202 });
+  const response = jsonOk(ack, { status: 202 });
+  if (outcome.seatCapability !== undefined) {
+    response.cookies.set(COOKIE_NAMES.seat, outcome.seatCapability, COOKIE_OPTIONS);
+  }
+  return response;
 }

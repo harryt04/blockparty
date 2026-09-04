@@ -401,12 +401,13 @@ seat. Each ticket removes the corresponding builder from
       Proves: presence/command integration scenarios cover each required phase, reconnect, deterministic transfer, and zero-connected-human state; TEST-002 protocol-integration layer.
       Implemented phase-aware journaled pause/resume recovery, deterministic connection-tenure host transfer, and a separate authenticated host-capability claim; `apps/web/test/presence-recovery.test.ts` proves required phases, reconnect, tie-break, zero-connected-human, and multi-tab presence behavior.
 
-- [ ] **B9 — Bot replacement and reclaim**
+- [x] **B9 — Bot replacement and reclaim**
       Blocked by: B8
       Requirements: PRD-FUN-012, PROTO-003, SEC-002
       Read: docs/product/prd.md, docs/engineering/realtime-and-data.md, docs/engineering/security-privacy-analytics.md
       Acceptance: host-confirmed replacement and reclaim execute only between command transactions, revoke/issue the correct seat authority while retaining separate reclaim claims, preserve seat state, and emit every audit event.
       Proves: multi-client race tests cover request/approval/revocation/reclaim, old-token rejection, and safe-boundary ordering; TEST-002 protocol/security layer.
+      Implemented safe-boundary replacement, reclaim request/approval, capability rotation, and audit journaling in the authoritative command transaction; `apps/web/test/bot-reclaim.test.ts` proves ordering, state preservation, old-authority revocation, new issuance, and unsafe-boundary rejection.
 
 - [ ] **B10 — Expiry, cleanup, and retention**
       Blocked by: B4

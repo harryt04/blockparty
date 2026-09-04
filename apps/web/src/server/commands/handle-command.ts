@@ -36,6 +36,9 @@ import { COLLECTIONS } from "../db/collections";
 import type { GameDocument } from "../games/create-game";
 import type { AuthenticatedSeat } from "../auth/session";
 import { ensureChangeStream } from "../sse/change-stream";
+import { connectedSeatTenures } from "../sse/registry";
+import type { AuditDocument, CapabilityDocument } from "../games/create-game";
+import { generateCapability, hashCapability } from "../auth/capabilities";
 
 export interface CommandAccepted {
   readonly ok: true;
@@ -43,6 +46,8 @@ export interface CommandAccepted {
   readonly aggregateVersion: number;
   readonly firstSequence: number;
   readonly lastSequence: number;
+  /** Short-lived server-to-route handoff; never included in the JSON ACK. */
+  readonly seatCapability?: string;
 }
 
 export interface CommandRejected {
@@ -72,6 +77,8 @@ export interface CommandStore {
   readonly games: Pick<Collection<GameDocument>, "findOne" | "updateOne">;
   readonly gameEvents: Pick<Collection<GameEventDocument>, "insertMany">;
   readonly commandReceipts: Pick<Collection<CommandReceiptDocument>, "findOne" | "insertOne">;
+  readonly capabilities: Pick<Collection<CapabilityDocument>, "updateOne" | "insertOne">;
+  readonly auditLog: Pick<Collection<AuditDocument>, "insertOne">;
 }
 
 export interface CommandPathOptions {
@@ -102,11 +109,287 @@ function commandStore(): CommandStore {
     games: database.collection<GameDocument>(COLLECTIONS.games),
     gameEvents: database.collection<GameEventDocument>(COLLECTIONS.gameEvents),
     commandReceipts: database.collection<CommandReceiptDocument>(COLLECTIONS.commandReceipts),
+    capabilities: database.collection<CapabilityDocument>(COLLECTIONS.capabilities),
+    auditLog: database.collection<AuditDocument>(COLLECTIONS.auditLog),
   };
 }
 
 function hostCommand(command: ParsedCommandEnvelope["payload"]): boolean {
   return (HOST_ONLY_COMMANDS as readonly string[]).includes(command.type);
+}
+
+function recoveryCommand(command: ParsedCommandEnvelope["payload"]): boolean {
+  return (
+    command.type === "ReplaceSeatWithBot" ||
+    command.type === "RequestSeatReclaim" ||
+    command.type === "ApproveSeatReclaim"
+  );
+}
+
+function safeBoundary(game: GameDocument): boolean {
+  return game.snapshot.effectQueue.length === 0 && game.snapshot.pendingChoice === undefined;
+}
+
+function connected(game: GameDocument, seatId: string): boolean {
+  return (
+    connectedSeatTenures(game._id).some((tenure) => tenure.seatId === seatId) ||
+    game.lobby.seats.some((seat) => seat.seatId === seatId && seat.connected)
+  );
+}
+
+function recoveryEvent(
+  game: GameDocument,
+  type: DomainEvent["type"],
+  actorSeatId: string,
+  payload: Readonly<Record<string, unknown>>,
+  now: Date,
+): DomainEvent {
+  return DomainEvent.parse({
+    gameId: game._id,
+    sequence: game.lastSequence + 1,
+    aggregateVersion: game.aggregateVersion + 1,
+    type,
+    eventVersion: 1,
+    actorSeatId,
+    occurredAt: now.toISOString(),
+    payload,
+  });
+}
+
+function recoveryLobby(game: GameDocument, seats: GameDocument["seats"]): GameDocument["lobby"] {
+  const bySeat = new Map(seats.map((seat) => [seat.seatId, seat]));
+  return {
+    ...game.lobby,
+    seats: game.lobby.seats.map((seat) => {
+      const replacement = bySeat.get(seat.seatId);
+      return replacement === undefined
+        ? seat
+        : {
+            ...seat,
+            kind: replacement.kind,
+            status: replacement.status,
+            ...(replacement.name === undefined ? {} : { name: replacement.name }),
+          };
+    }),
+  };
+}
+
+async function transactRecovery(
+  envelope: ParsedCommandEnvelope,
+  actor: AuthenticatedSeat,
+  store: CommandStore,
+  session: ClientSession,
+  now: Date,
+): Promise<CommittedCommand> {
+  const existing = await store.commandReceipts.findOne(
+    { gameId: envelope.gameId, commandId: envelope.commandId },
+    { session },
+  );
+  if (existing !== null) return { outcome: ackFromReceipt(existing), events: [] };
+
+  const game = await store.games.findOne({ _id: envelope.gameId }, { session });
+  if (game === null) throw new CommandPathError("NOT_FOUND", "GAME_NOT_FOUND");
+  if (game.expiresAt <= now) throw new CommandPathError("GAME_EXPIRED", "GAME_EXPIRED");
+  if (game.status !== "ACTIVE") throw new CommandPathError("ILLEGAL_ACTION", "GAME_TERMINAL");
+  const command = envelope.payload;
+  const expectedCapability = command.type === "RequestSeatReclaim" ? "reclaim" : "host";
+  if (actor.gameId !== game._id || actor.kind !== expectedCapability) {
+    throw new CommandPathError("FORBIDDEN", "CAPABILITY_KIND_MISMATCH");
+  }
+  if (envelope.expectedVersion !== game.aggregateVersion) {
+    throw new CommandPathError("STALE_VERSION", "STALE_VERSION");
+  }
+  if (!safeBoundary(game)) {
+    throw new CommandPathError("PHASE_MISMATCH", "RECOVERY_NOT_AT_SAFE_BOUNDARY");
+  }
+
+  const targetSeatId =
+    command.type === "RequestSeatReclaim"
+      ? actor.seatId
+      : command.type === "ReplaceSeatWithBot" || command.type === "ApproveSeatReclaim"
+        ? command.seatId
+        : undefined;
+  if (targetSeatId === undefined)
+    throw new CommandPathError("INTERNAL", "INVALID_RECOVERY_COMMAND");
+  const seatIndex = game.seats.findIndex((seat) => seat.seatId === targetSeatId);
+  const seat = game.seats[seatIndex];
+  if (seat === undefined) throw new CommandPathError("FORBIDDEN", "SEAT_NOT_FOUND");
+
+  let nextSeats = game.seats;
+  let nextSnapshot = game.snapshot;
+  let nextPendingReclaim = game.pendingSeatReclaimId;
+  let event: DomainEvent;
+  let issuedSeatCapability: string | undefined;
+  const audits: AuditDocument[] = [];
+
+  if (command.type === "ReplaceSeatWithBot") {
+    if (seat.kind !== "human" || seat.status !== "active" || connected(game, seat.seatId)) {
+      throw new CommandPathError("ILLEGAL_ACTION", "SEAT_MUST_BE_DISCONNECTED_HUMAN");
+    }
+    const botName = `Bot ${seatIndex + 1}`;
+    nextSeats = game.seats.map((candidate, index) =>
+      index === seatIndex
+        ? {
+            ...candidate,
+            kind: "bot" as const,
+            status: "replaced" as const,
+            name: botName,
+            replacedName: candidate.name,
+          }
+        : candidate,
+    );
+    nextSnapshot = {
+      ...game.snapshot,
+      seats: game.snapshot.seats.map((candidate) =>
+        candidate.seatId === seat.seatId ? { ...candidate, kind: "bot" as const } : candidate,
+      ),
+    };
+    event = recoveryEvent(game, "SeatReplacedWithBot", actor.seatId, { seatId: seat.seatId }, now);
+    const revoked = await store.capabilities.updateOne(
+      { gameId: game._id, seatId: seat.seatId, kind: "seat", status: "active" },
+      { $set: { status: "revoked" } },
+      { session },
+    );
+    if (revoked.matchedCount !== 1) {
+      throw new CommandPathError("INTERNAL", "SEAT_CAPABILITY_NOT_FOUND");
+    }
+    audits.push(
+      {
+        gameId: game._id,
+        seatId: seat.seatId,
+        action: "seat_replaced_with_bot",
+        reasonCode: "SEAT_REPLACED",
+        occurredAt: now,
+      },
+      {
+        gameId: game._id,
+        seatId: seat.seatId,
+        action: "seat_capability_revoked",
+        reasonCode: "SEAT_CAPABILITY_REVOKED",
+        occurredAt: now,
+      },
+    );
+  } else if (command.type === "RequestSeatReclaim") {
+    if (actor.kind !== "reclaim" || seat.kind !== "bot" || seat.status !== "replaced") {
+      throw new CommandPathError("FORBIDDEN", "RECLAIM_NOT_AVAILABLE");
+    }
+    if (game.pendingSeatReclaimId !== undefined) {
+      throw new CommandPathError("ILLEGAL_ACTION", "RECLAIM_ALREADY_REQUESTED");
+    }
+    nextPendingReclaim = seat.seatId;
+    event = recoveryEvent(game, "SeatReclaimRequested", actor.seatId, { seatId: seat.seatId }, now);
+    audits.push({
+      gameId: game._id,
+      seatId: seat.seatId,
+      action: "seat_reclaim_requested",
+      reasonCode: "RECLAIM_REQUESTED",
+      occurredAt: now,
+    });
+  } else {
+    if (actor.kind !== "host" || game.pendingSeatReclaimId !== seat.seatId) {
+      throw new CommandPathError("FORBIDDEN", "RECLAIM_NOT_REQUESTED");
+    }
+    const newToken = generateCapability();
+    issuedSeatCapability = newToken;
+    nextPendingReclaim = undefined;
+    nextSeats = game.seats.map((candidate) =>
+      candidate.seatId === seat.seatId
+        ? {
+            ...candidate,
+            kind: "human" as const,
+            status: "active" as const,
+            ...(candidate.replacedName === undefined
+              ? {}
+              : { name: candidate.replacedName, replacedName: undefined }),
+          }
+        : candidate,
+    );
+    nextSnapshot = {
+      ...game.snapshot,
+      seats: game.snapshot.seats.map((candidate) =>
+        candidate.seatId === seat.seatId ? { ...candidate, kind: "human" as const } : candidate,
+      ),
+    };
+    event = recoveryEvent(game, "SeatReclaimApproved", actor.seatId, { seatId: seat.seatId }, now);
+    const revoked = await store.capabilities.updateOne(
+      { gameId: game._id, seatId: seat.seatId, kind: "reclaim", status: "active" },
+      { $set: { status: "revoked" } },
+      { session },
+    );
+    if (revoked.matchedCount !== 1) {
+      throw new CommandPathError("INTERNAL", "RECLAIM_CLAIM_NOT_FOUND");
+    }
+    await store.capabilities.insertOne(
+      {
+        tokenHash: hashCapability(newToken),
+        gameId: game._id,
+        seatId: seat.seatId,
+        kind: "seat",
+        status: "active",
+        createdAt: now,
+        expiresAt: game.expiresAt,
+      },
+      { session },
+    );
+    audits.push(
+      {
+        gameId: game._id,
+        seatId: seat.seatId,
+        action: "seat_reclaim_approved",
+        reasonCode: "RECLAIM_APPROVED",
+        occurredAt: now,
+      },
+      {
+        gameId: game._id,
+        seatId: seat.seatId,
+        action: "seat_reclaim_transferred",
+        reasonCode: "RECLAIM_TRANSFERRED",
+        occurredAt: now,
+      },
+    );
+  }
+
+  const nextVersion = game.aggregateVersion + 1;
+  const nextState = Object.freeze({
+    ...nextSnapshot,
+    aggregateVersion: nextVersion,
+    pendingSeatReclaimId: nextPendingReclaim,
+  });
+  const journalEvent = DomainEvent.parse({ ...event, aggregateVersion: nextVersion });
+  await store.gameEvents.insertMany([journalEvent], { session, ordered: true });
+  const updated = await store.games.updateOne(
+    { _id: game._id, aggregateVersion: game.aggregateVersion, lastSequence: game.lastSequence },
+    {
+      $set: {
+        seats: nextSeats,
+        snapshot: nextState,
+        lobby: recoveryLobby(game, nextSeats),
+        aggregateVersion: nextVersion,
+        lastSequence: game.lastSequence + 1,
+        pendingSeatReclaimId: nextPendingReclaim,
+      },
+    },
+    { session },
+  );
+  if (updated.matchedCount !== 1) throw new CommandPathError("STALE_VERSION", "STALE_VERSION");
+  for (const audit of audits) await store.auditLog.insertOne(audit, { session });
+  const receipt: CommandReceiptDocument = {
+    gameId: game._id,
+    commandId: envelope.commandId,
+    accepted: true,
+    aggregateVersion: nextVersion,
+    firstSequence: game.lastSequence + 1,
+    lastSequence: game.lastSequence + 1,
+    createdAt: now,
+  };
+  await store.commandReceipts.insertOne(receipt, { session });
+  return {
+    outcome: {
+      ...ackFromReceipt(receipt),
+      ...(issuedSeatCapability === undefined ? {} : { seatCapability: issuedSeatCapability }),
+    },
+    events: [journalEvent],
+  };
 }
 
 function gameStatus(state: GameState, previous: GameStatus): GameStatus {
@@ -212,7 +495,12 @@ async function transact(
   if (actor.gameId !== game._id || actor.seatId.length === 0) {
     throw new CommandPathError("FORBIDDEN", "CAPABILITY_SCOPE_MISMATCH");
   }
-  if (hostCommand(envelope.payload) !== (actor.kind === "host")) {
+  const expectedCapability = hostCommand(envelope.payload)
+    ? "host"
+    : envelope.payload.type === "RequestSeatReclaim"
+      ? "reclaim"
+      : "seat";
+  if (actor.kind !== expectedCapability) {
     throw new CommandPathError("FORBIDDEN", "CAPABILITY_KIND_MISMATCH");
   }
   if (envelope.expectedVersion !== game.aggregateVersion) {
@@ -337,7 +625,11 @@ export async function handleCommand(
   const run = options.transaction ?? withMongoTransaction;
   const now = options.now?.() ?? new Date();
   try {
-    const committed = await run((session) => transact(parsed.data, actor, store, session, now));
+    const committed = await run((session) =>
+      recoveryCommand(parsed.data.payload)
+        ? transactRecovery(parsed.data, actor, store, session, now)
+        : transact(parsed.data, actor, store, session, now),
+    );
     const outcome = committed.outcome;
     if (outcome.ok && committed.events.length > 0) {
       const safeEvents = committed.events.map(publicEvent);

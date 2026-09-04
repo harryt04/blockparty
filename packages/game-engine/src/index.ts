@@ -214,6 +214,8 @@ export interface GameState {
   /** Terminal outcome, present only after completion or no-contest. */
   readonly terminalReason?: "WINNER" | "NO_WINNER" | "NO_CONTEST";
   readonly winnerSeatId?: SeatId;
+  /** Server-coordinated recovery request retained for event replay. See PRD-FUN-012. */
+  readonly pendingSeatReclaimId?: SeatId;
   /** Server-only deck cursors and future order. Never expose in a projection. ENG-022. */
   readonly decks?: readonly DeckState[];
   /** Server-only card context used to return ordinary cards after resolution. */
@@ -1833,6 +1835,31 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         pendingChoice: undefined,
         obligation: undefined,
       });
+    case "SeatReplacedWithBot": {
+      const seatId = payloadSeatId(event, "seatId");
+      if (seatId === undefined) return state;
+      return freezeState({
+        ...state,
+        seats: state.seats.map((seat) =>
+          seat.seatId === seatId ? { ...seat, kind: "bot" as const } : seat,
+        ),
+      });
+    }
+    case "SeatReclaimRequested": {
+      const seatId = payloadSeatId(event, "seatId");
+      return seatId === undefined ? state : freezeState({ ...state, pendingSeatReclaimId: seatId });
+    }
+    case "SeatReclaimApproved": {
+      const seatId = payloadSeatId(event, "seatId");
+      if (seatId === undefined) return state;
+      return freezeState({
+        ...state,
+        pendingSeatReclaimId: undefined,
+        seats: state.seats.map((seat) =>
+          seat.seatId === seatId ? { ...seat, kind: "human" as const } : seat,
+        ),
+      });
+    }
     default:
       return state;
   }

@@ -35,8 +35,10 @@ const RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 export interface GameSeatRecord {
   readonly seatId: SeatId;
   readonly kind: "human" | "bot" | "open";
-  readonly status: "active";
+  readonly status: "active" | "replaced";
   readonly name?: string;
+  /** The pseudonym to restore if a bot is later reclaimed. */
+  readonly replacedName?: string;
   readonly token: SeatToken;
 }
 
@@ -69,6 +71,8 @@ export interface GameDocument {
   readonly pausedSeatId?: SeatId;
   /** The selected replacement host claims a host cookie on its next request. */
   readonly pendingHostClaimSeatId?: SeatId;
+  /** A replaced human has requested return; host approval consumes this marker. */
+  readonly pendingSeatReclaimId?: SeatId;
 }
 
 export interface InvitationDocument {
@@ -86,7 +90,7 @@ export interface CapabilityDocument {
   readonly gameId: GameId;
   readonly seatId: SeatId;
   readonly kind: "seat" | "reclaim";
-  readonly status: "active";
+  readonly status: "active" | "revoked";
   readonly createdAt: Date;
   readonly expiresAt: Date;
 }
@@ -111,14 +115,24 @@ export interface AuditDocument {
     | "play_paused"
     | "play_resumed"
     | "host_transferred"
-    | "host_transfer_claimed";
+    | "host_transfer_claimed"
+    | "seat_reclaim_requested"
+    | "seat_reclaim_approved"
+    | "seat_replaced_with_bot"
+    | "seat_capability_revoked"
+    | "seat_reclaim_transferred";
   readonly reasonCode:
     | "CREATE"
     | "JOIN"
     | "DISCONNECTED_REQUIRED_SEAT"
     | "REQUIRED_SEAT_RECONNECTED"
     | "HOST_DISCONNECTED"
-    | "HOST_TRANSFER_CLAIMED";
+    | "HOST_TRANSFER_CLAIMED"
+    | "RECLAIM_REQUESTED"
+    | "RECLAIM_APPROVED"
+    | "SEAT_REPLACED"
+    | "SEAT_CAPABILITY_REVOKED"
+    | "RECLAIM_TRANSFERRED";
   readonly occurredAt: Date;
 }
 

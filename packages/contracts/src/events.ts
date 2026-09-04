@@ -76,6 +76,7 @@ export const DomainEventType = z.enum([
   "SeatEliminated",
   // Recovery
   "SeatReplacedWithBot",
+  "SeatReclaimRequested",
   "SeatReclaimApproved",
   "HostTransferred",
   "PlayPaused",

@@ -121,6 +121,8 @@ export const ReplaceSeatWithBot = z
   .object({ type: z.literal("ReplaceSeatWithBot"), seatId: SeatId })
   .strict();
 
+export const RequestSeatReclaim = z.object({ type: z.literal("RequestSeatReclaim") }).strict();
+
 export const ApproveSeatReclaim = z
   .object({ type: z.literal("ApproveSeatReclaim"), seatId: SeatId })
   .strict();
@@ -157,6 +159,7 @@ export const Command = z.discriminatedUnion("type", [
   CancelTrade,
   ChoosePendingOption,
   ReplaceSeatWithBot,
+  RequestSeatReclaim,
   ApproveSeatReclaim,
   TransferHost,
   EndNoContest,
@@ -213,6 +216,7 @@ export const CommandTypeSchema = z.enum([
   "CancelTrade",
   "ChoosePendingOption",
   "ReplaceSeatWithBot",
+  "RequestSeatReclaim",
   "ApproveSeatReclaim",
   "TransferHost",
   "EndNoContest",
