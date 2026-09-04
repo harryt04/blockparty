@@ -131,6 +131,13 @@ describe("validateBundle", () => {
       "VARIANT_OUT_OF_BOUNDS",
       "economy.startingAssetDealCount",
     ],
+    [
+      "starting asset eligibility",
+      (bundle: Mutable<ContentBundle>) =>
+        (bundle.economy.startingAssetEligibleDeedIds = ["missing-deed"]),
+      "VARIANT_OUT_OF_BOUNDS",
+      "missing-deed",
+    ],
   ] as const)("rejects %s and names the offending canonical ID", (_name, mutate, code, id) => {
     const bundle = copyBundle();
     mutate(bundle);

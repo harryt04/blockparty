@@ -572,12 +572,13 @@ recorded draws.
       Proves: pure-engine acquisition/detention income tables cover each toggle and all documented interactions; TEST-002 pure-engine table layer.
       Implemented variant-gated no-auction resolution for declined and unaffordable deeds, plus detained rent/card-income suppression that leaves bank payments and outgoing player payments intact. `packages/game-engine/test/variant-auction-income.test.ts` covers defaults, each toggle, combined configuration, replay, and mutation-sensitive boundaries.
 
-- [ ] **D4 — VAR-006, VAR-007, VAR-008: setup and construction toggles**
+- [x] **D4 — VAR-006, VAR-007, VAR-008: setup and construction toggles**
       Blocked by: D1
       Requirements: VAR-006, VAR-007, VAR-008, VAR-014, CONTENT-007
       Read: docs/product/rule-variants.md, docs/product/rules.md, docs/product/game-content.md
       Acceptance: auditable recorded starting deals, relaxed even building, and unlimited inventory implement data-defined bounds independently and together without reinterpretation or a ninth toggle.
       Proves: fixed-seed deal goldens and construction property tables cover default, each toggle, interactions, fairness, and invariants; TEST-002 pure-engine golden/property layer.
+      Implemented content-declared starting-deed eligibility with deterministic round-robin event assignments, VAR-007 buy/sell relaxation, and VAR-008 inventory bypass. `packages/game-engine/test/variant-setup.test.ts` proves fixed-seed order, fairness for 2–6 seats, underfilled-pool rejection, construction tables, replay, and combined toggles; `packages/game-content/test/validate.test.ts` proves eligibility references are validated.
 
 - [ ] **D5 — Bot policy, explanations, and the soak harness**
       Blocked by: D4

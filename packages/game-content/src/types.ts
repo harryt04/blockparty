@@ -117,6 +117,8 @@ export interface Economy {
   readonly improvementResaleRatio: { readonly numerator: number; readonly denominator: number };
   /** Deeds dealt per seat when VAR-006 is on. See CONTENT-007. */
   readonly startingAssetDealCount: number;
+  /** Content-defined deed pool eligible for VAR-006. See CONTENT-007. */
+  readonly startingAssetEligibleDeedIds: readonly DeedId[];
 }
 
 export interface Card {

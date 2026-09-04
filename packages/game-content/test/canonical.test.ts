@@ -22,13 +22,13 @@ type Mutable<T> = {
 const ARCHIVED_V1_BUNDLE: ContentBundle = {
   ...PLACEHOLDER_BUNDLE,
   contentVersion: "1.0.0",
-  hash: "6ae619bbccd076395b903ed27e1527c576a7f2ab01733b5455dce8d7eca858cf",
+  hash: "9766938cbc884f835a8ccd818af803488decbac2422d2c951917c84704b3a983",
 };
 
 describe("canonical content identity", () => {
   it("matches the recorded canonical hash golden", () => {
     expect(canonicalHashBundle(PLACEHOLDER_BUNDLE)).toBe(
-      "2ba58630b981f8b06a5062121bb45e8e27b2e529ade54b2fe62df8b7e14ac447",
+      "a1e99bfdbfc78e6db5d6f2abad520e5ee54c16a3a485c7b67fde11a368c404a2",
     );
     expect(canonicalSerializeBundle(PLACEHOLDER_BUNDLE)).not.toContain(PLACEHOLDER_BUNDLE.hash);
     expect(validateBundle(PLACEHOLDER_BUNDLE)).toEqual({ valid: true, issues: [] });

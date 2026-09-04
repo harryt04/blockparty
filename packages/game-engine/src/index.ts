@@ -317,6 +317,27 @@ function payloadStringArray(event: EngineEvent, key: string): readonly string[] 
   return value;
 }
 
+function payloadStartingAssetAssignments(
+  event: EngineEvent,
+): readonly { readonly seatId: SeatId; readonly deedIds: readonly string[] }[] | undefined {
+  const value = event.payload.startingAssetAssignments;
+  if (!Array.isArray(value)) return undefined;
+  const assignments: { seatId: SeatId; deedIds: readonly string[] }[] = [];
+  for (const entry of value) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return undefined;
+    const record = entry as Record<string, unknown>;
+    if (
+      typeof record.seatId !== "string" ||
+      !Array.isArray(record.deedIds) ||
+      !record.deedIds.every((deedId): deedId is string => typeof deedId === "string")
+    ) {
+      return undefined;
+    }
+    assignments.push({ seatId: record.seatId, deedIds: record.deedIds });
+  }
+  return assignments;
+}
+
 function payloadInventory(
   event: EngineEvent,
   key: string,
@@ -657,21 +678,41 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
             }))
           : state.seats;
       const deedIds = payloadStringArray(event, "deedIds");
+      const startingAssetAssignments = payloadStartingAssetAssignments(event);
+      const assignedDeeds = new Map<string, SeatId>();
+      for (const assignment of startingAssetAssignments ?? []) {
+        for (const deedId of assignment.deedIds) assignedDeeds.set(deedId, assignment.seatId);
+      }
+      const setupSeats =
+        startingAssetAssignments === undefined
+          ? seats
+          : seats.map((seat) => ({
+              ...seat,
+              deedIds:
+                startingAssetAssignments.find((assignment) => assignment.seatId === seat.seatId)
+                  ?.deedIds ?? [],
+            }));
       const improvementInventory = payloadInventory(event, "improvementInventory");
       const decks = payloadDeckStates(event);
       return freezeState({
         ...state,
-        seats,
+        seats: setupSeats,
         deeds:
           deedIds === undefined
             ? state.deeds
-            : deedIds.map((deedId) => ({ deedId, mortgaged: false, improvementLevel: 0 })),
+            : deedIds.map((deedId) => ({
+                deedId,
+                ownerSeatId: assignedDeeds.get(deedId),
+                mortgaged: false,
+                improvementLevel: 0,
+              })),
         bank:
           deedIds === undefined && improvementInventory === undefined
             ? state.bank
             : {
                 cash: payloadNumber(event, "bankCash") ?? state.bank.cash,
-                deedIds: deedIds ?? state.bank.deedIds,
+                deedIds:
+                  deedIds?.filter((deedId) => !assignedDeeds.has(deedId)) ?? state.bank.deedIds,
                 improvementInventory: improvementInventory ?? state.bank.improvementInventory,
               },
         ...(payloadNumber(event, "jackpot") === undefined
@@ -2595,6 +2636,72 @@ function resolveStartGame(state: GameState, actorSeatId: SeatId, rules: RuleSet)
     return reject("INVALID_PAYLOAD", "NO_FIRST_SEAT", "The game has no eligible first seat.");
   }
 
+  // VAR-006/CONTENT-007: shuffle the content-declared deed pool after seat
+  // order is fixed, then deal round-robin. The order is event data so replay
+  // never redraws or infers starting ownership.
+  let startingAssetOrder: readonly string[] = [];
+  let startingAssetAssignments: readonly {
+    readonly seatId: SeatId;
+    readonly deedIds: readonly string[];
+  }[] = [];
+  if (rules.configuration.startingAssetsDealt) {
+    const dealCount = rules.content.economy.startingAssetDealCount;
+    const eligibleDeedIds = rules.content.economy.startingAssetEligibleDeedIds;
+    if (!Number.isSafeInteger(dealCount) || dealCount < 0 || !Array.isArray(eligibleDeedIds)) {
+      return reject(
+        "INVALID_PAYLOAD",
+        "INVALID_STARTING_ASSET_DATA",
+        "Starting asset deal data is invalid.",
+      );
+    }
+    const eligibleSet = new Set(eligibleDeedIds);
+    if (
+      eligibleSet.size !== eligibleDeedIds.length ||
+      eligibleDeedIds.some((deedId) => !rules.content.deeds.some((deed) => deed.deedId === deedId))
+    ) {
+      return reject(
+        "INVALID_PAYLOAD",
+        "INVALID_STARTING_ASSET_DATA",
+        "Starting asset eligibility must contain unique deeds from content.",
+      );
+    }
+    const requiredDeeds = activeSeats.length * dealCount;
+    if (eligibleDeedIds.length < requiredDeeds) {
+      return reject(
+        "ILLEGAL_ACTION",
+        "STARTING_ASSETS_UNAVAILABLE",
+        "There are not enough eligible deeds for a fair starting deal.",
+      );
+    }
+    const shuffled = shuffleCardIds(eligibleDeedIds, prng);
+    startingAssetOrder = shuffled.cardIds;
+    prng = shuffled.prng;
+    const assignmentMap = new Map<SeatId, string[]>();
+    for (const seat of orderedSeats) assignmentMap.set(seat.seatId, []);
+    for (let dealIndex = 0; dealIndex < dealCount; dealIndex += 1) {
+      for (let seatIndex = 0; seatIndex < orderedSeats.length; seatIndex += 1) {
+        const deedId = startingAssetOrder[dealIndex * orderedSeats.length + seatIndex];
+        const seat = orderedSeats[seatIndex];
+        if (deedId === undefined || seat === undefined) continue;
+        assignmentMap.get(seat.seatId)?.push(deedId);
+      }
+    }
+    startingAssetAssignments = orderedSeats.map((seat) => ({
+      seatId: seat.seatId,
+      deedIds: Object.freeze(assignmentMap.get(seat.seatId) ?? []),
+    }));
+  }
+  const dealtBySeat = new Map(
+    startingAssetAssignments.map((assignment) => [assignment.seatId, assignment.deedIds]),
+  );
+  const dealtDeedIds = new Set(
+    startingAssetAssignments.flatMap((assignment) => assignment.deedIds),
+  );
+  const setupSeats = orderedSeats.map((seat) => ({
+    ...seat,
+    deedIds: dealtBySeat.get(seat.seatId) ?? [],
+  }));
+
   const deckOrders: { readonly deckId: string; readonly cardIds: readonly string[] }[] = [];
   const decks: DeckState[] = [];
   for (const deck of rules.content.decks) {
@@ -2609,9 +2716,19 @@ function resolveStartGame(state: GameState, actorSeatId: SeatId, rules: RuleSet)
 
   const nextState = freezeState({
     ...state,
-    seats: orderedSeats,
-    deeds: initialDeedStates(rules),
-    bank: initialBankState(rules),
+    seats: setupSeats,
+    deeds: initialDeedStates(rules).map((deed) => ({
+      ...deed,
+      ownerSeatId: dealtDeedIds.has(deed.deedId)
+        ? setupSeats.find((seat) => seat.deedIds.includes(deed.deedId))?.seatId
+        : undefined,
+    })),
+    bank: {
+      ...initialBankState(rules),
+      deedIds: rules.content.deeds
+        .map((deed) => deed.deedId)
+        .filter((deedId) => !dealtDeedIds.has(deedId)),
+    },
     phase: "AwaitRoll",
     activeSeatId: firstSeatId,
     prioritySeatId: firstSeatId,
@@ -2636,6 +2753,13 @@ function resolveStartGame(state: GameState, actorSeatId: SeatId, rules: RuleSet)
         startingCash: rules.content.economy.startingCash,
         startingPosition: startPosition,
         deedIds: rules.content.deeds.map((deed) => deed.deedId),
+        ...(rules.configuration.startingAssetsDealt
+          ? {
+              startingAssetDealCount: rules.content.economy.startingAssetDealCount,
+              startingAssetOrder,
+              startingAssetAssignments,
+            }
+          : {}),
         bankCash: 0,
         improvementInventory: rules.content.economy.improvementInventory,
         ...(rules.configuration.restSpaceJackpot ? { jackpot: 0 } : {}),
@@ -4119,7 +4243,7 @@ function improvementContext(
   };
 }
 
-/** RULE-005, RULE-008: enforce ownership, complete districts, and even building. */
+/** RULE-005, RULE-008, VAR-007: enforce ownership and district eligibility; optionally relax even building. */
 function resolveBuyImprovement(
   state: GameState,
   actorSeatId: SeatId,
@@ -4171,7 +4295,7 @@ function resolveBuyImprovement(
     );
   }
   const lowestLevel = Math.min(...context.districtDeedStates.map((deed) => deed.improvementLevel));
-  if (currentLevel > lowestLevel) {
+  if (!rules.configuration.relaxedEvenBuilding && currentLevel > lowestLevel) {
     return reject(
       "ILLEGAL_ACTION",
       "EVEN_BUILDING_REQUIRED",
@@ -4242,7 +4366,7 @@ function resolveBuyImprovement(
   return { ok: true, state: freezeState(applyEvent(state, event)), events: Object.freeze([event]) };
 }
 
-/** RULE-005, RULE-008: return one level to bank with content-defined rounding. */
+/** RULE-005, RULE-008, VAR-007: return one level to bank with content-defined rounding. */
 function resolveSellImprovement(
   state: GameState,
   actorSeatId: SeatId,
@@ -4290,7 +4414,7 @@ function resolveSellImprovement(
     );
   }
   const highestLevel = Math.max(...context.districtDeedStates.map((deed) => deed.improvementLevel));
-  if (currentLevel !== highestLevel) {
+  if (!rules.configuration.relaxedEvenBuilding && currentLevel !== highestLevel) {
     return reject(
       "ILLEGAL_ACTION",
       "EVEN_BUILDING_REQUIRED",
@@ -4300,7 +4424,10 @@ function resolveSellImprovement(
   const nextLevels = context.districtDeedStates.map((deed) =>
     deed.deedId === deedId ? deed.improvementLevel - 1 : deed.improvementLevel,
   );
-  if (Math.max(...nextLevels) - Math.min(...nextLevels) > 1) {
+  if (
+    !rules.configuration.relaxedEvenBuilding &&
+    Math.max(...nextLevels) - Math.min(...nextLevels) > 1
+  ) {
     return reject(
       "ILLEGAL_ACTION",
       "EVEN_BUILDING_REQUIRED",
@@ -4425,7 +4552,10 @@ function scarceDemandContext(
       "The deed is already fully improved.",
     );
   }
-  if (currentLevel > Math.min(...context.districtDeedStates.map((deed) => deed.improvementLevel))) {
+  if (
+    !rules.configuration.relaxedEvenBuilding &&
+    currentLevel > Math.min(...context.districtDeedStates.map((deed) => deed.improvementLevel))
+  ) {
     return reject(
       "ILLEGAL_ACTION",
       "EVEN_BUILDING_REQUIRED",

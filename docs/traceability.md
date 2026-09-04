@@ -67,6 +67,16 @@ Rules and accessibility content is authored in `apps/web/src/app/rules/page.tsx`
 PRD-FUN-010, VAR-013, UX-003, UX-005, DS-060, and DS-070; Playwright navigation,
 storage inspection, and manual assistive-technology evidence remain required.
 
+## D4 variant evidence
+
+D4 implements VAR-006 through VAR-008 and CONTENT-007's starting-deed
+eligibility data in `packages/game-content/src/types.ts`,
+`packages/game-content/src/validate.ts`, and
+`packages/game-engine/src/index.ts`. Fixed-seed deal goldens, 2–6-seat fairness,
+underfilled-pool rejection, construction toggle tables, and combined-toggle
+coverage are in `packages/game-engine/test/variant-setup.test.ts`; eligibility
+reference rejection is covered by `packages/game-content/test/validate.test.ts`.
+
 ## Engineering, protocol, security, analytics, and legal
 
 B2 implements the separate snapshot/capability creation seam for ENG-010 and

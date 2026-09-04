@@ -383,7 +383,7 @@ export const PLACEHOLDER_BUNDLE: ContentBundle = {
     similarityDisposition: "Not reviewed. Blocks release until replaced by an authored bundle.",
   },
   // Canonical SHA-256 over this bundle without the hash field. CONTENT-001.
-  hash: "2ba58630b981f8b06a5062121bb45e8e27b2e529ade54b2fe62df8b7e14ac447",
+  hash: "a1e99bfdbfc78e6db5d6f2abad520e5ee54c16a3a485c7b67fde11a368c404a2",
   startSpaceId: "s00",
   detentionSpaceId: "s06",
   spaces,
@@ -399,6 +399,7 @@ export const PLACEHOLDER_BUNDLE: ContentBundle = {
     improvementInventory: { stall: 32, stage: 12 },
     improvementResaleRatio: { numerator: 1, denominator: 2 },
     startingAssetDealCount: 1,
+    startingAssetEligibleDeedIds: deeds.map((deed) => deed.deedId),
   },
   jackpotEligibleSpaceIds: ["s08"],
 };

@@ -749,6 +749,36 @@ export function validateBundle(
       ),
     );
   }
+  const eligibleStartingDeedIds = economy.startingAssetEligibleDeedIds;
+  if (
+    !Array.isArray(eligibleStartingDeedIds) ||
+    !eligibleStartingDeedIds.every((deedId) => typeof deedId === "string")
+  ) {
+    fail(
+      "VARIANT_OUT_OF_BOUNDS",
+      "economy.startingAssetEligibleDeedIds",
+      "Starting asset eligibility must be a list of canonical deed IDs.",
+    );
+  } else {
+    const seenEligible = new Set<string>();
+    for (const deedId of eligibleStartingDeedIds) {
+      if (seenEligible.has(deedId)) {
+        fail(
+          "VARIANT_OUT_OF_BOUNDS",
+          `economy.startingAssetEligibleDeedIds.${deedId}`,
+          idMessage("Starting asset eligibility cannot repeat a deed.", deedId),
+        );
+      }
+      seenEligible.add(deedId);
+      if (!deedIds.has(deedId)) {
+        fail(
+          "VARIANT_OUT_OF_BOUNDS",
+          `economy.startingAssetEligibleDeedIds.${deedId}`,
+          idMessage("Starting asset eligibility must reference a deed in the bundle.", deedId),
+        );
+      }
+    }
+  }
 
   // --- Jackpot references (CONTENT-007) ----------------------------------
   for (const spaceId of bundle.jackpotEligibleSpaceIds) {
