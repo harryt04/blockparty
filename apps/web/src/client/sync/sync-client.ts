@@ -184,6 +184,10 @@ export class GameSyncClient {
         this.options.onPresence?.(envelope);
         return;
       case "game.closed":
+        if (envelope.reason === "SERVER_SHUTDOWN") {
+          this.handleTransportLoss();
+          return;
+        }
         this.closed = true;
         this.started = false;
         if (this.retryTimer !== undefined) clearTimeout(this.retryTimer);

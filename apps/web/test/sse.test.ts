@@ -7,6 +7,7 @@ import { CreateGameRequest } from "@blockparty/contracts";
 import { createGameInTransaction, type GameDocument } from "../src/server/games/create-game";
 import {
   canSubscribe,
+  closeSseConnections,
   publishSnapshot,
   subscribe,
   subscriberCount,
@@ -180,5 +181,22 @@ describe("authenticated SSE delivery", () => {
     expect(watch).toHaveBeenCalledWith([{ $match: { operationType: "insert" } }]);
     await stopChangeStream();
     expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("signals shutdown before closing every authenticated stream", () => {
+    const firstFrames: string[] = [];
+    const secondFrames: string[] = [];
+    const first = subscriber(GAME_ID, "seat-a", firstFrames);
+    const second = subscriber(GAME_ID, "seat-b", secondFrames);
+    subscribe(first);
+    subscribe(second);
+
+    closeSseConnections("SERVER_SHUTDOWN");
+
+    expect(firstFrames.some((frame) => frame.includes('"reason":"SERVER_SHUTDOWN"'))).toBe(true);
+    expect(secondFrames.some((frame) => frame.includes('"reason":"SERVER_SHUTDOWN"'))).toBe(true);
+    expect(first.close).toHaveBeenCalledOnce();
+    expect(second.close).toHaveBeenCalledOnce();
+    expect(subscriberCount(GAME_ID)).toBe(0);
   });
 });

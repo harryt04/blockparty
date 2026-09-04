@@ -1,5 +1,7 @@
 .next
 dist
 .gnhf
+test-results
+playwright-report
 node_modules
 pnpm-lock.yaml

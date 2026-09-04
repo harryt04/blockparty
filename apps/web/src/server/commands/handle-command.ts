@@ -37,6 +37,7 @@ import { connectedSeatTenures } from "../sse/registry";
 import type { AuditDocument, CapabilityDocument } from "../games/create-game";
 import { generateCapability, hashCapability } from "../auth/capabilities";
 import { capturedRuleSet } from "../games/captured-rules";
+import { admitCommand } from "../lifecycle";
 
 export interface CommandAccepted {
   readonly ok: true;
@@ -717,6 +718,11 @@ export async function handleCommand(
   const parsed = CommandEnvelope.safeParse(envelope);
   if (!parsed.success) return { ok: false, code: "INVALID_ENVELOPE", reason: "INVALID_ENVELOPE" };
 
+  const releaseCommand = admitCommand();
+  if (releaseCommand === undefined) {
+    return { ok: false, code: "SERVER_BUSY", reason: "SERVER_SHUTDOWN" };
+  }
+
   const store = options.database ?? commandStore();
   const run = options.transaction ?? withMongoTransaction;
   const now = options.now?.() ?? new Date();
@@ -746,5 +752,7 @@ export async function handleCommand(
       return { ok: false, code: error.code, reason: error.reason };
     }
     return { ok: false, code: "SERVER_BUSY", reason: "COMMAND_TRANSACTION_FAILED" };
+  } finally {
+    releaseCommand();
   }
 }

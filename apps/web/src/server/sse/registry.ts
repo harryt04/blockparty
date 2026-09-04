@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   PROTOCOL_VERSION,
+  type ClosedEnvelope,
   type GameSnapshotProjection,
   type PresenceEnvelope,
 } from "@blockparty/contracts";
@@ -186,6 +187,38 @@ export function subscriberCount(gameId: string, seatId?: string): number {
   const subscribers = registry().get(gameId);
   if (seatId === undefined) return subscribers?.size ?? 0;
   return [...(subscribers ?? [])].filter((subscriber) => subscriber.seatId === seatId).length;
+}
+
+/**
+ * Ends every stream with a retryable shutdown envelope before the process
+ * closes its transport. Clearing the process-local maps also prevents stale
+ * presence from surviving a graceful restart. See ENG-004 and OPS-005.
+ */
+export function closeSseConnections(reason: ClosedEnvelope["reason"]): void {
+  const subscribers = [...registry().values()].flatMap((gameSubscribers) => [...gameSubscribers]);
+  const serverTime = new Date().toISOString();
+  for (const subscriber of subscribers) {
+    const frame = formatFrame("game.closed", {
+      protocolVersion: PROTOCOL_VERSION,
+      type: "game.closed",
+      gameId: subscriber.gameId,
+      serverTime,
+      reason,
+    });
+    try {
+      subscriber.send(frame);
+    } catch {
+      // The stream is already gone; closing it remains best effort.
+    }
+    try {
+      subscriber.close();
+    } catch {
+      // A disconnected stream must not prevent the remaining streams closing.
+    }
+  }
+  registry().clear();
+  presence().clear();
+  presenceTenure().clear();
 }
 
 /** Seat IDs currently subscribed in this process. Presence is never durable. */

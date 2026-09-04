@@ -253,6 +253,49 @@ describe("GameSyncClient", () => {
     }
   });
 
+  it("reconnects after a retryable server shutdown frame", async () => {
+    vi.useFakeTimers();
+    try {
+      const sources: FakeEventSource[] = [];
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(response(bootstrapBody(snapshot(0))))
+        .mockResolvedValueOnce(response(snapshotEnvelope(snapshot(1))));
+      const client = new GameSyncClient({
+        gameId: GAME_ID,
+        fetchImpl,
+        eventSourceFactory: () => {
+          const source = new FakeEventSource();
+          sources.push(source);
+          return source;
+        },
+        onState: () => undefined,
+        jitter: () => 0,
+      });
+
+      await client.start();
+      sources[0]!.open();
+      sources[0]!.emit({
+        protocolVersion: 1,
+        type: "game.closed",
+        gameId: GAME_ID,
+        serverTime: "2026-09-03T15:00:00.000Z",
+        reason: "SERVER_SHUTDOWN",
+      });
+
+      expect(sources[0]!.closed).toBe(true);
+      expect(client.currentState.connection).toBe("reconnecting");
+      expect(client.currentState.connection).not.toBe("closed");
+
+      await vi.advanceTimersByTimeAsync(188);
+      await vi.waitFor(() => expect(client.currentState.snapshot?.sequence).toBe(1));
+      expect(sources).toHaveLength(2);
+      client.close();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("treats malformed named frames as a gap and closes on terminal authorization errors", async () => {
     const source = new FakeEventSource();
     const fetchImpl = vi

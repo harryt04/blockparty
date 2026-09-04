@@ -21,6 +21,7 @@ import { checkOrigin, checkRateLimit, corsHeaders } from "@/server/http/guards";
 import { jsonError } from "@/server/http/responses";
 import { SseConnectionLimitError } from "@/server/sse/registry";
 import { installPresenceRecovery } from "@/server/recovery/presence-recovery";
+import { isServerDraining } from "@/server/lifecycle";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,6 +31,8 @@ const KEEP_ALIVE_MS = 15_000;
 
 export async function GET(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = await params;
+
+  if (isServerDraining()) return jsonError("SERVER_BUSY", { gameId, reason: "SERVER_SHUTDOWN" });
 
   const origin = checkOrigin(request);
   if (!origin.ok) return jsonError(origin.code, { gameId, reason: origin.reason });
@@ -88,16 +91,33 @@ export async function GET(request: Request, { params }: { params: Promise<{ game
       if (recovery === undefined) return jsonError("CONTENT_UNSUPPORTED", { gameId });
     }
 
+    // Shutdown may begin while capability/recovery reads are in flight.
+    if (isServerDraining()) {
+      return jsonError("SERVER_BUSY", { gameId, reason: "SERVER_SHUTDOWN" });
+    }
+
     const seatId = actor.seatId;
 
     const encoder = new TextEncoder();
     let keepAlive: ReturnType<typeof setInterval> | undefined;
     let unsubscribe: (() => void) | undefined;
+    let streamClosed = false;
 
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
         const write = (frame: string) => {
           controller.enqueue(encoder.encode(frame));
+        };
+        const closeStream = () => {
+          if (streamClosed) return;
+          streamClosed = true;
+          if (keepAlive !== undefined) clearInterval(keepAlive);
+          unsubscribe?.();
+          try {
+            controller.close();
+          } catch {
+            // Already closed.
+          }
         };
 
         // Tell the client how long to wait before reconnecting.
@@ -109,7 +129,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ game
           seatId,
           capabilityKind: actor.kind === "reclaim" ? "reclaim" : "seat",
           send: write,
-          close: () => controller.close(),
+          close: closeStream,
         });
 
         // A requested range/snapshot is sent after subscription admission so
@@ -126,16 +146,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ game
         }, KEEP_ALIVE_MS);
 
         request.signal.addEventListener("abort", () => {
-          if (keepAlive !== undefined) clearInterval(keepAlive);
-          unsubscribe?.();
-          try {
-            controller.close();
-          } catch {
-            // Already closed.
-          }
+          closeStream();
         });
       },
       cancel() {
+        streamClosed = true;
         if (keepAlive !== undefined) clearInterval(keepAlive);
         unsubscribe?.();
       },

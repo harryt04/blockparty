@@ -145,10 +145,13 @@ export function activeMongoSessionCount(): number {
  */
 export function installMongoShutdownHandlers(): () => void {
   const onSignal = () => {
-    void closeMongoClient().then(
-      () => process.exit(0),
-      () => process.exit(1),
-    );
+    void import("../lifecycle")
+      .then(({ beginServerShutdown }) => beginServerShutdown())
+      .then(() => closeMongoClient())
+      .then(
+        () => process.exit(0),
+        () => process.exit(1),
+      );
   };
   process.once("SIGTERM", onSignal);
   process.once("SIGINT", onSignal);

@@ -660,12 +660,13 @@ recorded draws.
       Proves: browser network tests for denied/granted/withdrawn consent and schema/redaction canaries; TEST-002 browser security/privacy layer.
       Implemented consent-gated PostHog capture, strict taxonomy validation, device-local withdrawal, and product-event hooks. `apps/web/e2e/analytics.spec.ts` passes denied/granted/withdrawn network checks in Chromium, Firefox, and WebKit; `apps/web/test/analytics.test.ts` covers schema/redaction canaries.
 
-- [ ] **F3 — Coolify deployment, index maintenance, and the scheduled cleanup**
-      Blocked by: F2
-      Requirements: PRD-NFR-001, ENG-004, OPS-001, OPS-002, OPS-003, OPS-004, OPS-005, OPS-007
-      Read: docs/engineering/architecture.md, docs/delivery/operations.md
-      Acceptance: an immutable Node service deploys through Coolify to the private replica set, applies idempotent indexes, exposes correct probes, drains commands/SSE gracefully, and runs authenticated scheduled cleanup from the same image with documented rollback.
-      Proves: staging deployment smoke and migration/cleanup/redeploy/rollback drill records; TEST-002 deployment/runbook layer.
+- [?] **F3 — Coolify deployment, index maintenance, and the scheduled cleanup**
+  Blocked by: F2
+  Requirements: PRD-NFR-001, ENG-004, OPS-001, OPS-002, OPS-003, OPS-004, OPS-005, OPS-007
+  Read: docs/engineering/architecture.md, docs/delivery/operations.md
+  Acceptance: an immutable Node service deploys through Coolify to the private replica set, applies idempotent indexes, exposes correct probes, drains commands/SSE gracefully, and runs authenticated scheduled cleanup from the same image with documented rollback.
+  Proves: staging deployment smoke and migration/cleanup/redeploy/rollback drill records; TEST-002 deployment/runbook layer.
+  Added the Coolify deployment and rollback runbook, same-image maintenance/cleanup procedure, and lifecycle tests for command draining and retryable SSE shutdown. Staging execution and operator sign-off remain required before public release.
 
 - [ ] **F4 — Structured logs, metrics, alerts, and the redaction test**
       Blocked by: F3
