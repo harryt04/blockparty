@@ -8,6 +8,7 @@ import { useState } from "react";
 import { formatMoney } from "@/components/display-names";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ModalDialog } from "@/components/ui/modal-dialog";
 import { actionLabel } from "./action-bar";
 import { detentionDecisionContext, obligationDecisionContext } from "./game-model";
 
@@ -168,11 +169,14 @@ export function DetentionDebtPanel({
               <p className="text-sm text-muted-ink">{blockedBankruptcy.reason}</p>
             ) : null}
             {confirmBankruptcy && bankruptcyAction !== undefined ? (
-              <div
-                className="rounded-(--radius-md) border-2 border-danger bg-danger/5 p-3"
-                role="alert"
+              <ModalDialog
+                open
+                titleId="bankruptcy-confirmation-heading"
+                onClose={() => setConfirmBankruptcy(false)}
               >
-                <h3 className="font-medium">This cannot be undone</h3>
+                <h2 id="bankruptcy-confirmation-heading" className="font-medium">
+                  This cannot be undone
+                </h2>
                 <p className="mt-1 text-sm">
                   {obligation.creditorIsBank
                     ? "Your Addresses return to The Committee for auction and held Neighborly Words return to their decks."
@@ -197,7 +201,7 @@ export function DetentionDebtPanel({
                     Keep paying
                   </Button>
                 </div>
-              </div>
+              </ModalDialog>
             ) : null}
           </CardContent>
         </Card>

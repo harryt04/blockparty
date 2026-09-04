@@ -9,6 +9,7 @@ import { formatMoney } from "@/components/display-names";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ModalDialog } from "@/components/ui/modal-dialog";
 import {
   managementDecisionContext,
   type ManagementActionContext,
@@ -180,13 +181,14 @@ export function ManagementPanel({
             )}
 
             {selectedConfirmation?.deed.deedId === deed.deedId ? (
-              <div
-                className="rounded-(--radius-md) border-2 border-brand bg-brand/5 p-3"
-                aria-labelledby={`confirm-${deed.deedId}`}
+              <ModalDialog
+                open
+                titleId={`confirm-${deed.deedId}`}
+                onClose={() => setConfirmation(undefined)}
               >
-                <h4 id={`confirm-${deed.deedId}`} className="font-medium">
+                <h2 id={`confirm-${deed.deedId}`} className="font-medium">
                   Confirm {actionLabel(selectedConfirmation.action.type).toLowerCase()}
-                </h4>
+                </h2>
                 <p className="mt-1 text-sm">
                   {actionPreview(selectedConfirmation.action.type, deed, context.balance)}
                 </p>
@@ -208,7 +210,7 @@ export function ManagementPanel({
                     Keep reviewing
                   </Button>
                 </div>
-              </div>
+              </ModalDialog>
             ) : null}
           </section>
         ))}

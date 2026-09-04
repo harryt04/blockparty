@@ -601,19 +601,20 @@ recorded draws.
       Implemented an always-visible ordered semantic board list with keyboard inspect controls, complete accessible stop names, and selected-detail relationships. `apps/web/test/game-model.test.ts` proves the accessible label carries public route, category, district, ownership, price, mortgage, improvement, and occupant facts; browser matrix evidence remains planned because Playwright is not configured.
 
 - [x] **E2 — Live regions and restrained announcements**
-  Blocked by: E1
-  Requirements: PRD-NFR-005, UX-040, DS-070
-  Read: docs/design/ux-spec.md, docs/design/design-system.md
-  Acceptance: turn-critical actor, decision, dice, debt, pause, reconnect, and terminal changes announce once with suitable priority while routine feed/presence churn stays silent and focus remains stable.
-  Proves: component mutation cases and Playwright live-region sequence assertions; TEST-002 component/browser accessibility layer.
-  Implemented one-shot priority-aware live regions backed by an authoritative event allowlist; `apps/web/test/live-announcements.test.ts` proves critical event context, routine-event silence, decision deduplication, and reconnect transitions. Playwright and manual assistive-technology evidence remains planned because the browser harness is not configured.
+      Blocked by: E1
+      Requirements: PRD-NFR-005, UX-040, DS-070
+      Read: docs/design/ux-spec.md, docs/design/design-system.md
+      Acceptance: turn-critical actor, decision, dice, debt, pause, reconnect, and terminal changes announce once with suitable priority while routine feed/presence churn stays silent and focus remains stable.
+      Proves: component mutation cases and Playwright live-region sequence assertions; TEST-002 component/browser accessibility layer.
+      Implemented one-shot priority-aware live regions backed by an authoritative event allowlist; `apps/web/test/live-announcements.test.ts` proves critical event context, routine-event silence, decision deduplication, and reconnect transitions. Playwright and manual assistive-technology evidence remains planned because the browser harness is not configured.
 
-- [ ] **E3 — Dialog and sheet focus management**
+- [x] **E3 — Dialog and sheet focus management**
       Blocked by: E1
       Requirements: PRD-NFR-005, UX-040, DS-030, DS-070
       Read: docs/design/ux-spec.md, docs/design/design-system.md
       Acceptance: dialogs/sheets label themselves, trap and restore focus, support Escape except destructive required choices, prevent background interaction, and preserve decision context across server updates.
       Proves: keyboard Playwright matrix for every modal workflow, including update/unmount focus restoration; TEST-002 browser accessibility layer.
+      Implemented a shared portal-backed modal/sheet focus boundary with inert background, keyboard trapping, Escape/backdrop dismissal rules, opener restoration, and controlled server-update persistence; `apps/web/test/modal-dialog-model.test.ts` proves the keyboard boundary and Escape contract. Playwright focus journeys and manual assistive-technology evidence remain planned because the browser harness is not configured.
 
 - [ ] **E4 — Non-colour encoding, contrast, forced colours, reduced motion**
       Blocked by: E1

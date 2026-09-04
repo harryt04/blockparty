@@ -8,6 +8,7 @@ import { useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ModalDialog } from "@/components/ui/modal-dialog";
 import { recoveryDecisionContext } from "./game-model";
 
 export function RecoveryPanel({
@@ -125,11 +126,14 @@ export function RecoveryPanel({
         ) : null}
 
         {confirmation?.type === "replace" ? (
-          <div
-            className="rounded-(--radius-md) border-2 border-danger bg-danger/5 p-3"
-            role="alert"
+          <ModalDialog
+            open
+            titleId="replace-seat-confirmation-heading"
+            onClose={() => setConfirmation(undefined)}
           >
-            <p className="font-medium">Replace this disconnected seat?</p>
+            <h2 id="replace-seat-confirmation-heading" className="font-medium">
+              Replace this disconnected seat?
+            </h2>
             <p className="mt-1 text-sm">
               The old seat command credential will be revoked. The player keeps their assets and a
               separate reclaim claim; this change cannot happen during an unresolved action.
@@ -153,7 +157,7 @@ export function RecoveryPanel({
                 Keep the seat
               </Button>
             </div>
-          </div>
+          </ModalDialog>
         ) : null}
 
         {context.canEndNoContest ? (
@@ -173,11 +177,14 @@ export function RecoveryPanel({
         ) : null}
 
         {confirmation?.type === "no-contest" ? (
-          <div
-            className="rounded-(--radius-md) border-2 border-danger bg-danger/5 p-3"
-            role="alert"
+          <ModalDialog
+            open
+            titleId="no-contest-confirmation-heading"
+            onClose={() => setConfirmation(undefined)}
           >
-            <p className="font-medium">End the game with no winner?</p>
+            <h2 id="no-contest-confirmation-heading" className="font-medium">
+              End the game with no winner?
+            </h2>
             <p className="mt-1 text-sm">
               This is permanent. The game will become read-only, no winner will be recorded, and its
               final event history will remain available until normal expiry.
@@ -201,7 +208,7 @@ export function RecoveryPanel({
                 Keep playing
               </Button>
             </div>
-          </div>
+          </ModalDialog>
         ) : null}
       </CardContent>
     </Card>

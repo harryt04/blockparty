@@ -73,6 +73,14 @@ region; routine feed events, presence churn, and focus remain silent/stable. Evi
 `apps/web/test/live-announcements.test.ts`; browser sequence and manual assistive-technology
 evidence remains planned.
 
+E3 adds the shared `ModalDialog` shell in `apps/web/src/components/ui/modal-dialog.tsx` and
+keyboard rules in `apps/web/src/components/ui/modal-dialog-model.ts`. The action sheet and
+management, bankruptcy, bot-replacement, and no-contest confirmations now label their dialogs,
+trap keyboard focus, inert the background, dismiss safely, and restore the invoking control when
+closed or unmounted. This provides implementation evidence for PRD-NFR-005, UX-040, DS-030, and
+DS-070; `apps/web/test/modal-dialog-model.test.ts` proves the keyboard boundary, while Playwright
+update, unmount, and cross-browser focus journeys remain planned.
+
 C13 adds the device-only presentation preference provider and settings panel in
 `apps/web/src/components/settings/presentation-preferences.tsx`, with local
 serialization/fallback evidence in `apps/web/test/settings-content.test.ts`.

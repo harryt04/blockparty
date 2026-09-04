@@ -14,8 +14,9 @@ import type {
   GameSnapshotProjection,
   LegalAction,
 } from "@blockparty/contracts";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ModalDialog } from "@/components/ui/modal-dialog";
 import { AcquisitionAuctionSummary } from "./acquisition-auction-summary";
 import { MANAGEMENT_ACTION_TYPES } from "./game-model";
 
@@ -208,47 +209,7 @@ export function ActionBar({
   onAction?: (action: LegalAction, amount?: number) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const invokerRef = useRef<HTMLButtonElement>(null);
-  const dialogRef = useRef<HTMLDivElement>(null);
   const submit = onAction ?? (() => undefined);
-
-  useEffect(() => {
-    if (!open) {
-      invokerRef.current?.focus();
-      return undefined;
-    }
-    const dialog = dialogRef.current;
-    const focusable = dialog?.querySelector<HTMLElement>(
-      "button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex='-1'])",
-    );
-    focusable?.focus();
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setOpen(false);
-        return;
-      }
-      if (event.key !== "Tab" || dialog === null) return;
-      const controls = [
-        ...dialog.querySelectorAll<HTMLElement>(
-          "button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex='-1'])",
-        ),
-      ];
-      if (controls.length === 0) return;
-      const first = controls[0];
-      const last = controls[controls.length - 1];
-      if (first === undefined || last === undefined) return;
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open]);
 
   return (
     <section
@@ -263,7 +224,6 @@ export function ActionBar({
       ) : null}
 
       <Button
-        ref={invokerRef}
         variant="primary"
         className="w-full sm:w-auto"
         onClick={() => setOpen(true)}
@@ -274,54 +234,46 @@ export function ActionBar({
         {pending ? "Submitting action…" : "Open action sheet"}
       </Button>
 
-      {open ? (
-        <div
-          className="fixed inset-0 z-20 flex items-end bg-ink/40 p-0 sm:items-center sm:justify-center sm:p-4"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setOpen(false);
-          }}
-        >
-          <div
-            id="game-action-sheet"
-            ref={dialogRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="game-action-sheet-title"
-            className="max-h-[min(90dvh,42rem)] w-full overflow-y-auto rounded-t-(--radius-lg) border border-line bg-surface-raised p-4 shadow-xl sm:max-w-lg sm:rounded-(--radius-lg)"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 id="game-action-sheet-title" className="font-serif text-2xl">
-                  Your actions
-                </h2>
-                <p className="mt-1 text-sm text-muted-ink">
-                  These controls come from the current server state.
-                </p>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
-                Close
-              </Button>
-            </div>
-            <div className="mt-4">
-              {decisionSnapshot === undefined ? null : (
-                <AcquisitionAuctionSummary snapshot={decisionSnapshot} compact />
-              )}
-              <div className={decisionSnapshot === undefined ? undefined : "mt-4"}>
-                <ActionOptions
-                  legalActions={legalActions}
-                  actionAvailability={actionAvailability}
-                  decisionSnapshot={decisionSnapshot}
-                  disabled={disabled || pending}
-                  onAction={(action, amount) => {
-                    submit(action, amount);
-                    setOpen(false);
-                  }}
-                />
-              </div>
-            </div>
+      <ModalDialog
+        open={open}
+        id="game-action-sheet"
+        titleId="game-action-sheet-title"
+        dismissible={!(legalActions.length === 1 && legalActions[0]?.type === "DeclareBankruptcy")}
+        onClose={() => setOpen(false)}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 id="game-action-sheet-title" className="font-serif text-2xl">
+              Your actions
+            </h2>
+            <p className="mt-1 text-sm text-muted-ink">
+              These controls come from the current server state.
+            </p>
+          </div>
+          {legalActions.length === 1 && legalActions[0]?.type === "DeclareBankruptcy" ? null : (
+            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
+              Close
+            </Button>
+          )}
+        </div>
+        <div className="mt-4">
+          {decisionSnapshot === undefined ? null : (
+            <AcquisitionAuctionSummary snapshot={decisionSnapshot} compact />
+          )}
+          <div className={decisionSnapshot === undefined ? undefined : "mt-4"}>
+            <ActionOptions
+              legalActions={legalActions}
+              actionAvailability={actionAvailability}
+              decisionSnapshot={decisionSnapshot}
+              disabled={disabled || pending}
+              onAction={(action, amount) => {
+                submit(action, amount);
+                setOpen(false);
+              }}
+            />
           </div>
         </div>
-      ) : null}
+      </ModalDialog>
     </section>
   );
 }
