@@ -71,7 +71,9 @@ cookies, seeds, future deck order, pseudonyms, command payloads, private
 projections, and analytics identifiers. Metrics cover request/error/latency,
 transaction conflicts, SSE connections and lag, change-stream recovery,
 readiness, cleanup, expiry, and MongoDB pool health. Alerts name an owner,
-threshold, runbook link, and recovery condition.
+threshold, [runbook link](observability-runbook.md), and recovery condition.
+The logger and telemetry allowlists are the implementation boundary; staging
+must complete the fire-and-recover drill before release.
 
 ## OPS-007 — Retention and scheduled cleanup
 

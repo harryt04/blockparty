@@ -668,12 +668,13 @@ recorded draws.
   Proves: staging deployment smoke and migration/cleanup/redeploy/rollback drill records; TEST-002 deployment/runbook layer.
   Added the Coolify deployment and rollback runbook, same-image maintenance/cleanup procedure, and lifecycle tests for command draining and retryable SSE shutdown. Staging execution and operator sign-off remain required before public release.
 
-- [ ] **F4 — Structured logs, metrics, alerts, and the redaction test**
-      Blocked by: F3
-      Requirements: OPS-006, OPS-008, SEC-004, SEC-006
-      Read: docs/delivery/operations.md, docs/engineering/security-privacy-analytics.md
-      Acceptance: structured safe logs/metrics cover requests, transactions, conflicts, SSE lag, readiness, cleanup, pool and version data; actionable alerts link owners/runbooks and exclude all forbidden sensitive fields.
-      Proves: integration redaction canaries plus staging metric/alert fire-and-recover drill; TEST-002 security-boundary/deployment layer.
+- [?] **F4 — Structured logs, metrics, alerts, and the redaction test**
+  Blocked by: F3
+  Requirements: OPS-006, OPS-008, SEC-004, SEC-006
+  Read: docs/delivery/operations.md, docs/engineering/security-privacy-analytics.md
+  Acceptance: structured safe logs/metrics cover requests, transactions, conflicts, SSE lag, readiness, cleanup, pool and version data; actionable alerts link owners/runbooks and exclude all forbidden sensitive fields.
+  Proves: integration redaction canaries plus staging metric/alert fire-and-recover drill; TEST-002 security-boundary/deployment layer.
+  Implemented the allowlisted telemetry/logger boundary, all-API request instrumentation, subsystem metrics, and owner-linked alert definitions in `apps/web/src/server/observability/telemetry.ts` and `docs/delivery/observability-runbook.md`; `apps/web/test/telemetry.test.ts` proves coverage, forbidden-field exclusion, and alert fire/recovery. Staging fire-and-recover execution remains a human operational sign-off item.
 
 - [ ] **F5 — Backup and restore drill**
       Blocked by: F4

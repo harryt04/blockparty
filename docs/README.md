@@ -35,6 +35,7 @@ When documents disagree, use this order and correct the lower-level document:
 | Engineering | [Security, privacy, analytics](engineering/security-privacy-analytics.md) | Threat model, PostHog policy, data minimization, and acceptance checks                                |
 | Delivery    | [Test strategy](delivery/test-strategy.md)                                | CI, scenario, browser, accessibility, soak, load, and release evidence                                |
 | Delivery    | [Accessibility checklist](delivery/accessibility-checklist.md)            | E6 automated run record and human assistive-technology release evidence                               |
+| Delivery    | [Observability runbook](delivery/observability-runbook.md)                | F4 safe telemetry, alerts, and staging drill record                                                   |
 | Delivery    | [Build backlog](delivery/build-backlog.md)                                | Delivery plan: closed 64-ticket queue across Loops 0–F; one ticket per session                        |
 | Delivery    | [gnhf prompt](gnhf-prompt.md)                                             | The per-iteration loop prompt for autonomous agents                                                   |
 | Delivery    | [gnhf CLI](gnhf-cli.md)                                                   | The exact gnhf commands, branch policy, and stop condition                                            |

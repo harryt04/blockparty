@@ -17,6 +17,7 @@ import { buildSeatProjection, type ProjectionSeatSource } from "../projections/a
 import { readPublicEvents } from "../sync/recovery";
 import { capturedRuleSet } from "../games/captured-rules";
 import { publishSnapshot, subscriberCount, subscribedSeatAccess } from "./registry";
+import { observeChangeStreamRecovery, observeSseLag } from "../observability/telemetry";
 
 interface ChangeDocument {
   readonly operationType?: string;
@@ -121,10 +122,14 @@ async function consume(stream: ChangeStream): Promise<void> {
   try {
     for await (const change of stream) {
       const event = eventFromChange(change as ChangeDocument);
-      if (event !== undefined) await publishCommittedProjection(event);
+      if (event !== undefined) {
+        observeSseLag(Date.now() - Date.parse(event.occurredAt));
+        await publishCommittedProjection(event);
+      }
     }
   } catch {
     // A dropped cursor cannot lose state. Clients reconnect and call /sync.
+    observeChangeStreamRecovery();
   } finally {
     const state = runtime();
     if (state.stream === stream) {

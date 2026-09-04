@@ -17,6 +17,7 @@ import type {
   InvitationDocument,
 } from "../games/create-game";
 import type { CommandReceiptDocument, GameEventDocument } from "../commands/handle-command";
+import { observeCleanup } from "../observability/telemetry";
 
 export const RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 export const CLEANUP_BATCH_SIZE = 100;
@@ -213,5 +214,7 @@ export async function runRetentionCleanup(options: RetentionOptions = {}): Promi
     if (due.length < batchSize) break;
   }
 
-  return { expiredGames, deletedGames, revokedCapabilities };
+  const result = { expiredGames, deletedGames, revokedCapabilities };
+  observeCleanup(result);
+  return result;
 }

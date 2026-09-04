@@ -19,11 +19,18 @@ import type {
 import { COOKIE_NAMES, COOKIE_OPTIONS } from "@/server/auth/capabilities";
 import { checkPayloadSize, guardMutation } from "@/server/http/guards";
 import { jsonError, jsonOk } from "@/server/http/responses";
+import { withRequestTelemetry } from "@/server/observability/telemetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
+export function POST(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
+  return withRequestTelemetry("POST /api/games/:gameId/host/claim", request, () =>
+    claimHost(request, params),
+  );
+}
+
+async function claimHost(request: Request, params: Promise<{ gameId: string }>) {
   const { gameId } = await params;
   const size = checkPayloadSize(request);
   if (!size.ok) return jsonError(size.code, { gameId, reason: size.reason });

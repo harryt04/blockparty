@@ -9,11 +9,18 @@ import { handleCommand } from "@/server/commands/handle-command";
 import { COOKIE_NAMES, COOKIE_OPTIONS } from "@/server/auth/capabilities";
 import { checkJsonContentType, checkRequestBodySize, guardMutation } from "@/server/http/guards";
 import { jsonError, jsonOk } from "@/server/http/responses";
+import { withRequestTelemetry } from "@/server/observability/telemetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
+export function POST(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
+  return withRequestTelemetry("POST /api/games/:gameId/commands", request, () =>
+    postCommand(request, params),
+  );
+}
+
+async function postCommand(request: Request, params: Promise<{ gameId: string }>) {
   const { gameId } = await params;
   const size = await checkRequestBodySize(request);
   if (!size.ok) return jsonError(size.code, { reason: size.reason });

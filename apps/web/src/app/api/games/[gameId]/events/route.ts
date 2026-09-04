@@ -22,6 +22,7 @@ import { jsonError } from "@/server/http/responses";
 import { SseConnectionLimitError } from "@/server/sse/registry";
 import { installPresenceRecovery } from "@/server/recovery/presence-recovery";
 import { isServerDraining } from "@/server/lifecycle";
+import { withRequestTelemetry } from "@/server/observability/telemetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,7 +30,13 @@ export const dynamic = "force-dynamic";
 /** Proxy idle timeouts must exceed this. See ENG-004. */
 const KEEP_ALIVE_MS = 15_000;
 
-export async function GET(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
+export function GET(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
+  return withRequestTelemetry("GET /api/games/:gameId/events", request, () =>
+    getEvents(request, params),
+  );
+}
+
+async function getEvents(request: Request, params: Promise<{ gameId: string }>) {
   const { gameId } = await params;
 
   if (isServerDraining()) return jsonError("SERVER_BUSY", { gameId, reason: "SERVER_SHUTDOWN" });

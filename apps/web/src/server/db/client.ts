@@ -11,6 +11,7 @@ import "server-only";
  */
 import { MongoClient, type ClientSession, type Db } from "mongodb";
 import { env, isDatabaseConfigured } from "../env";
+import { observeMongoPool, observeReadiness } from "../observability/telemetry";
 
 /** Cached across hot reloads in development so connections do not leak. */
 const globalForMongo = globalThis as unknown as {
@@ -107,8 +108,13 @@ export async function checkDatabaseReadiness(
  * the credential, or the driver's error text. See SEC-004.
  */
 export async function pingDatabase(): Promise<"ok" | "not_configured" | "unreachable"> {
-  if (!isDatabaseConfigured) return "not_configured";
-  return checkDatabaseReadiness(getDb());
+  if (!isDatabaseConfigured) {
+    observeReadiness("not_configured");
+    return "not_configured";
+  }
+  const status = await checkDatabaseReadiness(getDb());
+  observeReadiness(status);
+  return status;
 }
 
 /**
@@ -125,11 +131,13 @@ export async function withMongoTransaction<T>(
 
   const session = getMongoClient().startSession();
   state.activeSessions += 1;
+  observeMongoPool(state.activeSessions, MAX_ACTIVE_SESSIONS);
   try {
     return await session.withTransaction(() => operation(session));
   } finally {
     await session.endSession();
     state.activeSessions -= 1;
+    observeMongoPool(state.activeSessions, MAX_ACTIVE_SESSIONS);
   }
 }
 

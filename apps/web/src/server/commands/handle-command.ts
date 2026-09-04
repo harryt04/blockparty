@@ -38,6 +38,7 @@ import type { AuditDocument, CapabilityDocument } from "../games/create-game";
 import { generateCapability, hashCapability } from "../auth/capabilities";
 import { capturedRuleSet } from "../games/captured-rules";
 import { admitCommand } from "../lifecycle";
+import { observeTransaction, type TransactionOutcome } from "../observability/telemetry";
 
 export interface CommandAccepted {
   readonly ok: true;
@@ -726,6 +727,9 @@ export async function handleCommand(
   const store = options.database ?? commandStore();
   const run = options.transaction ?? withMongoTransaction;
   const now = options.now?.() ?? new Date();
+  const startedAt = Date.now();
+  let transactionOutcome: TransactionOutcome = "failed";
+  let transactionCode: ErrorCode | undefined;
   try {
     const committed = await run((session) =>
       parsed.data.payload.type === "ConfigureRules"
@@ -735,6 +739,8 @@ export async function handleCommand(
           : transact(parsed.data, actor, store, session, now),
     );
     const outcome = committed.outcome;
+    transactionOutcome = outcome.ok ? "accepted" : "rejected";
+    if (!outcome.ok) transactionCode = outcome.code;
     if (outcome.ok && committed.events.length > 0) {
       const safeEvents = committed.events.map(publicEvent);
       await (
@@ -749,10 +755,13 @@ export async function handleCommand(
     return outcome;
   } catch (error) {
     if (error instanceof CommandPathError) {
+      transactionOutcome = error.code === "STALE_VERSION" ? "conflict" : "rejected";
+      transactionCode = error.code;
       return { ok: false, code: error.code, reason: error.reason };
     }
     return { ok: false, code: "SERVER_BUSY", reason: "COMMAND_TRANSACTION_FAILED" };
   } finally {
+    observeTransaction(transactionOutcome, Date.now() - startedAt, transactionCode);
     releaseCommand();
   }
 }

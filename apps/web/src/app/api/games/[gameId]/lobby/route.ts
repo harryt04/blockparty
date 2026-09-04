@@ -13,11 +13,16 @@ import { jsonError, jsonOk } from "@/server/http/responses";
 import type { GameDocument } from "@/server/games/create-game";
 import { buildLobbyProjection } from "@/server/projections/authorize";
 import { subscriberCount } from "@/server/sse/registry";
+import { withRequestTelemetry } from "@/server/observability/telemetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ gameId: string }> }) {
+export function GET(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
+  return withRequestTelemetry("GET /api/games/:gameId/lobby", request, () => getLobby(params));
+}
+
+async function getLobby(params: Promise<{ gameId: string }>) {
   const { gameId } = await params;
   const actor = await readSeatCapability(gameId);
   if (actor === undefined) return jsonError("UNAUTHENTICATED", { gameId });

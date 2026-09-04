@@ -17,11 +17,16 @@ import { env } from "@/server/env";
 import { jsonError, jsonOk, notFound } from "@/server/http/responses";
 import { checkOrigin, checkPayloadSize, checkRateLimit } from "@/server/http/guards";
 import { retentionStore, runRetentionCleanup } from "@/server/retention/cleanup";
+import { observeCleanupFailure, withRequestTelemetry } from "@/server/observability/telemetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
+export function POST(request: Request) {
+  return withRequestTelemetry("POST /api/internal/cleanup", request, () => runCleanup(request));
+}
+
+async function runCleanup(request: Request) {
   const size = checkPayloadSize(request);
   if (!size.ok) return jsonError(size.code, { reason: size.reason });
   const configured = env.INTERNAL_CLEANUP_SECRET;
@@ -47,6 +52,7 @@ export async function POST(request: Request) {
   } catch {
     // The scheduler can safely retry the same bounded job. Do not expose
     // driver details or whether a particular game exists. See SEC-004.
+    observeCleanupFailure();
     return jsonError("SERVER_BUSY");
   }
 }

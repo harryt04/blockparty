@@ -21,11 +21,16 @@ import {
 } from "@/server/games/create-game";
 import { checkJsonContentType, checkRequestBodySize, guardMutation } from "@/server/http/guards";
 import { jsonError, jsonOk } from "@/server/http/responses";
+import { withRequestTelemetry } from "@/server/observability/telemetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
+export function POST(request: Request) {
+  return withRequestTelemetry("POST /api/games", request, () => createGame(request));
+}
+
+async function createGame(request: Request) {
   const size = await checkRequestBodySize(request);
   if (!size.ok) return jsonError(size.code, { reason: size.reason });
   const contentType = checkJsonContentType(request);

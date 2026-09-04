@@ -12,11 +12,16 @@ import { PLACEHOLDER_BUNDLE, validateBundle } from "@blockparty/game-content";
 import { pingDatabase } from "@/server/db/client";
 import { isProduction } from "@/server/env";
 import { jsonOk } from "@/server/http/responses";
+import { withRequestTelemetry } from "@/server/observability/telemetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export function GET(request: Request) {
+  return withRequestTelemetry("GET /api/health/ready", request, getReady);
+}
+
+async function getReady() {
   const database = await pingDatabase();
   const bundle = validateBundle(PLACEHOLDER_BUNDLE, { production: isProduction });
 

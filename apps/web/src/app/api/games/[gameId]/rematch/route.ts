@@ -19,11 +19,18 @@ import {
 } from "@/server/games/create-game";
 import { checkJsonContentType, checkRequestBodySize, guardMutation } from "@/server/http/guards";
 import { jsonError, jsonOk } from "@/server/http/responses";
+import { withRequestTelemetry } from "@/server/observability/telemetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
+export function POST(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
+  return withRequestTelemetry("POST /api/games/:gameId/rematch", request, () =>
+    createRematch(request, params),
+  );
+}
+
+async function createRematch(request: Request, params: Promise<{ gameId: string }>) {
   const { gameId } = await params;
   const size = await checkRequestBodySize(request);
   if (!size.ok) return jsonError(size.code, { gameId, reason: size.reason });

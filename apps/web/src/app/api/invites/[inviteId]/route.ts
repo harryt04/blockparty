@@ -13,11 +13,18 @@ import type { GameDocument, InvitationDocument } from "@/server/games/create-gam
 import { getInviteStatus } from "@/server/games/join-game";
 import { checkRateLimit } from "@/server/http/guards";
 import { jsonError, jsonOk } from "@/server/http/responses";
+import { withRequestTelemetry } from "@/server/observability/telemetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request, { params }: { params: Promise<{ inviteId: string }> }) {
+export function GET(request: Request, { params }: { params: Promise<{ inviteId: string }> }) {
+  return withRequestTelemetry("GET /api/invites/:inviteId", request, () =>
+    getInvite(request, params),
+  );
+}
+
+async function getInvite(request: Request, params: Promise<{ inviteId: string }>) {
   const limit = checkRateLimit(request, "join");
   if (!limit.ok) return jsonError(limit.code, { reason: limit.reason });
 

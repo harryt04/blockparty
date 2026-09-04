@@ -28,6 +28,7 @@ const EnvSchema = z.object({
 
   PROTOCOL_VERSION: z.coerce.number().int().default(1),
   APP_VERSION: z.string().default("0.0.0"),
+  CONTENT_VERSION: z.string().default("0.0.0-placeholder"),
   PWA_CACHE_VERSION: z.string().default("1"),
 
   /** Unset disables the internal cleanup route entirely. */

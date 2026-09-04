@@ -7,6 +7,7 @@ import {
   type PresenceEnvelope,
 } from "@blockparty/contracts";
 import { env } from "../env";
+import { observeSseConnections } from "../observability/telemetry";
 
 /**
  * Process-local SSE subscriber registry. See PROTO-003.
@@ -123,6 +124,7 @@ export function subscribe(subscriber: Subscriber): () => void {
   }
   set.add(subscriber);
   byGame.set(subscriber.gameId, set);
+  observeSseConnections(subscriberCount());
 
   const bySeat = presence();
   const counts = bySeat.get(subscriber.gameId) ?? new Map<string, number>();
@@ -175,6 +177,7 @@ export function subscribe(subscriber: Subscriber): () => void {
       bySeat.delete(subscriber.gameId);
       presenceTenure().delete(subscriber.gameId);
     }
+    observeSseConnections(subscriberCount());
   };
 }
 
@@ -183,7 +186,10 @@ export function canSubscribe(gameId: string, seatId: string): boolean {
   return subscriberCount(gameId, seatId) < env.RATE_LIMIT_SSE_CONNECTIONS;
 }
 
-export function subscriberCount(gameId: string, seatId?: string): number {
+export function subscriberCount(gameId?: string, seatId?: string): number {
+  if (gameId === undefined) {
+    return [...registry().values()].reduce((total, subscribers) => total + subscribers.size, 0);
+  }
   const subscribers = registry().get(gameId);
   if (seatId === undefined) return subscribers?.size ?? 0;
   return [...(subscribers ?? [])].filter((subscriber) => subscriber.seatId === seatId).length;
@@ -219,6 +225,7 @@ export function closeSseConnections(reason: ClosedEnvelope["reason"]): void {
   registry().clear();
   presence().clear();
   presenceTenure().clear();
+  observeSseConnections(0);
 }
 
 /** Seat IDs currently subscribed in this process. Presence is never durable. */

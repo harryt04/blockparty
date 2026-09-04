@@ -18,11 +18,18 @@ import { jsonError } from "@/server/http/responses";
 import { subscriberCount } from "@/server/sse/registry";
 import type { GameEventDocument } from "@/server/commands/handle-command";
 import { readPublicEvents } from "@/server/sync/recovery";
+import { withRequestTelemetry } from "@/server/observability/telemetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ gameId: string }> }) {
+export function GET(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
+  return withRequestTelemetry("GET /api/games/:gameId/bootstrap", request, () =>
+    getBootstrap(params),
+  );
+}
+
+async function getBootstrap(params: Promise<{ gameId: string }>) {
   const { gameId } = await params;
 
   try {

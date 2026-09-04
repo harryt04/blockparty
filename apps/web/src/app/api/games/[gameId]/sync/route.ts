@@ -15,11 +15,18 @@ import { checkRateLimit } from "@/server/http/guards";
 import { jsonError, jsonOk } from "@/server/http/responses";
 import type { GameDocument } from "@/server/games/create-game";
 import { recover, recoveryStore } from "@/server/sync/recovery";
+import { withRequestTelemetry } from "@/server/observability/telemetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
+export function GET(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
+  return withRequestTelemetry("GET /api/games/:gameId/sync", request, () =>
+    getSync(request, params),
+  );
+}
+
+async function getSync(request: Request, params: Promise<{ gameId: string }>) {
   const { gameId } = await params;
 
   const limit = checkRateLimit(request, "sync");

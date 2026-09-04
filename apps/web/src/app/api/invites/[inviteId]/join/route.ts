@@ -23,14 +23,18 @@ import {
 } from "@/server/games/join-game";
 import { checkJsonContentType, checkRequestBodySize, guardMutation } from "@/server/http/guards";
 import { jsonError, jsonOk } from "@/server/http/responses";
+import { withRequestTelemetry } from "@/server/observability/telemetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ inviteId: string }> },
-) {
+export function POST(request: Request, { params }: { params: Promise<{ inviteId: string }> }) {
+  return withRequestTelemetry("POST /api/invites/:inviteId/join", request, () =>
+    joinInvite(request, params),
+  );
+}
+
+async function joinInvite(request: Request, params: Promise<{ inviteId: string }>) {
   const size = await checkRequestBodySize(request);
   if (!size.ok) return jsonError(size.code, { reason: size.reason });
   const contentType = checkJsonContentType(request);

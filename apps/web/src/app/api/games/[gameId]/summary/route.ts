@@ -16,18 +16,23 @@ import type { GameEventDocument } from "@/server/commands/handle-command";
 import type { GameDocument } from "@/server/games/create-game";
 import { projectionSeats, readPublicEvents } from "@/server/sync/recovery";
 import { buildSummaryProjection } from "@/server/projections/authorize";
+import { withRequestTelemetry } from "@/server/observability/telemetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(
-  _request: Request,
+export function GET(
+  request: Request,
   {
     params,
   }: {
     params: Promise<{ gameId: string }>;
   },
 ) {
+  return withRequestTelemetry("GET /api/games/:gameId/summary", request, () => getSummary(params));
+}
+
+async function getSummary(params: Promise<{ gameId: string }>) {
   const { gameId } = await params;
 
   try {
