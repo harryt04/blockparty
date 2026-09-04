@@ -17,6 +17,7 @@ import { BoardList } from "./board-list";
 import { BoardView } from "./board-view";
 import { EventFeed } from "./event-feed";
 import { ActionBar } from "./action-bar";
+import { ManagementPanel } from "./management-panel";
 import {
   activeSpace,
   boardLayout,
@@ -24,6 +25,7 @@ import {
   districtNames,
   enabledVariantLabels,
   latestDiceResult,
+  managementDecisionContext,
   orderedBoard,
 } from "./game-model";
 import { PlayerStrip } from "./player-strip";
@@ -54,6 +56,7 @@ export function GameClient({ gameId }: { gameId: string }) {
   const [pendingAction, setPendingAction] = useState<LegalAction>();
   const [actionStatus, setActionStatus] = useState<string>();
   const [actionError, setActionError] = useState<string>();
+  const [managementOpen, setManagementOpen] = useState(false);
 
   const snapshot = state.snapshot;
   const spaces = useMemo(
@@ -67,6 +70,13 @@ export function GameClient({ gameId }: { gameId: string }) {
   const districtMap = snapshot === undefined ? {} : districtNames(snapshot);
   const variants = snapshot === undefined ? [] : enabledVariantLabels(snapshot.configuration);
   const diceResult = snapshot === undefined ? undefined : latestDiceResult(snapshot);
+  const management = snapshot === undefined ? undefined : managementDecisionContext(snapshot);
+  const canManageSelectedSpace =
+    detailSpace?.deedId !== undefined &&
+    detailSpace.ownerSeatId !== undefined &&
+    snapshot?.seats.some((seat) => seat.isSelf && seat.seatId === detailSpace.ownerSeatId) ===
+      true &&
+    management !== undefined;
 
   useEffect(() => {
     if (
@@ -247,6 +257,17 @@ export function GameClient({ gameId }: { gameId: string }) {
               detailSpace === undefined ? undefined : districtMap[detailSpace.districtId ?? ""]
             }
             currencyLabel="Tabs"
+            canManage={canManageSelectedSpace}
+            onManage={() => setManagementOpen(true)}
+          />
+
+          <ManagementPanel
+            snapshot={snapshot}
+            open={managementOpen}
+            disabled={state.connection !== "live" || snapshot.paused || pendingAction !== undefined}
+            pending={pendingAction !== undefined}
+            onAction={(action) => void submitAction(action)}
+            onClose={() => setManagementOpen(false)}
           />
 
           <AcquisitionAuctionSummary snapshot={snapshot} />

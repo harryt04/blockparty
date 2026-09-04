@@ -17,6 +17,7 @@ import type {
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AcquisitionAuctionSummary } from "./acquisition-auction-summary";
+import { MANAGEMENT_ACTION_TYPES } from "./game-model";
 
 /** Verb + object labels. Never a vague "Confirm". DS-030. */
 const ACTION_LABELS: Partial<Record<LegalAction["type"], string>> = {
@@ -65,9 +66,16 @@ function ActionOptions({
   disabled: boolean;
   onAction: (action: LegalAction, amount?: number) => void;
 }) {
+  const managementActionTypes = new Set<LegalAction["type"]>(MANAGEMENT_ACTION_TYPES);
+  const visibleLegalActions = legalActions.filter(
+    (action) => !managementActionTypes.has(action.type),
+  );
+  const visibleAvailability = actionAvailability.filter(
+    (action) => !managementActionTypes.has(action.type),
+  );
   const [bidAmount, setBidAmount] = useState<string>();
   const [bidError, setBidError] = useState<string>();
-  const bidAction = legalActions.find((action) => action.type === "PlaceAuctionBid");
+  const bidAction = visibleLegalActions.find((action) => action.type === "PlaceAuctionBid");
   const bidMinimum = bidAction?.constraints?.minBid;
   const bidMaximum = bidAction?.constraints?.maxBid;
 
@@ -95,10 +103,10 @@ function ActionOptions({
 
   return (
     <div className="flex flex-col gap-3">
-      {legalActions.length === 0 && actionAvailability.length === 0 ? (
+      {visibleLegalActions.length === 0 && visibleAvailability.length === 0 ? (
         <p className="text-sm text-muted-ink">No action is required from you right now.</p>
       ) : null}
-      {legalActions.map((action) => {
+      {visibleLegalActions.map((action) => {
         if (action.type === "PlaceAuctionBid") {
           return (
             <div key={actionKey(action)} className="rounded-(--radius-md) border border-line p-3">
@@ -143,7 +151,7 @@ function ActionOptions({
           </Button>
         );
       })}
-      {actionAvailability.map((blocked) => (
+      {visibleAvailability.map((blocked) => (
         <div key={blocked.type} className="flex flex-col gap-1">
           <Button disabled aria-describedby={`reason-${blocked.type}`}>
             {actionLabel(blocked.type)}

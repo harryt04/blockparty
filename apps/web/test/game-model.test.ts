@@ -10,6 +10,7 @@ import {
   districtNames,
   enabledVariantLabels,
   latestDiceResult,
+  managementDecisionContext,
   orderedBoard,
 } from "../src/components/game/game-model";
 
@@ -199,6 +200,46 @@ describe("game presentation model", () => {
       priorityConnected: false,
       leaderName: "Maya",
       passedNames: ["North Star"],
+    });
+  });
+
+  it("builds a management preview from content and server action data", () => {
+    const value = snapshot({
+      phase: "TurnStart",
+      bank: { cash: 20_000, deedIds: [], improvementInventory: { stall: 7, stage: 2 } },
+      legalActions: [
+        { type: "BuyImprovement", constraints: { deedId: "d-sawhorse-lane" } },
+        { type: "MortgageDeed", constraints: { deedId: "d-sawhorse-lane" } },
+      ],
+      actionAvailability: [
+        {
+          type: "RedeemMortgage",
+          available: false,
+          reasonCode: "DEED_NOT_MORTGAGED",
+          reason: "This deed is not mortgaged.",
+        },
+      ],
+    });
+
+    expect(managementDecisionContext(value)).toMatchObject({
+      inventoryKind: "stall",
+      inventoryAvailable: 7,
+      inventoryUnlimited: false,
+      balance: 150_000,
+      deeds: [
+        {
+          deedId: "d-sawhorse-lane",
+          categoryLabel: "Block",
+          improvementLevel: 0,
+          maximumImprovementLevel: 3,
+          districtComplete: false,
+          nextImprovementCost: 10_000,
+          mortgageValue: 6_000,
+          redemptionAmount: 12_600,
+          actions: [{ type: "BuyImprovement" }, { type: "MortgageDeed" }],
+        },
+      ],
+      blocked: [{ type: "RedeemMortgage", reasonCode: "DEED_NOT_MORTGAGED" }],
     });
   });
 

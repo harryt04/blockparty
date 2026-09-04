@@ -491,12 +491,14 @@ separate player contexts.
       Implemented the projection-only acquisition and auction decision context in `apps/web/src/components/game/acquisition-auction-summary.tsx`, with server-bound actions, readable bid/pass state, and pause-safe controls in the live game shell.
       `apps/web/test/game-model.test.ts` proves purchase balance/affordability mapping and auction leader, priority, pass, and bound mapping; full multi-context browser evidence remains planned because no Playwright harness or MongoDB is configured.
 
-- [ ] **C8 — Manage: improve, sell, mortgage, and redeem**
+- [x] **C8 — Manage: improve, sell, mortgage, and redeem**
       Blocked by: C6
       Requirements: RULE-005, RULE-008, UX-016
       Read: docs/product/rules.md, docs/design/ux-spec.md
       Acceptance: Manage presents complete-district, even-building, inventory, price/resale, mortgage/redemption, eligibility, preview, confirm, and authoritative result from live action data.
       Proves: Playwright management matrix covers legal/blocked improve/sell/mortgage/redeem and stale inventory; TEST-002 browser layer.
+      Implemented the owned-Address Manage flow with content-backed district, level, inventory, integer price/resale, mortgage, redemption, blocked-reason, confirmation, and authoritative command presentation in `apps/web/src/components/game/management-panel.tsx`.
+      `apps/web/test/game-model.test.ts` proves management previews and action grouping; the repository still has no Playwright harness or configured MongoDB, so the required browser matrix remains planned.
 
 - [ ] **C9 — Trade**
       Blocked by: C8

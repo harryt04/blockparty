@@ -4,7 +4,8 @@
  */
 import type { BoardSpaceProjection, SeatProjection } from "@blockparty/contracts";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   DEED_CATEGORY_DISPLAY,
   SPACE_CATEGORY_DISPLAY,
@@ -16,11 +17,15 @@ export function ActiveSpaceDetail({
   seats,
   currencyLabel = "Tabs",
   districtName,
+  canManage,
+  onManage,
 }: {
   space?: BoardSpaceProjection;
   seats: readonly SeatProjection[];
   currencyLabel?: string;
   districtName?: string;
+  canManage?: boolean;
+  onManage?: () => void;
 }) {
   if (space === undefined) {
     return (
@@ -70,6 +75,13 @@ export function ActiveSpaceDetail({
           </dd>
         </dl>
       </CardContent>
+      {canManage && onManage !== undefined ? (
+        <CardFooter>
+          <Button onClick={onManage} className="w-full sm:w-auto">
+            Manage this Address
+          </Button>
+        </CardFooter>
+      ) : null}
     </Card>
   );
 }

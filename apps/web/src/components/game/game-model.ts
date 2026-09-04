@@ -1,4 +1,5 @@
 import type {
+  ActionAvailability,
   BoardSpaceProjection,
   Command,
   GameSnapshotProjection,
@@ -124,6 +125,44 @@ export interface AuctionDecisionContext {
   readonly passedNames: readonly string[];
 }
 
+export const MANAGEMENT_ACTION_TYPES = [
+  "BuyImprovement",
+  "SellImprovement",
+  "MortgageDeed",
+  "RedeemMortgage",
+] as const satisfies readonly LegalAction["type"][];
+
+type ManagementActionType = (typeof MANAGEMENT_ACTION_TYPES)[number];
+
+export interface ManagementActionContext {
+  readonly type: ManagementActionType;
+  readonly action: LegalAction;
+}
+
+export interface ManagementDeedContext {
+  readonly deedId: string;
+  readonly spaceName: string;
+  readonly categoryLabel: string;
+  readonly districtName?: string;
+  readonly improvementLevel: number;
+  readonly maximumImprovementLevel: number;
+  readonly districtComplete?: boolean;
+  readonly nextImprovementCost?: number;
+  readonly improvementResaleValue?: number;
+  readonly mortgageValue: number;
+  readonly redemptionAmount: number;
+  readonly actions: readonly ManagementActionContext[];
+}
+
+export interface ManagementDecisionContext {
+  readonly deeds: readonly ManagementDeedContext[];
+  readonly blocked: readonly ActionAvailability[];
+  readonly inventoryKind?: string;
+  readonly inventoryAvailable?: number;
+  readonly inventoryUnlimited: boolean;
+  readonly balance: number;
+}
+
 function deedPresentation(
   snapshot: GameSnapshotProjection,
   deedId: string,
@@ -153,6 +192,115 @@ function selfBalance(snapshot: GameSnapshotProjection): number {
 function stringConstraint(action: LegalAction | undefined, key: string): string | undefined {
   const value = action?.constraints?.[key];
   return typeof value === "string" ? value : undefined;
+}
+
+function managementDeedId(action: LegalAction): string | undefined {
+  const deedId = action.constraints?.deedId;
+  return typeof deedId === "string" ? deedId : undefined;
+}
+
+function isManagementAction(type: LegalAction["type"]): type is ManagementActionType {
+  return (MANAGEMENT_ACTION_TYPES as readonly string[]).includes(type);
+}
+
+/**
+ * Builds the Manage inventory from the captured content and current public
+ * projection. Buttons remain keyed to server legalActions; these values are
+ * previews only. See RULE-005/RULE-008 and UX-016.
+ */
+export function managementDecisionContext(
+  snapshot: GameSnapshotProjection,
+): ManagementDecisionContext | undefined {
+  const self = snapshot.seats.find((seat) => seat.isSelf);
+  if (self === undefined || self.deedIds === undefined) return undefined;
+
+  const bundle = getBundle(snapshot.versions.contentVersion);
+  if (bundle === undefined) return undefined;
+  const deedById = new Map(bundle.deeds.map((deed) => [deed.deedId, deed]));
+  const spaceByDeedId = new Map(
+    snapshot.board.flatMap((space) => (space.deedId === undefined ? [] : [[space.deedId, space]])),
+  );
+  const districtById = new Map(bundle.districts.map((district) => [district.districtId, district]));
+  const districtNameById = districtNames(snapshot);
+  const actions = snapshot.legalActions.filter(
+    (action): action is LegalAction & { readonly type: ManagementActionType } =>
+      isManagementAction(action.type) && managementDeedId(action) !== undefined,
+  );
+  const managementActionTypes = new Set<LegalAction["type"]>(MANAGEMENT_ACTION_TYPES);
+  const blocked = snapshot.actionAvailability.filter((action) =>
+    managementActionTypes.has(action.type),
+  );
+  const inventoryKind = Object.keys(bundle.economy.improvementInventory)[0];
+  const inventoryUnlimited = snapshot.configuration.unlimitedImprovementInventory;
+
+  const deeds = self.deedIds.flatMap((deedId) => {
+    const deed = deedById.get(deedId);
+    const space = spaceByDeedId.get(deedId);
+    if (deed === undefined || space === undefined) return [];
+    const district = deed.districtId === undefined ? undefined : districtById.get(deed.districtId);
+    const districtSpaces =
+      district === undefined
+        ? []
+        : district.deedIds.flatMap((id) => {
+            const districtSpace = spaceByDeedId.get(id);
+            return districtSpace === undefined ? [] : [districtSpace];
+          });
+    const districtComplete =
+      district === undefined
+        ? undefined
+        : districtSpaces.length === district.deedIds.length &&
+          districtSpaces.every(
+            (districtSpace) =>
+              districtSpace.ownerSeatId === self.seatId && districtSpace.mortgaged !== true,
+          );
+    const improvementLevel = space.improvementLevel ?? 0;
+    const improvementLevels = deed.improvementLevels ?? [];
+    const maximumImprovementLevel = improvementLevels.at(-1)?.level ?? 0;
+    const nextLevel = improvementLevels.find((level) => level.level === improvementLevel + 1);
+    const actionsForDeed = actions
+      .filter((action) => managementDeedId(action) === deedId)
+      .map((action) => ({ type: action.type, action }));
+
+    return [
+      {
+        deedId,
+        spaceName: space.name,
+        categoryLabel: DEED_CATEGORY_DISPLAY[deed.category].label,
+        ...(deed.districtId === undefined
+          ? {}
+          : { districtName: districtNameById[deed.districtId] }),
+        improvementLevel,
+        maximumImprovementLevel,
+        ...(districtComplete === undefined ? {} : { districtComplete }),
+        ...(nextLevel === undefined || deed.improvementCost === undefined
+          ? {}
+          : { nextImprovementCost: deed.improvementCost }),
+        ...(improvementLevel <= 0 || deed.improvementCost === undefined
+          ? {}
+          : {
+              improvementResaleValue: Math.floor(
+                (deed.improvementCost * bundle.economy.improvementResaleRatio.numerator) /
+                  bundle.economy.improvementResaleRatio.denominator,
+              ),
+            }),
+        mortgageValue: deed.mortgageValue,
+        redemptionAmount: deed.mortgageValue + deed.redemptionCharge,
+        actions: actionsForDeed,
+      },
+    ];
+  });
+
+  if (deeds.length === 0 && blocked.length === 0) return undefined;
+  return {
+    deeds,
+    blocked,
+    ...(inventoryKind === undefined ? {} : { inventoryKind }),
+    ...(inventoryKind === undefined || inventoryUnlimited || snapshot.bank === undefined
+      ? {}
+      : { inventoryAvailable: snapshot.bank.improvementInventory[inventoryKind] ?? 0 }),
+    inventoryUnlimited,
+    balance: self.balance ?? 0,
+  };
 }
 
 /** Display-only acquisition context. Authority remains in legalActions. See UX-014. */
