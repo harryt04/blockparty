@@ -17,6 +17,7 @@ const PUBLIC_ROUTES = [
   "/rules",
   "/settings",
   "/accessibility",
+  "/offline",
   "/unavailable",
   "/does-not-exist",
 ] as const;

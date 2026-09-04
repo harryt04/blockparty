@@ -644,12 +644,13 @@ recorded draws.
 
 ## Loop F — PWA, analytics, and operations
 
-- [ ] **F1 — PWA manifest, service worker, and update UX**
+- [x] **F1 — PWA manifest, service worker, and update UX**
       Blocked by: E6
       Requirements: PRD-FUN-017, PRD-NFR-009, TEST-005
       Read: docs/product/prd.md, docs/engineering/security-privacy-analytics.md, apps/web/public/PWA-TODO.md
       Acceptance: installable manifest/icons and update UX work over HTTPS; the service worker caches only versioned app shell/public assets, never game/API/SSE/capability data, and offline UI says play requires reconnection.
       Proves: Playwright install/offline/update/cache-inspection matrix proves shell availability and zero cached game state; TEST-002 browser PWA/security layer.
+      Implemented generated versioned shell worker, offline fallback/status, engagement-gated install and dismissal UX, iOS instructions, and waiting-worker update flow. `apps/web/e2e/pwa.spec.ts` passes its 9-check Chromium/Firefox/WebKit matrix; `apps/web/test/pwa.test.ts` covers cache policy and install/network decisions.
 
 - [ ] **F2 — Consent gate, PostHog adapter, and the approved taxonomy**
       Blocked by: F1

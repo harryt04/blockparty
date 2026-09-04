@@ -1,19 +1,17 @@
-# PWA scaffolding notes
+# PWA implementation notes
 
-The manifest and the icons exist. The service worker deliberately does NOT.
+The manifest and original placeholder icons are served from `public/`. The
+service worker is generated at `/sw.js` so the server-side `PWA_CACHE_VERSION`
+controls the versioned cache name.
 
-`PRD-FUN-017` forbids claiming offline play until queued offline behaviour is
-implemented authoritatively, and `UX-005` says live gameplay always needs a
-network connection. Shipping a cache-first worker now would make the app claim
-something it cannot do.
+Only the public app shell, manifest/icons, and versioned `/_next/static/` assets
+are cached. API, SSE, game, capability, and other dynamic responses are never
+cached. An offline navigation falls back to `/offline`, which says that live
+play requires reconnection; no queued gameplay action is claimed or stored.
 
-Remaining PWA work, as its own ticket:
-
-- An offline APP SHELL only. Never cached game state.
-- A clear offline and reconnecting state driven by the sync client.
-- A dismissible, non-modal install prompt after meaningful engagement, with the
-  dismissal remembered. Concise manual steps on iOS, shown only on request.
-- `PWA_CACHE_VERSION` wired to the cache name so a deploy invalidates it.
+The client coordinator registers updates, offers a non-modal install prompt
+after engagement, remembers dismissal in device-local preferences, and shows
+concise iOS Safari instructions only after the player requests them.
 
 The icons here are placeholders. Final artwork needs a provenance record before
 release. See CONTENT-008 and LEGAL.
