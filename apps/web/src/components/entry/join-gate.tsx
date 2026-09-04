@@ -49,9 +49,14 @@ function Unavailable() {
 function JoinForm({ inviteId, gameName }: { inviteId: string; gameName?: string }) {
   const router = useRouter();
   const { track } = useAnalytics();
+  const [hydrated, setHydrated] = useState(false);
   const [pending, setPending] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<JoinField, string>>>({});
   const [apiError, setApiError] = useState<string>();
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -196,7 +201,7 @@ function JoinForm({ inviteId, gameName }: { inviteId: string; gameName?: string 
       <p aria-live="polite" className="min-h-6 text-sm text-muted-ink">
         {pending ? "Joining the lobby…" : ""}
       </p>
-      <Button variant="primary" size="lg" type="submit" disabled={pending}>
+      <Button variant="primary" size="lg" type="submit" disabled={pending || !hydrated}>
         {pending ? "Joining lobby…" : "Join the lobby"}
       </Button>
     </form>

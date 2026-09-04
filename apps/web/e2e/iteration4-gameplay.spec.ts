@@ -9,6 +9,10 @@ import { PLACEHOLDER_BUNDLE } from "@blockparty/game-content";
 // Browser evidence for PRD-FUN-006–010, PROTO-002, and UX-013–017.
 const GAME_ID = "00000000-0000-4000-8000-000000000054";
 
+// Keep the mocked API boundary authoritative in every browser. WebKit can
+// otherwise let a previously registered service worker bypass page routes.
+test.use({ serviceWorkers: "block" });
+
 function snapshot(phase: GameSnapshotProjectionType["phase"], sequence: number) {
   const deeds = new Map(PLACEHOLDER_BUNDLE.deeds.map((deed) => [deed.deedId, deed]));
   const category = {

@@ -79,6 +79,7 @@ test.describe("PWA shell and network truth", () => {
 
   test("offers install only after engagement and remembers dismissal", async ({ page }) => {
     await page.goto("/");
+    await expect(page.getByRole("complementary", { name: "Analytics consent" })).toBeVisible();
     await page.evaluate(() => {
       const event = new Event("beforeinstallprompt");
       Object.defineProperty(event, "prompt", { value: async () => undefined });

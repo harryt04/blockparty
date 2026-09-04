@@ -8,7 +8,7 @@ import {
 } from "@blockparty/contracts";
 import { Check, Clipboard, Share2, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   enabledVariantCountBucket,
@@ -64,8 +64,10 @@ export function LobbyClient({ gameId }: { gameId: string }) {
   const [commandPending, setCommandPending] = useState(false);
   const [commandError, setCommandError] = useState<string>();
   const [draftConfiguration, setDraftConfiguration] = useState<RulesConfiguration>();
+  const activeGameRef = useRef(false);
 
   const loadLobby = useCallback(async () => {
+    if (activeGameRef.current) return;
     try {
       const response = await fetch(lobbyUrl(gameId), {
         credentials: "include",
@@ -89,13 +91,17 @@ export function LobbyClient({ gameId }: { gameId: string }) {
   const { state, retry } = useGameSync(gameId, { onPresence: loadLobby });
 
   useEffect(() => {
+    activeGameRef.current = state.snapshot?.status === "ACTIVE";
+  }, [state.snapshot?.status]);
+
+  useEffect(() => {
     void loadLobby();
   }, [loadLobby]);
 
   // Presence is deliberately ephemeral. Re-read the authorized lobby after a
   // presence frame so seat occupancy and connection labels stay current.
   useEffect(() => {
-    if (state.snapshot !== undefined) void loadLobby();
+    if (state.snapshot !== undefined && state.snapshot.status !== "ACTIVE") void loadLobby();
   }, [loadLobby, state.snapshot]);
 
   useEffect(() => {

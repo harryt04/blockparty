@@ -50,3 +50,17 @@ The shared browser skill could not run because its one-time browser binary was
 not installed in this environment. The live journey was therefore exercised
 through the same HTTP API contracts and authenticated cookie flow; a browser
 journey remains follow-up evidence.
+
+## Iteration 5 follow-up
+
+The dev server also exposed a cold-hydration race: an enabled server-rendered
+create or join button could submit its native form before the React handler
+mounted. Both mutation buttons now remain disabled until hydration, with a
+Playwright regression covering the server-rendered boundary.
+
+A real two-context journey using a temporary MongoDB replica set now reaches
+create, invite join, lobby start, and RollDice. The lobby client also stops
+refreshing after the authoritative state becomes ACTIVE, avoiding a repeated
+409 loop while the route changes to the game. A single in-flight 409 can still
+occur during the intentional SSE handoff, but it does not block navigation or
+gameplay.

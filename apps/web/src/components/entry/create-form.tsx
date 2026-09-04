@@ -9,7 +9,7 @@ import {
   type VariantKey,
 } from "@blockparty/contracts";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   enabledVariantCountBucket,
@@ -104,6 +104,7 @@ function FieldError({
 export function CreateGameForm() {
   const router = useRouter();
   const { track } = useAnalytics();
+  const [hydrated, setHydrated] = useState(false);
   const [pending, setPending] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<CreateField, string>>>({});
   const [apiError, setApiError] = useState<string>();
@@ -115,6 +116,10 @@ export function CreateGameForm() {
         boolean
       >,
   );
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   function selectPreset(nextPreset: "standard" | "short-game") {
     const configuration =
@@ -337,7 +342,7 @@ export function CreateGameForm() {
       <p aria-live="polite" className="min-h-6 text-sm text-muted-ink">
         {pending ? "Creating your private lobby…" : ""}
       </p>
-      <Button variant="primary" size="lg" type="submit" disabled={pending}>
+      <Button variant="primary" size="lg" type="submit" disabled={pending || !hydrated}>
         {pending ? "Creating lobby…" : "Create lobby"}
       </Button>
     </form>
