@@ -6,12 +6,11 @@
  * settings links, and install education. There is no account wall.
  */
 import Link from "next/link";
+import { JoinLinkForm } from "@/components/entry/join-link-form";
 import { AppShell } from "@/components/shell/app-shell";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 const HOW_IT_WORKS = [
   "Create a private game and pick two to six seats.",
@@ -45,20 +44,8 @@ export default function LandingPage() {
               over a seat someone is already using.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="flex-1">
-              <Label htmlFor="invite-link">Invite link</Label>
-              <Input
-                id="invite-link"
-                name="invite-link"
-                type="url"
-                inputMode="url"
-                autoComplete="off"
-                placeholder="https://example.com/join/..."
-                className="mt-1"
-              />
-            </div>
-            <Button variant="secondary">Open invite</Button>
+          <CardContent>
+            <JoinLinkForm />
           </CardContent>
         </Card>
 
@@ -80,13 +67,6 @@ export default function LandingPage() {
           <AlertDescription>
             For players aged 13 and over. Anyone with the invite link can join until the game
             starts. Games are removed 30 days after the last action.
-          </AlertDescription>
-        </Alert>
-
-        <Alert variant="warning">
-          <AlertDescription>
-            Scaffolding build. Pages and routes exist, but no game rules, saving, or realtime
-            updates run yet.
           </AlertDescription>
         </Alert>
       </div>

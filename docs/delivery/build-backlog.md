@@ -441,12 +441,13 @@ separate player contexts.
       Proves: client state-machine tests plus browser disconnect/out-of-order/reload cases; TEST-002 component and Playwright layers.
       Implemented the credentialed bootstrap/SSE coordinator, contiguous cursor recovery, authoritative snapshot replacement, visibility resync, and jittered reconnect states; `apps/web/test/sync-client.test.ts` proves the component-layer state machine and frame boundaries.
 
-- [ ] **C2 — Landing and create, wired to the API**
+- [x] **C2 — Landing and create, wired to the API**
       Blocked by: C1
       Requirements: PRD-FUN-001, PRD-FUN-013, UX-001, UX-010
       Read: docs/product/prd.md, docs/design/ux-spec.md
       Acceptance: landing/create explain private play and retention, validate seat count, create through the API, retain capabilities only in secure cookies, and route the host to the live lobby with accessible pending/error states.
       Proves: Playwright create journey covers keyboard, validation, success, safe failure, cookies, and no URL/storage token; TEST-002 browser layer.
+      Implemented the credentialed create form, preset-aware validation, safe pending/error states, and opaque invite-path navigation; `apps/web/test/create-form.test.ts` proves request mapping, validation, and invite safety.
 
 - [ ] **C3 — Join gate, wired**
       Blocked by: C2
