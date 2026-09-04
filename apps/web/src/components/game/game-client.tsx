@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { CommandAckEnvelope, ErrorEnvelope, type LegalAction } from "@blockparty/contracts";
+import {
+  CommandAckEnvelope,
+  ErrorEnvelope,
+  type Command,
+  type LegalAction,
+} from "@blockparty/contracts";
 import { useGameSync } from "@/client/sync/use-game-sync";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +23,7 @@ import { BoardView } from "./board-view";
 import { EventFeed } from "./event-feed";
 import { ActionBar } from "./action-bar";
 import { ManagementPanel } from "./management-panel";
+import { TradePanel } from "./trade-panel";
 import {
   activeSpace,
   boardLayout,
@@ -110,17 +116,12 @@ export function GameClient({ gameId }: { gameId: string }) {
     (left, right) => left.sequence - right.sequence,
   );
 
-  async function submitAction(action: LegalAction, amount?: number) {
+  async function submitCommand(payload: Command): Promise<boolean> {
     if (snapshot === undefined || state.connection !== "live" || pendingAction !== undefined)
-      return;
-    const payload = commandForLegalAction(action, amount);
-    if (payload === undefined) {
-      setActionError("This action needs its own decision details and is not ready here.");
-      return;
-    }
-    setPendingAction(action);
+      return false;
+    setPendingAction({ type: payload.type });
     setActionError(undefined);
-    setActionStatus(`Submitting ${action.type.replace(/([a-z])([A-Z])/g, "$1 $2")}…`);
+    setActionStatus(`Submitting ${payload.type.replace(/([a-z])([A-Z])/g, "$1 $2")}…`);
     try {
       const response = await fetch(commandUrl(gameId), {
         method: "POST",
@@ -147,7 +148,7 @@ export function GameClient({ gameId }: { gameId: string }) {
         setActionStatus(undefined);
         setPendingAction(undefined);
         if (parsed.success && parsed.data.error.code === "STALE_VERSION") retry();
-        return;
+        return false;
       }
       const ack = CommandAckEnvelope.safeParse(body);
       if (!ack.success) {
@@ -155,16 +156,27 @@ export function GameClient({ gameId }: { gameId: string }) {
         setActionStatus(undefined);
         setPendingAction(undefined);
         retry();
-        return;
+        return false;
       }
       setActionStatus("Action accepted. Waiting for the authoritative result.");
       setPendingAction(undefined);
       retry();
+      return true;
     } catch {
       setActionError("The action could not be sent. Check your connection and try again.");
       setActionStatus(undefined);
       setPendingAction(undefined);
+      return false;
     }
+  }
+
+  async function submitAction(action: LegalAction, amount?: number) {
+    const payload = commandForLegalAction(action, amount);
+    if (payload === undefined) {
+      setActionError("This action needs its own decision details and is not ready here.");
+      return;
+    }
+    await submitCommand(payload);
   }
 
   return (
@@ -268,6 +280,13 @@ export function GameClient({ gameId }: { gameId: string }) {
             pending={pendingAction !== undefined}
             onAction={(action) => void submitAction(action)}
             onClose={() => setManagementOpen(false)}
+          />
+
+          <TradePanel
+            snapshot={snapshot}
+            disabled={state.connection !== "live" || snapshot.paused}
+            pending={pendingAction !== undefined}
+            onCommand={(command) => void submitCommand(command)}
           />
 
           <AcquisitionAuctionSummary snapshot={snapshot} />

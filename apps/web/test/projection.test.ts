@@ -4,6 +4,7 @@ import { PLACEHOLDER_BUNDLE } from "@blockparty/game-content";
 import { deriveInitialState, type GameState } from "@blockparty/game-engine";
 import type { ProjectionContext } from "../src/server/projections/authorize";
 import { buildSeatProjection } from "../src/server/projections/authorize";
+import { publicEvent } from "../src/server/commands/handle-command";
 import { readPublicEvents } from "../src/server/sync/recovery";
 
 vi.mock("server-only", () => ({}));
@@ -112,6 +113,7 @@ describe("authorized seat projections", () => {
       balance: 145000,
       deedIds: ["d-sawhorse-lane"],
       detentionReleaseCardCount: 1,
+      detentionReleaseCardIds: ["card-secret-release"],
       isSelf: true,
     });
     expect(projection.seats[1]).toMatchObject({
@@ -124,12 +126,65 @@ describe("authorized seat projections", () => {
 
     const serialized = JSON.stringify(projection);
     expect(serialized).not.toContain("future-card");
-    expect(serialized).not.toContain("card-secret-release");
+    expect(serialized).toContain("card-secret-release");
+    expect(serialized).not.toContain("card-other-secret");
     expect(serialized).not.toContain("prng");
     expect(serialized).not.toContain("seed");
     expect(serialized).not.toContain("decks");
     expect(projection).not.toHaveProperty("secretSeed");
     expect(projection).not.toHaveProperty("contentHash");
+  });
+
+  it("shares a pending trade only with its named parties", () => {
+    const pendingTrade = {
+      tradeId: "trade:projection:1",
+      proposerSeatId: "seat-a",
+      counterpartySeatId: "seat-b",
+      offered: { cash: 1_000, deedIds: ["d-sawhorse-lane"], detentionReleaseCardIds: [] },
+      requested: { cash: 2_000, deedIds: [], detentionReleaseCardIds: ["card-other-secret"] },
+      proposerBalance: 145_000,
+      counterpartyBalance: 155_000,
+      offeredDeedSnapshots: [{ deedId: "d-sawhorse-lane", mortgaged: false, improvementLevel: 0 }],
+      requestedDeedSnapshots: [],
+      aggregateVersion: 5,
+    } as const;
+    const withOffer: GameState = { ...state(), pendingTrade };
+    const proposer = buildSeatProjection(withOffer, "seat-a", projectionContext());
+    const counterparty = buildSeatProjection(withOffer, "seat-b", projectionContext());
+    const anonymous = buildSeatProjection(withOffer, undefined, projectionContext());
+
+    expect(proposer.pendingTrade).toMatchObject({
+      tradeId: pendingTrade.tradeId,
+      proposerSeatId: pendingTrade.proposerSeatId,
+      counterpartySeatId: pendingTrade.counterpartySeatId,
+      offered: pendingTrade.offered,
+      requested: pendingTrade.requested,
+    });
+    expect(counterparty.pendingTrade).toMatchObject({ tradeId: pendingTrade.tradeId });
+    expect(anonymous.pendingTrade).toBeUndefined();
+    expect(JSON.stringify(anonymous)).not.toContain("card-other-secret");
+  });
+
+  it("does not publish held card identities in trade history", () => {
+    const event = {
+      gameId: GAME_ID,
+      sequence: 8,
+      aggregateVersion: 8,
+      type: "TradeProposed",
+      eventVersion: 1,
+      actorSeatId: "seat-a",
+      occurredAt: "2026-09-03T15:00:08.000Z",
+      payload: {
+        tradeId: "trade:private-card",
+        offered: { cash: 0, deedIds: [], detentionReleaseCardIds: ["card-secret-release"] },
+        requested: { cash: 1_000, deedIds: [], detentionReleaseCardIds: [] },
+      },
+    } as const;
+    const published = publicEvent(event);
+    expect(published.payload).toMatchObject({
+      offered: { detentionReleaseCardIds: [] },
+    });
+    expect(JSON.stringify(published)).not.toContain("card-secret-release");
   });
 
   it("orders recent history and removes private card facts before projection", async () => {

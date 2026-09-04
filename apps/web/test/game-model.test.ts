@@ -12,6 +12,9 @@ import {
   latestDiceResult,
   managementDecisionContext,
   orderedBoard,
+  latestTradeOutcome,
+  tradeComposerContext,
+  tradeDecisionContext,
 } from "../src/components/game/game-model";
 
 const snapshot = (overrides: Partial<GameSnapshotProjection> = {}): GameSnapshotProjection => ({
@@ -261,5 +264,89 @@ describe("game presentation model", () => {
         }),
       ),
     ).toEqual({ first: 3, second: 5 });
+  });
+
+  it("maps named-party trade offers to display assets and explicit mortgage charges", () => {
+    const value = snapshot({
+      viewerSeatId: "seat-a",
+      seats: [
+        { ...snapshot().seats[0]!, detentionReleaseCardIds: ["c-flyer-04"] },
+        {
+          ...snapshot().seats[0]!,
+          seatId: "seat-b",
+          name: "Maya",
+          isHost: false,
+          isSelf: false,
+          balance: 90_000,
+          deedIds: [],
+        },
+      ],
+      board: [
+        { ...snapshot().board[0]!, mortgaged: true, ownerSeatId: "seat-a" },
+        snapshot().board[1]!,
+      ],
+      legalActions: [{ type: "AcceptTrade", constraints: { tradeId: "trade-1" } }],
+      pendingTrade: {
+        tradeId: "trade-1",
+        proposerSeatId: "seat-b",
+        counterpartySeatId: "seat-a",
+        offered: { cash: 4_000, deedIds: [], detentionReleaseCardIds: ["c-flyer-04"] },
+        requested: { cash: 2_000, deedIds: ["d-sawhorse-lane"], detentionReleaseCardIds: [] },
+        proposerBalance: 90_000,
+        counterpartyBalance: 150_000,
+        aggregateVersion: 5,
+      },
+      publicEvents: [
+        {
+          gameId: "00000000-0000-4000-8000-000000000099",
+          sequence: 5,
+          aggregateVersion: 5,
+          type: "TradeStaled",
+          eventVersion: 1,
+          occurredAt: "2026-09-03T15:00:05.000Z",
+          payload: { tradeId: "trade-0" },
+        },
+      ],
+    });
+
+    expect(tradeDecisionContext(value)).toMatchObject({
+      tradeId: "trade-1",
+      proposerName: "Maya",
+      counterpartyName: "North Star",
+      canAccept: true,
+      offered: {
+        cash: 4_000,
+        detentionReleaseCards: [{ label: "A neighbourly word" }],
+      },
+      requested: {
+        deeds: [{ label: "Sawhorse Lane", mortgaged: true, transferCharge: 600 }],
+        incomingMortgageCharge: 600,
+      },
+    });
+    expect(latestTradeOutcome(value)).toBe("stale");
+  });
+
+  it("exposes only current owned assets to the compose context", () => {
+    const value = snapshot({
+      seats: [
+        { ...snapshot().seats[0]!, detentionReleaseCardIds: ["c-flyer-04"] },
+        {
+          ...snapshot().seats[0]!,
+          seatId: "seat-b",
+          name: "Maya",
+          isHost: false,
+          isSelf: false,
+          deedIds: [],
+          detentionReleaseCardIds: ["c-flyer-03"],
+        },
+      ],
+      legalActions: [{ type: "ProposeTrade", constraints: { counterpartySeatId: "seat-b" } }],
+    });
+
+    expect(tradeComposerContext(value)).toMatchObject({
+      offeredDeeds: [{ assetId: "d-sawhorse-lane", label: "Sawhorse Lane" }],
+      offeredDetentionReleaseCards: [{ assetId: "c-flyer-04", label: "A neighbourly word" }],
+      counterparties: [{ seatId: "seat-b", name: "Maya", deeds: [] }],
+    });
   });
 });

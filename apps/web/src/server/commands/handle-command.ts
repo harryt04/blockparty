@@ -509,12 +509,25 @@ export function publicEvent(event: DomainEvent): DomainEvent {
   const payload = Object.fromEntries(
     Object.entries(event.payload).filter(([key]) => !privateKeys.has(key)),
   );
+  let nestedPayloadChanged = false;
   if (event.type === "CardDrawn" || event.type === "DetentionReleaseCardGranted") {
     delete payload.cardId;
     delete payload.retainable;
     delete payload.deckId;
   }
-  if (Object.keys(payload).length === Object.keys(event.payload).length) return event;
+  if (event.type === "TradeProposed" || event.type === "TradeAccepted") {
+    for (const key of ["offered", "requested"]) {
+      const side = payload[key];
+      if (typeof side !== "object" || side === null || Array.isArray(side)) continue;
+      payload[key] = {
+        ...(side as Record<string, unknown>),
+        detentionReleaseCardIds: [],
+      };
+      nestedPayloadChanged = true;
+    }
+  }
+  if (Object.keys(payload).length === Object.keys(event.payload).length && !nestedPayloadChanged)
+    return event;
   return DomainEvent.parse({ ...event, payload });
 }
 

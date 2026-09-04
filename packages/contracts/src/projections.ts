@@ -57,6 +57,8 @@ export const SeatProjection = z
     detained: z.boolean().optional(),
     /** Count only. Card identities stay private until played. */
     detentionReleaseCardCount: z.int().min(0).optional(),
+    /** Held card IDs are returned only to the owning seat or a named trade party. */
+    detentionReleaseCardIds: z.array(z.string().max(64)).max(8).optional(),
     deedIds: z.array(z.string().max(64)).max(128).optional(),
     isHost: z.boolean(),
     /** Ephemeral presence. Not a game-rule field. See PROTO-003. */
@@ -174,6 +176,31 @@ export const ObligationProjection = z
   .strict();
 export type ObligationProjection = z.infer<typeof ObligationProjection>;
 
+/** A present-value, escrow-free trade side. IDs remain canonical wire data. */
+export const TradeSideProjection = z
+  .object({
+    cash: NonNegativeMoney,
+    deedIds: z.array(z.string().max(64)).max(64),
+    detentionReleaseCardIds: z.array(z.string().max(64)).max(8),
+  })
+  .strict();
+export type TradeSideProjection = z.infer<typeof TradeSideProjection>;
+
+/** The one pending offer, visible only to its named parties. See UX-015. */
+export const PendingTradeProjection = z
+  .object({
+    tradeId: z.string().min(1).max(128),
+    proposerSeatId: SeatId,
+    counterpartySeatId: SeatId,
+    offered: TradeSideProjection,
+    requested: TradeSideProjection,
+    proposerBalance: Money,
+    counterpartyBalance: Money,
+    aggregateVersion: AggregateVersion,
+  })
+  .strict();
+export type PendingTradeProjection = z.infer<typeof PendingTradeProjection>;
+
 /**
  * The complete authorized snapshot for one seat. The database snapshot is
  * always authoritative; this is a projection of it.
@@ -199,6 +226,7 @@ export const GameSnapshotProjection = z
     publicEvents: z.array(DomainEvent).max(256).optional(),
     auction: AuctionProjection.optional(),
     obligation: ObligationProjection.optional(),
+    pendingTrade: PendingTradeProjection.optional(),
     /** Present only when a variant enables it. See VAR-001. */
     jackpot: NonNegativeMoney.optional(),
     legalActions: z.array(LegalAction).max(64),

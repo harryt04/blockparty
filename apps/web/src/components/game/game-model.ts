@@ -4,6 +4,7 @@ import type {
   Command,
   GameSnapshotProjection,
   LegalAction,
+  PendingTradeProjection,
   VariantKey,
 } from "@blockparty/contracts";
 import { VARIANT_KEYS } from "@blockparty/contracts";
@@ -161,6 +162,194 @@ export interface ManagementDecisionContext {
   readonly inventoryAvailable?: number;
   readonly inventoryUnlimited: boolean;
   readonly balance: number;
+}
+
+export interface TradeAssetContext {
+  readonly assetId: string;
+  readonly label: string;
+  readonly mortgaged?: boolean;
+  readonly transferCharge: number;
+}
+
+export interface TradeSideContext {
+  readonly cash: number;
+  readonly deeds: readonly TradeAssetContext[];
+  readonly detentionReleaseCards: readonly TradeAssetContext[];
+  readonly incomingMortgageCharge: number;
+  readonly balanceAfter: number;
+}
+
+export interface TradeDecisionContext {
+  readonly tradeId: string;
+  readonly proposerSeatId: string;
+  readonly counterpartySeatId: string;
+  readonly proposerName: string;
+  readonly counterpartyName: string;
+  readonly offered: TradeSideContext;
+  readonly requested: TradeSideContext;
+  readonly proposerBalance: number;
+  readonly counterpartyBalance: number;
+  readonly viewerIsProposer: boolean;
+  readonly canAccept: boolean;
+  readonly canReject: boolean;
+  readonly canCancel: boolean;
+}
+
+export interface TradeComposerContext {
+  readonly proposerSeatId: string;
+  readonly proposerName: string;
+  readonly counterparties: readonly {
+    readonly seatId: string;
+    readonly name: string;
+    readonly balance: number;
+    readonly deeds: readonly TradeAssetContext[];
+  }[];
+  readonly offeredDeeds: readonly TradeAssetContext[];
+  readonly offeredDetentionReleaseCards: readonly TradeAssetContext[];
+  readonly proposeAction: LegalAction;
+}
+
+function cardTitle(snapshot: GameSnapshotProjection, cardId: string): string {
+  const card = getBundle(snapshot.versions.contentVersion)
+    ?.decks.flatMap((deck) => deck.cards)
+    .find((candidate) => candidate.cardId === cardId);
+  return card?.title ?? "Neighborly Word";
+}
+
+function tradeDeedAsset(snapshot: GameSnapshotProjection, deedId: string): TradeAssetContext {
+  const space = snapshot.board.find((candidate) => candidate.deedId === deedId);
+  const deed = getBundle(snapshot.versions.contentVersion)?.deeds.find(
+    (candidate) => candidate.deedId === deedId,
+  );
+  return {
+    assetId: deedId,
+    label: space?.name ?? "Address",
+    ...(space?.mortgaged === undefined ? {} : { mortgaged: space.mortgaged }),
+    transferCharge: space?.mortgaged === true ? (deed?.transferCharge ?? 0) : 0,
+  };
+}
+
+function tradeSideContext(
+  snapshot: GameSnapshotProjection,
+  side: PendingTradeProjection["offered"],
+  incomingMortgageCharge: number,
+  balanceAfter: number,
+): TradeSideContext {
+  return {
+    cash: side.cash,
+    deeds: side.deedIds.map((deedId) => tradeDeedAsset(snapshot, deedId)),
+    detentionReleaseCards: side.detentionReleaseCardIds.map((cardId) => ({
+      assetId: cardId,
+      label: cardTitle(snapshot, cardId),
+      transferCharge: 0,
+    })),
+    incomingMortgageCharge,
+    balanceAfter,
+  };
+}
+
+/** Builds the named-parties-only trade review from canonical projection data. */
+export function tradeDecisionContext(
+  snapshot: GameSnapshotProjection,
+): TradeDecisionContext | undefined {
+  const trade = snapshot.pendingTrade;
+  if (trade === undefined) return undefined;
+  const proposer = snapshot.seats.find((seat) => seat.seatId === trade.proposerSeatId);
+  const counterparty = snapshot.seats.find((seat) => seat.seatId === trade.counterpartySeatId);
+  if (proposer === undefined || counterparty === undefined) return undefined;
+  const offeredCharge = tradeSideContext(
+    snapshot,
+    trade.offered,
+    trade.offered.deedIds.reduce(
+      (total, deedId) => total + tradeDeedAsset(snapshot, deedId).transferCharge,
+      0,
+    ),
+    trade.counterpartyBalance -
+      trade.requested.cash +
+      trade.offered.cash -
+      trade.offered.deedIds.reduce(
+        (total, deedId) => total + tradeDeedAsset(snapshot, deedId).transferCharge,
+        0,
+      ),
+  );
+  const requestedCharge = trade.requested.deedIds.reduce(
+    (total, deedId) => total + tradeDeedAsset(snapshot, deedId).transferCharge,
+    0,
+  );
+  const requested = tradeSideContext(
+    snapshot,
+    trade.requested,
+    requestedCharge,
+    trade.proposerBalance - trade.offered.cash + trade.requested.cash - requestedCharge,
+  );
+  const viewerIsProposer = snapshot.viewerSeatId === trade.proposerSeatId;
+  const viewerIsCounterparty = snapshot.viewerSeatId === trade.counterpartySeatId;
+  return {
+    tradeId: trade.tradeId,
+    proposerSeatId: trade.proposerSeatId,
+    counterpartySeatId: trade.counterpartySeatId,
+    proposerName: proposer.name ?? "Proposer",
+    counterpartyName: counterparty.name ?? "Counterparty",
+    offered: offeredCharge,
+    requested,
+    proposerBalance: trade.proposerBalance,
+    counterpartyBalance: trade.counterpartyBalance,
+    viewerIsProposer,
+    canAccept: viewerIsCounterparty && snapshot.legalActions.some((a) => a.type === "AcceptTrade"),
+    canReject: viewerIsCounterparty && snapshot.legalActions.some((a) => a.type === "RejectTrade"),
+    canCancel: viewerIsProposer && snapshot.legalActions.some((a) => a.type === "CancelTrade"),
+  };
+}
+
+/** Builds the compose inventory without exposing another seat's private cards. */
+export function tradeComposerContext(
+  snapshot: GameSnapshotProjection,
+): TradeComposerContext | undefined {
+  const self = snapshot.seats.find((seat) => seat.isSelf);
+  const proposeAction = snapshot.legalActions.find((action) => action.type === "ProposeTrade");
+  if (self === undefined || proposeAction === undefined) return undefined;
+  const counterparties = snapshot.seats
+    .filter((seat) => seat.status === "active" && seat.seatId !== self.seatId)
+    .map((seat) => ({
+      seatId: seat.seatId,
+      name: seat.name ?? "Open seat",
+      balance: seat.balance ?? 0,
+      deeds: (seat.deedIds ?? []).map((deedId) => tradeDeedAsset(snapshot, deedId)),
+    }));
+  return {
+    proposerSeatId: self.seatId,
+    proposerName: self.name ?? "You",
+    counterparties,
+    offeredDeeds: (self.deedIds ?? []).map((deedId) => tradeDeedAsset(snapshot, deedId)),
+    offeredDetentionReleaseCards: (self.detentionReleaseCardIds ?? []).map((cardId) => ({
+      assetId: cardId,
+      label: cardTitle(snapshot, cardId),
+      transferCharge: 0,
+    })),
+    proposeAction,
+  };
+}
+
+export function latestTradeOutcome(
+  snapshot: GameSnapshotProjection,
+): "stale" | "accepted" | "rejected" | "cancelled" | undefined {
+  const event = [...(snapshot.publicEvents ?? [])]
+    .sort((left, right) => right.sequence - left.sequence)
+    .find((candidate) =>
+      ["TradeStaled", "TradeAccepted", "TradeRejected", "TradeCancelled"].includes(candidate.type),
+    );
+  switch (event?.type) {
+    case "TradeStaled":
+      return "stale";
+    case "TradeAccepted":
+      return "accepted";
+    case "TradeRejected":
+      return "rejected";
+    case "TradeCancelled":
+      return "cancelled";
+    default:
+      return undefined;
+  }
 }
 
 function deedPresentation(

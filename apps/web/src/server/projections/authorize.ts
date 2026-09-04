@@ -80,6 +80,9 @@ export function buildSeatProjection(
       ...(state.phase === "Lobby"
         ? {}
         : { detentionReleaseCardCount: seat.detentionReleaseCardIds.length }),
+      ...(state.phase !== "Lobby" && seat.seatId === viewerSeatId
+        ? { detentionReleaseCardIds: [...seat.detentionReleaseCardIds] }
+        : {}),
       ...(state.phase === "Lobby" ? {} : { deedIds: [...seat.deedIds] }),
       isHost: source?.isHost ?? seat.seatId === context.hostSeatId,
       connected: source?.connected ?? false,
@@ -132,6 +135,30 @@ export function buildSeatProjection(
           reason: obligationReason(state.obligation.reasonCode),
         };
 
+  const pendingTrade =
+    state.pendingTrade === undefined ||
+    (viewerSeatId !== state.pendingTrade.proposerSeatId &&
+      viewerSeatId !== state.pendingTrade.counterpartySeatId)
+      ? undefined
+      : {
+          tradeId: state.pendingTrade.tradeId,
+          proposerSeatId: state.pendingTrade.proposerSeatId,
+          counterpartySeatId: state.pendingTrade.counterpartySeatId,
+          offered: {
+            cash: state.pendingTrade.offered.cash,
+            deedIds: [...state.pendingTrade.offered.deedIds],
+            detentionReleaseCardIds: [...state.pendingTrade.offered.detentionReleaseCardIds],
+          },
+          requested: {
+            cash: state.pendingTrade.requested.cash,
+            deedIds: [...state.pendingTrade.requested.deedIds],
+            detentionReleaseCardIds: [...state.pendingTrade.requested.detentionReleaseCardIds],
+          },
+          proposerBalance: state.pendingTrade.proposerBalance,
+          counterpartyBalance: state.pendingTrade.counterpartyBalance,
+          aggregateVersion: state.pendingTrade.aggregateVersion,
+        };
+
   const projection: GameSnapshotProjection = {
     gameId: state.gameId,
     status: context.status,
@@ -153,6 +180,7 @@ export function buildSeatProjection(
     ...(context.publicEvents === undefined ? {} : { publicEvents: [...context.publicEvents] }),
     ...(auction === undefined ? {} : { auction }),
     ...(obligation === undefined ? {} : { obligation }),
+    ...(pendingTrade === undefined ? {} : { pendingTrade }),
     legalActions:
       viewerSeatId === undefined ? [] : [...legalActions(state, viewerSeatId, context.rules)],
     actionAvailability:

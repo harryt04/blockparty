@@ -500,12 +500,13 @@ separate player contexts.
       Implemented the owned-Address Manage flow with content-backed district, level, inventory, integer price/resale, mortgage, redemption, blocked-reason, confirmation, and authoritative command presentation in `apps/web/src/components/game/management-panel.tsx`.
       `apps/web/test/game-model.test.ts` proves management previews and action grouping; the repository still has no Playwright harness or configured MongoDB, so the required browser matrix remains planned.
 
-- [ ] **C9 — Trade**
+- [x] **C9 — Trade**
       Blocked by: C8
-      Requirements: RULE-012, UX-017
+      Requirements: UX-015
       Read: docs/product/rules.md, docs/design/ux-spec.md
       Acceptance: accessible trade compose/review/counter/accept/reject/cancel uses canonical projected assets, explicit mortgage charges, no escrow fiction, and clear stale-offer recovery.
       Proves: separate-context Playwright trade lifecycle covers validation, counter, staleness, charges, acceptance, rejection, and cancel; TEST-002 browser layer.
+      Implemented the authorized pending-trade projection and accessible compose/review/respond surface in `apps/web/src/components/game/trade-panel.tsx`; `apps/web/test/game-model.test.ts` and `apps/web/test/projection.test.ts` prove canonical asset mapping, mortgage charges, stale recovery, and named-party privacy. The repository still has no Playwright harness or configured MongoDB, so separate-context browser evidence remains planned.
 
 - [ ] **C10 — Detention, debt, and bankruptcy**
       Blocked by: C8

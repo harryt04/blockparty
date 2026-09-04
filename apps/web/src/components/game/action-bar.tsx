@@ -67,11 +67,12 @@ function ActionOptions({
   onAction: (action: LegalAction, amount?: number) => void;
 }) {
   const managementActionTypes = new Set<LegalAction["type"]>(MANAGEMENT_ACTION_TYPES);
+  const tradeActionTypes = new Set<LegalAction["type"]>(["ProposeTrade"]);
   const visibleLegalActions = legalActions.filter(
-    (action) => !managementActionTypes.has(action.type),
+    (action) => !managementActionTypes.has(action.type) && !tradeActionTypes.has(action.type),
   );
   const visibleAvailability = actionAvailability.filter(
-    (action) => !managementActionTypes.has(action.type),
+    (action) => !managementActionTypes.has(action.type) && !tradeActionTypes.has(action.type),
   );
   const [bidAmount, setBidAmount] = useState<string>();
   const [bidError, setBidError] = useState<string>();
