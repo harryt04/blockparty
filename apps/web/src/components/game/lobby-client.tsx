@@ -65,10 +65,11 @@ export function LobbyClient({ gameId }: { gameId: string }) {
   const [commandError, setCommandError] = useState<string>();
   const [draftConfiguration, setDraftConfiguration] = useState<RulesConfiguration>();
   const activeGameRef = useRef(false);
+  const startRequestedRef = useRef(false);
   const lobbyRequestRef = useRef<AbortController | null>(null);
 
   const loadLobby = useCallback(async () => {
-    if (activeGameRef.current) return;
+    if (activeGameRef.current || startRequestedRef.current) return;
     lobbyRequestRef.current?.abort();
     const controller = new AbortController();
     lobbyRequestRef.current = controller;
@@ -152,6 +153,8 @@ export function LobbyClient({ gameId }: { gameId: string }) {
   async function startGame() {
     if (lobby === undefined || state.snapshot === undefined || !lobby.viewerIsHost || !ready)
       return;
+    startRequestedRef.current = true;
+    lobbyRequestRef.current?.abort();
     setCommandPending(true);
     setCommandError(undefined);
     try {
@@ -176,6 +179,7 @@ export function LobbyClient({ gameId }: { gameId: string }) {
       });
       const body: unknown = await response.json();
       if (!response.ok) {
+        startRequestedRef.current = false;
         const parsed = ErrorEnvelope.safeParse(body);
         setCommandError(parsed.success ? parsed.data.error.message : "The game could not start.");
         return;
@@ -186,6 +190,7 @@ export function LobbyClient({ gameId }: { gameId: string }) {
       setCommandPending(false);
       retry();
     } catch {
+      startRequestedRef.current = false;
       setCommandError("The game could not start. Check your connection and try again.");
     } finally {
       setCommandPending(false);

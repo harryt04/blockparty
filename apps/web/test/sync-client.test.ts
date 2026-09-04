@@ -176,7 +176,7 @@ describe("GameSyncClient", () => {
     expect(JSON.stringify(client.currentState)).not.toContain("capability");
   });
 
-  it("accepts only contiguous event ranges, then replaces them with the sync snapshot", async () => {
+  it("accepts only contiguous event ranges, replaces them with the sync snapshot, and keeps SSE open", async () => {
     const sources: FakeEventSource[] = [];
     const current = snapshot(0);
     const fetchImpl = vi
@@ -198,13 +198,75 @@ describe("GameSyncClient", () => {
     await client.start();
     sources[0]!.open();
     sources[0]!.emit(eventsEnvelope(1, 1));
+    client.refresh();
     await vi.waitFor(() => expect(client.currentState.snapshot?.sequence).toBe(2));
 
     expect(fetchImpl).toHaveBeenLastCalledWith(
       `/api/games/${GAME_ID}/sync?lastSequence=1&aggregateVersion=1`,
       expect.objectContaining({ credentials: "include" }),
     );
-    expect(sources[0]!.closed).toBe(true);
+    expect(sources[0]!.closed).toBe(false);
+    expect(sources).toHaveLength(1);
+  });
+
+  it("discards an older sync range when a newer SSE snapshot wins the race", async () => {
+    const sources: FakeEventSource[] = [];
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(response(bootstrapBody(snapshot(0))))
+      .mockResolvedValueOnce(response(eventsEnvelope(1, 1)))
+      .mockResolvedValueOnce(response(snapshotEnvelope(snapshot(2))));
+    const client = new GameSyncClient({
+      gameId: GAME_ID,
+      fetchImpl,
+      eventSourceFactory: () => {
+        const source = new FakeEventSource();
+        sources.push(source);
+        return source;
+      },
+      onState: () => undefined,
+      jitter: () => 0,
+    });
+
+    await client.start();
+    sources[0]!.open();
+    client.refresh();
+    sources[0]!.emit(snapshotEnvelope(snapshot(2)));
+    await vi.waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(3));
+
+    expect(fetchImpl).toHaveBeenLastCalledWith(
+      `/api/games/${GAME_ID}/sync?lastSequence=2&aggregateVersion=2`,
+      expect.objectContaining({ credentials: "include" }),
+    );
+    expect(sources[0]!.closed).toBe(false);
+    expect(sources).toHaveLength(1);
+  });
+
+  it("reconciles an ACK-driven refresh without replacing the live stream", async () => {
+    const sources: FakeEventSource[] = [];
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(response(bootstrapBody(snapshot(0))))
+      .mockResolvedValueOnce(response(snapshotEnvelope(snapshot(1))));
+    const client = new GameSyncClient({
+      gameId: GAME_ID,
+      fetchImpl,
+      eventSourceFactory: () => {
+        const source = new FakeEventSource();
+        sources.push(source);
+        return source;
+      },
+      onState: () => undefined,
+      jitter: () => 0,
+    });
+
+    await client.start();
+    sources[0]!.open();
+    client.refresh();
+    await vi.waitFor(() => expect(client.currentState.snapshot?.sequence).toBe(1));
+
+    expect(sources[0]!.closed).toBe(false);
+    expect(sources).toHaveLength(1);
   });
 
   it("resyncs a gap and retries transport loss with exponential backoff", async () => {

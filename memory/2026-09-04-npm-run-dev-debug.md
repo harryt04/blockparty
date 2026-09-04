@@ -108,3 +108,20 @@ or `AwaitDebt`. The cause was `GameClient` gating the detail control on ownershi
 regression covers allowed and disallowed phases. The same live browser flow still creates, starts,
 and reaches the active game, while the initial Await Roll screen no longer exposes the misleading
 management affordance. Focused model tests, full CI, and the production build all pass.
+
+## Iteration 12 follow-up
+
+The first bot-assisted game run exposed an SSE reconnect storm: ACK-driven refreshes and
+event-driven syncs repeatedly replaced the authenticated stream until the per-seat eight
+connection cap returned 429. The sync client now keeps the stream open for ordinary
+reconciliation and ignores an older in-flight event range when a newer SSE snapshot has
+already advanced the delivery cursor. A memoized presence callback also prevents the lobby
+sync client from being recreated on every state update.
+
+The same run exposed one transient 409 lobby read during the StartGame-to-ACTIVE handoff.
+`LobbyClient` now marks start intent before issuing the command and suppresses stale lobby
+reads until the authoritative ACTIVE snapshot arrives. A fresh `npm run dev` run with a
+disposable MongoDB replica set created a lobby, started the game, and completed eight real
+action-sheet commands with no API failures or browser console errors. Final CI passed with
+63 test files and 270 passing tests (2 intentional skips); the no-Mongo production build
+also passed.

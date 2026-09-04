@@ -21,12 +21,13 @@ export function useGameSync(
     resyncing: true,
   });
   const clientRef = useRef<GameSyncClient | undefined>(undefined);
+  const presenceHandler = useCallback(() => onPresence?.(), [onPresence]);
 
   useEffect(() => {
     const client = new GameSyncClient({
       gameId,
       onState: setState,
-      onPresence: onPresence === undefined ? undefined : () => onPresence(),
+      onPresence: presenceHandler,
     });
     clientRef.current = client;
     void client.start();
@@ -34,7 +35,7 @@ export function useGameSync(
       client.close();
       clientRef.current = undefined;
     };
-  }, [gameId, onPresence]);
+  }, [gameId, presenceHandler]);
 
   const retry = useCallback(() => {
     clientRef.current?.refresh();

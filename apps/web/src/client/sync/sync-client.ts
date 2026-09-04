@@ -105,10 +105,14 @@ export class GameSyncClient {
 
   /** Reconciles immediately after a command or an explicit retry request. */
   refresh(): void {
-    if (this.closed || !this.started) return;
-    this.streamClose?.();
-    this.streamClose = undefined;
-    void this.synchronize();
+    // An ACK can race the SSE event for the same committed command. Let the
+    // in-flight event-driven sync finish instead of closing its live stream
+    // and making it reopen after every command.
+    if (this.closed || !this.started || this.syncing) return;
+    // The stream is delivery evidence and remains useful while the ACK-driven
+    // sync catches up. Closing it here creates one new connection per command
+    // when the ACK wins the race against the SSE event.
+    void this.synchronize(false);
   }
 
   private emit(change: Partial<GameSyncState>): void {
@@ -178,7 +182,12 @@ export class GameSyncClient {
           resyncing: true,
           error: undefined,
         });
-        void this.synchronize();
+        // A normal committed event range does not require a new SSE socket.
+        // Keep the authenticated stream open while /sync replaces the
+        // delivery evidence with the authoritative snapshot. Reconnecting
+        // for every command exhausts the per-seat connection cap in a live
+        // game with several bot events.
+        void this.synchronize(false);
         return;
       case "room.presence":
         this.options.onPresence?.(envelope);
@@ -224,7 +233,7 @@ export class GameSyncClient {
     void this.synchronize();
   }
 
-  private async synchronize(): Promise<void> {
+  private async synchronize(reopenStream = true): Promise<void> {
     if (this.closed || this.syncing) return;
     this.syncing = true;
     this.emit({ connection: "resyncing", resyncing: true, error: undefined });
@@ -247,7 +256,17 @@ export class GameSyncClient {
           this.applySnapshot(parsed.data.snapshot);
           break;
         }
-        if (parsed.data.type !== "game.events" || !this.isContiguousEvents(parsed.data)) {
+        if (parsed.data.type !== "game.events") throw new SyncProtocolError();
+        if (!this.isContiguousEvents(parsed.data)) {
+          // A newer SSE snapshot may arrive while this request is in flight.
+          // The older range is already represented by the current delivery
+          // cursor, so it is safe to ask again from that newer position.
+          if (
+            parsed.data.lastSequence <= this.state.lastSequence &&
+            parsed.data.aggregateVersion <= this.state.aggregateVersion
+          ) {
+            continue;
+          }
           throw new SyncProtocolError();
         }
         // Domain events are delivery evidence. Follow the range until the
@@ -258,7 +277,7 @@ export class GameSyncClient {
         });
       }
       this.retryAttempt = 0;
-      if (!this.closed) this.openStream();
+      if (!this.closed && reopenStream) this.openStream();
     } catch (error) {
       this.handleFailure(error);
     } finally {
@@ -267,9 +286,10 @@ export class GameSyncClient {
   }
 
   private handleTransportLoss(): void {
-    if (this.closed || this.syncing) return;
+    if (this.closed) return;
     this.streamClose?.();
     this.streamClose = undefined;
+    if (this.syncing) return;
     this.schedule(() => void this.synchronize());
   }
 

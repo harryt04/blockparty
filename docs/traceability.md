@@ -272,3 +272,11 @@ prevents an owned-space detail from opening management during `AwaitRoll`,
 `AwaitPurchase`, or other non-management phases while retaining the
 `TurnStart`/`ResolveMove`/`AwaitDebt` cases defined by RULE-005, RULE-008, and
 UX-016; `apps/web/test/game-model.test.ts` records the boundary regression.
+
+Iteration 12 keeps the authenticated SSE stream open while a normal contiguous
+event range is replaced by the authoritative `/sync` snapshot. This preserves
+PROTO-003/004 delivery and recovery behavior without exhausting the configured
+per-seat connection cap during ordinary bot-assisted play; `apps/web/test/sync-client.test.ts`
+records the regression. The StartGame handoff also suppresses stale lobby reads
+until the authoritative ACTIVE snapshot arrives, preventing a transient
+409 response during navigation.
