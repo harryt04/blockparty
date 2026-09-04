@@ -65,6 +65,14 @@ fixed-state coverage live in `apps/web/src/components/game/game-model.ts` and
 `apps/web/test/game-model.test.ts`; cross-browser keyboard and assistive-technology evidence
 remains planned for the TEST-002 Playwright layer.
 
+E2 adds `LiveAnnouncements` in `apps/web/src/components/game/live-announcements.tsx` and the
+allowlisted event/connection decision model in
+`apps/web/src/components/game/live-announcements-model.ts`. Only authoritative turn, dice,
+decision, Owed, auction, pause, reconnect, elimination, and terminal transitions enter a live
+region; routine feed events, presence churn, and focus remain silent/stable. Evidence is in
+`apps/web/test/live-announcements.test.ts`; browser sequence and manual assistive-technology
+evidence remains planned.
+
 C13 adds the device-only presentation preference provider and settings panel in
 `apps/web/src/components/settings/presentation-preferences.tsx`, with local
 serialization/fallback evidence in `apps/web/test/settings-content.test.ts`.

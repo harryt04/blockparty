@@ -22,6 +22,7 @@ import { BankAssets } from "./bank-assets";
 import { BoardList } from "./board-list";
 import { BoardView } from "./board-view";
 import { EventFeed } from "./event-feed";
+import { LiveAnnouncements, type CommandAnnouncement } from "./live-announcements";
 import { ActionBar } from "./action-bar";
 import { ManagementPanel } from "./management-panel";
 import { TradePanel } from "./trade-panel";
@@ -72,6 +73,7 @@ export function GameClient({ gameId }: { gameId: string }) {
   const [pendingAction, setPendingAction] = useState<LegalAction>();
   const [actionStatus, setActionStatus] = useState<string>();
   const [actionError, setActionError] = useState<string>();
+  const [commandAnnouncement, setCommandAnnouncement] = useState<CommandAnnouncement>();
   const [managementOpen, setManagementOpen] = useState(false);
   const [recoveryStatus, setRecoveryStatus] = useState<string>();
 
@@ -94,6 +96,14 @@ export function GameClient({ gameId }: { gameId: string }) {
     snapshot?.seats.some((seat) => seat.isSelf && seat.seatId === detailSpace.ownerSeatId) ===
       true &&
     management !== undefined;
+
+  function announceCommand(message: string, priority: CommandAnnouncement["priority"]): void {
+    setCommandAnnouncement((previous) => ({
+      id: (previous?.id ?? 0) + 1,
+      message,
+      priority,
+    }));
+  }
 
   useEffect(() => {
     if (
@@ -130,6 +140,11 @@ export function GameClient({ gameId }: { gameId: string }) {
   if (snapshot.phase === "Finished") {
     return (
       <div className="mx-auto max-w-2xl px-4 py-8">
+        <LiveAnnouncements
+          snapshot={snapshot}
+          connection={state.connection}
+          command={commandAnnouncement}
+        />
         <Card>
           <CardHeader>
             <CardTitle>Game complete</CardTitle>
@@ -185,11 +200,11 @@ export function GameClient({ gameId }: { gameId: string }) {
       const body: unknown = await response.json();
       if (!response.ok) {
         const parsed = ErrorEnvelope.safeParse(body);
-        setActionError(
-          parsed.success
-            ? parsed.data.error.message
-            : "The action was not accepted. Refresh and try again.",
-        );
+        const message = parsed.success
+          ? parsed.data.error.message
+          : "The action was not accepted. Refresh and try again.";
+        setActionError(message);
+        announceCommand(`Action rejected: ${message}`, "assertive");
         setActionStatus(undefined);
         setPendingAction(undefined);
         if (parsed.success && parsed.data.error.code === "STALE_VERSION") retry();
@@ -197,18 +212,23 @@ export function GameClient({ gameId }: { gameId: string }) {
       }
       const ack = CommandAckEnvelope.safeParse(body);
       if (!ack.success) {
-        setActionError("The action acknowledgement was not understood. Refresh and try again.");
+        const message = "The action acknowledgement was not understood. Refresh and try again.";
+        setActionError(message);
+        announceCommand(`Action rejected: ${message}`, "assertive");
         setActionStatus(undefined);
         setPendingAction(undefined);
         retry();
         return false;
       }
       setActionStatus("Action accepted. Waiting for the authoritative result.");
+      announceCommand("Action accepted. Waiting for the authoritative result.", "polite");
       setPendingAction(undefined);
       retry();
       return true;
     } catch {
-      setActionError("The action could not be sent. Check your connection and try again.");
+      const message = "The action could not be sent. Check your connection and try again.";
+      setActionError(message);
+      announceCommand(`Action rejected: ${message}`, "assertive");
       setActionStatus(undefined);
       setPendingAction(undefined);
       return false;
@@ -253,6 +273,11 @@ export function GameClient({ gameId }: { gameId: string }) {
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-6">
+      <LiveAnnouncements
+        snapshot={snapshot}
+        connection={state.connection}
+        command={commandAnnouncement}
+      />
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm text-muted-ink">Live game</p>

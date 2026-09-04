@@ -31,9 +31,9 @@ export function ConnectionStatus({
   const { label, icon: Icon, tone } = STATES[state];
   return (
     <p
-      // Restrained announcements: status, not assertive. UX-040.
-      role="status"
-      aria-live="polite"
+      // The dedicated live-region component announces only transitions. This
+      // persistent label stays visual so resync/presence churn is silent.
+      aria-label={`Connection status: ${label}`}
       className={cn(
         "inline-flex items-center gap-2 rounded-(--radius-pill) border bg-surface px-3 py-1 text-xs font-medium",
         tone,
