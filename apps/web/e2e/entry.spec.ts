@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("entry actions remain reachable with first-visit notices", () => {
+  // WebKit can let a previously registered shell worker bypass page.route()
+  // for API requests. Entry tests need the mocked API boundary to stay
+  // authoritative. See TEST-002 and the E6 browser matrix.
+  test.use({ serviceWorkers: "block" });
+
   test("keeps mutation submits disabled until the client form hydrates", async ({ page }) => {
     await page.context().route("**/_next/static/**/*.js", async (route) => {
       await route.abort();

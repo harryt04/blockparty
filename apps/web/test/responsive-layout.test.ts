@@ -10,6 +10,14 @@ const actionBar = readFileSync(
   new URL("../src/components/game/action-bar.tsx", import.meta.url),
   "utf8",
 );
+const playerStrip = readFileSync(
+  new URL("../src/components/game/player-strip.tsx", import.meta.url),
+  "utf8",
+);
+const eventFeed = readFileSync(
+  new URL("../src/components/game/event-feed.tsx", import.meta.url),
+  "utf8",
+);
 
 describe("responsive game shell contract", () => {
   it("defines the documented phone, tablet, desktop, and landscape modes", () => {
@@ -39,5 +47,15 @@ describe("responsive game shell contract", () => {
     expect(actionBar).toContain('className="game-action-bar z-10 border-t border-line bg-surface"');
     expect(stylesheet).toContain(".game-action-bar {\n    position: fixed;");
     expect(stylesheet).toContain(".game-action-bar {\n      position: sticky;");
+  });
+
+  it("keeps the narrow player strip keyboard-scrollable without a duplicate landmark", () => {
+    expect(playerStrip).toContain('aria-label="Player list"');
+    expect(playerStrip).toContain("tabIndex={0}");
+    expect(playerStrip).not.toContain('<section aria-label="Players"');
+  });
+
+  it("keeps the bounded event history keyboard-scrollable", () => {
+    expect(eventFeed).toContain('className="max-h-80 overflow-y-auto px-4 pb-4" tabIndex={0}');
   });
 });

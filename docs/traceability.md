@@ -112,7 +112,9 @@ supports 320–767px focused-board play with a safe-area-aware fixed action bar;
 320–400px contextual panel; 1024px and wider uses a persistent sidebar; and short landscape uses
 a board-first split with independently scrollable context. `apps/web/test/responsive-layout.test.ts`
 proves the breakpoint, overflow, safe-area, and action-order contracts. E6 adds cross-browser
-axe and responsive overflow evidence; screenshot and interaction capture remains pending.
+axe and responsive overflow evidence; iteration 15 also makes the horizontally scrollable player
+list and bounded event history keyboard-focusable and removes the duplicate Players landmark after
+live 320px axe findings. Screenshot and interaction capture remains pending.
 
 C13 adds the device-only presentation preference provider and settings panel in
 `apps/web/src/components/settings/presentation-preferences.tsx`, with local

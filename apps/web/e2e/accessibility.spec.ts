@@ -290,6 +290,13 @@ test.describe("accessibility release matrix", () => {
         expect(dimensions.scrollWidth, `${width}px page overflow`).toBeLessThanOrEqual(
           dimensions.clientWidth + 1,
         );
+        if (width === 320) {
+          const results = await new AxeBuilder({ page }).analyze();
+          const seriousOrCritical = results.violations.filter((violation) =>
+            ["serious", "critical"].includes(violation.impact ?? ""),
+          );
+          expect(seriousOrCritical, "320px gameplay has serious/critical axe findings").toEqual([]);
+        }
       }
     });
   });

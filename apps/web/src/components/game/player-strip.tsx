@@ -21,50 +21,52 @@ export function PlayerStrip({
   className?: string;
 }) {
   return (
-    <section aria-label="Players" className={className}>
-      <ul className="flex gap-3 overflow-x-auto pb-2">
-        {seats.map((seat) => {
-          const isActive = seat.seatId === activeSeatId;
-          return (
-            <li
-              key={seat.seatId}
-              aria-current={isActive ? "true" : undefined}
-              className={cn(
-                "min-w-40 shrink-0 rounded-(--radius-md) border bg-surface-raised p-3",
-                // The current turn takes a border and a label, not color alone.
-                isActive ? "border-2 border-brand" : "border-line",
-              )}
-            >
-              <div className="flex items-center gap-2">
-                {seat.token !== undefined ? (
-                  <PlayerToken token={seat.token} name={seat.name} />
-                ) : null}
-                <span className="truncate font-medium">{seat.name ?? "Open seat"}</span>
-              </div>
+    <ul
+      aria-label="Player list"
+      className={cn("flex gap-3 overflow-x-auto pb-2", className)}
+      tabIndex={0}
+    >
+      {seats.map((seat) => {
+        const isActive = seat.seatId === activeSeatId;
+        return (
+          <li
+            key={seat.seatId}
+            aria-current={isActive ? "true" : undefined}
+            className={cn(
+              "min-w-40 shrink-0 rounded-(--radius-md) border bg-surface-raised p-3",
+              // The current turn takes a border and a label, not color alone.
+              isActive ? "border-2 border-brand" : "border-line",
+            )}
+          >
+            <div className="flex items-center gap-2">
+              {seat.token !== undefined ? (
+                <PlayerToken token={seat.token} name={seat.name} />
+              ) : null}
+              <span className="truncate font-medium">{seat.name ?? "Open seat"}</span>
+            </div>
 
-              <p className="tabular mt-1 text-sm">
-                {seat.balance === undefined
-                  ? "No balance yet"
-                  : formatMoney(seat.balance, currencyLabel)}
+            <p className="tabular mt-1 text-sm">
+              {seat.balance === undefined
+                ? "No balance yet"
+                : formatMoney(seat.balance, currencyLabel)}
+            </p>
+            {seat.position === undefined ? null : (
+              <p className="text-xs text-muted-ink">
+                Stop {seat.position} · {seat.deedIds?.length ?? 0} Addresses
               </p>
-              {seat.position === undefined ? null : (
-                <p className="text-xs text-muted-ink">
-                  Stop {seat.position} · {seat.deedIds?.length ?? 0} Addresses
-                </p>
-              )}
+            )}
 
-              <div className="mt-2 flex flex-wrap gap-1">
-                {isActive ? <Badge variant="brand">Their turn</Badge> : null}
-                {seat.kind === "bot" ? <Badge>Bot</Badge> : null}
-                {seat.isHost ? <Badge>Host</Badge> : null}
-                {!seat.connected ? <Badge variant="warning">Disconnected</Badge> : null}
-                {seat.detained === true ? <Badge variant="warning">Noise Complaint</Badge> : null}
-                {seat.status === "eliminated" ? <Badge variant="danger">Packed Up</Badge> : null}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+            <div className="mt-2 flex flex-wrap gap-1">
+              {isActive ? <Badge variant="brand">Their turn</Badge> : null}
+              {seat.kind === "bot" ? <Badge>Bot</Badge> : null}
+              {seat.isHost ? <Badge>Host</Badge> : null}
+              {!seat.connected ? <Badge variant="warning">Disconnected</Badge> : null}
+              {seat.detained === true ? <Badge variant="warning">Noise Complaint</Badge> : null}
+              {seat.status === "eliminated" ? <Badge variant="danger">Packed Up</Badge> : null}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

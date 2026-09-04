@@ -92,7 +92,7 @@ export function EventFeed({
       <summary className="min-h-11 cursor-pointer list-none px-4 py-3 font-medium">
         Event log{events.length > 0 ? ` (${events.length})` : ""}
       </summary>
-      <div className="max-h-80 overflow-y-auto px-4 pb-4">
+      <div className="max-h-80 overflow-y-auto px-4 pb-4" tabIndex={0}>
         {events.length === 0 ? (
           <EmptyState
             title="Nothing has happened yet"

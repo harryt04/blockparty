@@ -639,6 +639,7 @@ recorded draws.
   Acceptance: axe covers every route and major phase with no serious/critical findings, and a release checklist records keyboard, 200%/400% zoom, VoiceOver, NVDA, iOS Safari, and Android Chrome results with issue links.
   Proves: automated cross-browser axe/zoom suite plus completed human assistive-technology records; TEST-002 browser/human-review layers.
   Added `playwright.config.ts` and `apps/web/e2e/accessibility.spec.ts` for Chromium/Firefox/WebKit route, phase, axe, reduced-motion, and zoom-equivalent viewport coverage. `docs/delivery/accessibility-checklist.md` records the human execution packet; human execution and sign-off are required before release.
+  Iteration 15 fixes the live 320px axe findings by removing a duplicate Players landmark and making both bounded player/event scroll regions keyboard-focusable; `apps/web/test/responsive-layout.test.ts` records the regression contract.
 
 ---
 
