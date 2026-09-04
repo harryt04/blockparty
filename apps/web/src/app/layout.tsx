@@ -46,9 +46,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </a>
         <PresentationPreferencesProvider>
           <AnalyticsProvider>
+            <AnalyticsConsentBanner />
             <PwaClient />
             {children}
-            <AnalyticsConsentBanner />
           </AnalyticsProvider>
         </PresentationPreferencesProvider>
       </body>

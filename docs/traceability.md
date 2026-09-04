@@ -9,7 +9,10 @@ commit; a scaffold alone is never evidence.
 
 The F1/F2 browser evidence also covers the concurrent first-visit notices:
 `apps/web/e2e/pwa.spec.ts` verifies that the install dismissal remains
-actionable while the analytics consent banner is visible.
+actionable while the analytics consent banner is visible, and
+`apps/web/e2e/entry.spec.ts` verifies that the create action reaches the form
+handler while consent is pending. The consent notice is in normal document
+flow so it cannot obscure entry or live-game controls.
 
 ## Product and rules
 

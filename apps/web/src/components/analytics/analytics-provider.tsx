@@ -109,7 +109,7 @@ export function AnalyticsConsentBanner() {
   return (
     <aside
       aria-label="Analytics consent"
-      className="fixed inset-x-4 bottom-4 z-40 mx-auto max-w-lg rounded-(--radius-lg) border-2 border-line bg-surface-raised p-4 shadow-lg"
+      className="mx-4 my-4 max-w-lg rounded-(--radius-lg) border-2 border-line bg-surface-raised p-4 shadow-lg sm:mx-auto"
     >
       <Card className="border-0">
         <CardHeader className="p-0">

@@ -61,6 +61,12 @@ function errorId(field: CreateField): string {
   return `${field}-error`;
 }
 
+function csrfToken(): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const cookie = document.cookie.split("; ").find((entry) => entry.startsWith("bp_csrf="));
+  return cookie?.slice("bp_csrf=".length);
+}
+
 function ApiError({ message }: { message: string }) {
   return (
     <Alert variant="danger" role="alert">
@@ -142,10 +148,15 @@ export function CreateGameForm() {
     });
     setPending(true);
     try {
+      const csrf = csrfToken();
       const response = await fetch("/api/games", {
         method: "POST",
         credentials: "include",
-        headers: { "content-type": "application/json", accept: "application/json" },
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json",
+          ...(csrf === undefined ? {} : { "x-csrf-token": csrf }),
+        },
         body: JSON.stringify(result.request),
       });
       const body: unknown = await response.json();

@@ -7,6 +7,7 @@ import {
   type VariantKey,
 } from "@blockparty/contracts";
 import { Check, Clipboard, Share2, Users } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -36,6 +37,12 @@ function commandUrl(gameId: string): string {
   return `/api/games/${encodeURIComponent(gameId)}/commands`;
 }
 
+function csrfToken(): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const cookie = document.cookie.split("; ").find((entry) => entry.startsWith("bp_csrf="));
+  return cookie?.slice("bp_csrf=".length);
+}
+
 function LobbyLoading() {
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-8" aria-busy="true">
@@ -49,6 +56,7 @@ function LobbyLoading() {
 }
 
 export function LobbyClient({ gameId }: { gameId: string }) {
+  const router = useRouter();
   const { track } = useAnalytics();
   const [lobby, setLobby] = useState<LobbyProjection>();
   const [error, setError] = useState<string>();
@@ -90,6 +98,12 @@ export function LobbyClient({ gameId }: { gameId: string }) {
     if (state.snapshot !== undefined) void loadLobby();
   }, [loadLobby, state.snapshot]);
 
+  useEffect(() => {
+    if (state.snapshot?.status === "ACTIVE") {
+      router.replace(`/game/${encodeURIComponent(gameId)}`);
+    }
+  }, [gameId, router, state.snapshot?.status]);
+
   const ready = lobby !== undefined && lobbyIsReady(lobby);
   const invite = useMemo(
     () =>
@@ -125,10 +139,15 @@ export function LobbyClient({ gameId }: { gameId: string }) {
     setCommandPending(true);
     setCommandError(undefined);
     try {
+      const csrf = csrfToken();
       const response = await fetch(commandUrl(gameId), {
         method: "POST",
         credentials: "include",
-        headers: { Accept: "application/json", "content-type": "application/json" },
+        headers: {
+          Accept: "application/json",
+          "content-type": "application/json",
+          ...(csrf === undefined ? {} : { "x-csrf-token": csrf }),
+        },
         body: JSON.stringify({
           protocolVersion: 1,
           type: "game.command",
@@ -168,10 +187,15 @@ export function LobbyClient({ gameId }: { gameId: string }) {
     setCommandPending(true);
     setCommandError(undefined);
     try {
+      const csrf = csrfToken();
       const response = await fetch(commandUrl(gameId), {
         method: "POST",
         credentials: "include",
-        headers: { Accept: "application/json", "content-type": "application/json" },
+        headers: {
+          Accept: "application/json",
+          "content-type": "application/json",
+          ...(csrf === undefined ? {} : { "x-csrf-token": csrf }),
+        },
         body: JSON.stringify({
           protocolVersion: 1,
           type: "game.command",
