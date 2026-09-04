@@ -676,12 +676,13 @@ recorded draws.
   Proves: integration redaction canaries plus staging metric/alert fire-and-recover drill; TEST-002 security-boundary/deployment layer.
   Implemented the allowlisted telemetry/logger boundary, all-API request instrumentation, subsystem metrics, and owner-linked alert definitions in `apps/web/src/server/observability/telemetry.ts` and `docs/delivery/observability-runbook.md`; `apps/web/test/telemetry.test.ts` proves coverage, forbidden-field exclusion, and alert fire/recovery. Staging fire-and-recover execution remains a human operational sign-off item.
 
-- [ ] **F5 — Backup and restore drill**
-      Blocked by: F4
-      Requirements: OPS-009, PRD-NFR-008, SEC-005
-      Read: docs/delivery/operations.md, docs/engineering/realtime-and-data.md, docs/engineering/security-privacy-analytics.md
-      Acceptance: encrypted replica-set backup restores into isolation and verifies snapshot/event/receipt consistency, indexes, hashes, captured versions, expiry and completed-game readability, with RPO/RTO/tool/result/remediation recorded.
-      Proves: completed restore drill and automated restored-dataset integrity suite; TEST-002 operations-drill/protocol layers.
+- [?] **F5 — Backup and restore drill**
+  Blocked by: F4
+  Requirements: OPS-009, PRD-NFR-008, SEC-005
+  Read: docs/delivery/operations.md, docs/engineering/realtime-and-data.md, docs/engineering/security-privacy-analytics.md
+  Acceptance: encrypted replica-set backup restores into isolation and verifies snapshot/event/receipt consistency, indexes, hashes, captured versions, expiry and completed-game readability, with RPO/RTO/tool/result/remediation recorded.
+  Proves: completed restore drill and automated restored-dataset integrity suite; TEST-002 operations-drill/protocol layers.
+  Added encrypted `mongodump`/`mongorestore` isolation procedure and aggregate-only `pnpm db:verify-restore` checks in `docs/delivery/backup-restore-drill.md` and `apps/web/src/server/backup/restore-integrity.ts`; `apps/web/test/backup-restore.test.ts` proves replay, receipt/index/reference integrity, capability-hash exclusion, corruption rejection, and completed-game readability. Real-environment restore execution and operator sign-off remain required.
 
 - [ ] **F6 — Load harness and the performance budgets**
       Blocked by: F5

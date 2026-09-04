@@ -17,7 +17,8 @@
     "test": "vitest run --coverage",
     "build": "pnpm --filter @blockparty/web build",
     "test:browser": "playwright test",
-    "db:maintain": "pnpm --filter @blockparty/web db:maintain"
+    "db:maintain": "pnpm --filter @blockparty/web db:maintain",
+    "db:verify-restore": "pnpm --filter @blockparty/web db:verify-restore"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
