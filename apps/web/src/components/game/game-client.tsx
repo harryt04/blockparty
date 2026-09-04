@@ -24,6 +24,7 @@ import { EventFeed } from "./event-feed";
 import { ActionBar } from "./action-bar";
 import { ManagementPanel } from "./management-panel";
 import { TradePanel } from "./trade-panel";
+import { DetentionDebtPanel } from "./detention-debt-panel";
 import {
   activeSpace,
   boardLayout,
@@ -287,6 +288,13 @@ export function GameClient({ gameId }: { gameId: string }) {
             disabled={state.connection !== "live" || snapshot.paused}
             pending={pendingAction !== undefined}
             onCommand={(command) => void submitCommand(command)}
+          />
+
+          <DetentionDebtPanel
+            snapshot={snapshot}
+            disabled={state.connection !== "live" || snapshot.paused}
+            pending={pendingAction !== undefined}
+            onAction={(action) => void submitAction(action)}
           />
 
           <AcquisitionAuctionSummary snapshot={snapshot} />

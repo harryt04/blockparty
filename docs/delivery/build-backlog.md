@@ -508,12 +508,13 @@ separate player contexts.
       Proves: separate-context Playwright trade lifecycle covers validation, counter, staleness, charges, acceptance, rejection, and cancel; TEST-002 browser layer.
       Implemented the authorized pending-trade projection and accessible compose/review/respond surface in `apps/web/src/components/game/trade-panel.tsx`; `apps/web/test/game-model.test.ts` and `apps/web/test/projection.test.ts` prove canonical asset mapping, mortgage charges, stale recovery, and named-party privacy. The repository still has no Playwright harness or configured MongoDB, so separate-context browser evidence remains planned.
 
-- [ ] **C10 — Detention, debt, and bankruptcy**
+- [x] **C10 — Detention, debt, and bankruptcy**
       Blocked by: C8
-      Requirements: RULE-009, RULE-011, UX-015, UX-016
+      Requirements: RULE-009, RULE-011, UX-015, UX-017
       Read: docs/product/rules.md, docs/design/ux-spec.md
       Acceptance: detention choices/attempts, debt creditor/amount/liquidity, and irreversible bankruptcy are explicit, accessible, server-driven, and untimed, with other players shown why play is paused.
       Proves: multi-context Playwright scenarios cover all release paths, debt recovery, disconnect pause, and confirmed bankruptcy; TEST-002 browser layer.
+      Implemented the explicit server-driven detention/debt/bankruptcy decision panel in `apps/web/src/components/game/detention-debt-panel.tsx`, including release-route explanations, creditor/amount/liquidity details, untimed pause messaging, and confirmed bankruptcy outcome copy. `apps/web/test/game-model.test.ts` proves captured-attempt, release-route, creditor, and liquidity mapping; the required separate-context browser evidence remains planned.
 
 - [ ] **C11 — Reconnect, reclaim, host transfer, and no-contest**
       Blocked by: C10

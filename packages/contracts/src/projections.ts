@@ -55,6 +55,8 @@ export const SeatProjection = z
     /** Route index of this seat's token. */
     position: z.int().min(0).optional(),
     detained: z.boolean().optional(),
+    /** Number of failed release attempts used by this seat. */
+    detentionTurnsRemaining: z.int().min(0).optional(),
     /** Count only. Card identities stay private until played. */
     detentionReleaseCardCount: z.int().min(0).optional(),
     /** Held card IDs are returned only to the owning seat or a named trade party. */
@@ -168,6 +170,7 @@ export type AuctionProjection = z.infer<typeof AuctionProjection>;
 
 export const ObligationProjection = z
   .object({
+    debtorSeatId: SeatId,
     amount: NonNegativeMoney,
     creditorSeatId: SeatId.optional(),
     reasonCode: z.string().max(64),

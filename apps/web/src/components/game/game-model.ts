@@ -164,6 +164,34 @@ export interface ManagementDecisionContext {
   readonly balance: number;
 }
 
+export interface DetentionRouteContext {
+  readonly action: LegalAction;
+  readonly label: string;
+  readonly description: string;
+}
+
+export interface DetentionDecisionContext {
+  readonly attempts: number;
+  readonly maxAttempts: number;
+  readonly releaseFee: number;
+  readonly routes: readonly DetentionRouteContext[];
+}
+
+export interface ObligationDecisionContext {
+  readonly debtorName: string;
+  readonly viewerIsDebtor: boolean;
+  readonly amount: number;
+  readonly creditorName: string;
+  readonly creditorIsBank: boolean;
+  readonly reason: string;
+  readonly balance: number;
+  readonly shortfall: number;
+  readonly liquidation: readonly LegalAction[];
+  readonly blocked: readonly ActionAvailability[];
+  readonly canPay: boolean;
+  readonly canDeclareBankruptcy: boolean;
+}
+
 export interface TradeAssetContext {
   readonly assetId: string;
   readonly label: string;
@@ -207,6 +235,97 @@ export interface TradeComposerContext {
   readonly offeredDeeds: readonly TradeAssetContext[];
   readonly offeredDetentionReleaseCards: readonly TradeAssetContext[];
   readonly proposeAction: LegalAction;
+}
+
+/**
+ * Builds current Noise Complaint release choices from server legalActions.
+ * Attempts and the fee come from the captured content bundle, while buttons
+ * remain entirely server-advertised. See RULE-009, CONTENT-005, and UX-017.
+ */
+export function detentionDecisionContext(
+  snapshot: GameSnapshotProjection,
+): DetentionDecisionContext | undefined {
+  const self = snapshot.seats.find((seat) => seat.isSelf);
+  if (self?.detained !== true || snapshot.phase !== "AwaitChoice") return undefined;
+  const bundle = getBundle(snapshot.versions.contentVersion);
+  if (bundle === undefined) return undefined;
+  const routes = snapshot.legalActions
+    .filter((action) => action.type === "ChoosePendingOption")
+    .flatMap((action): DetentionRouteContext[] => {
+      const optionId = stringConstraint(action, "optionId");
+      if (optionId === undefined) return [];
+      if (optionId === "attempt-roll") {
+        return [
+          {
+            action,
+            label: "Attempt a matching roll",
+            description:
+              "A matching roll clears Noise Complaint and moves you. A miss ends your turn.",
+          },
+        ];
+      }
+      if (optionId === "pay-release-fee") {
+        return [
+          {
+            action,
+            label: "Pay the release fee",
+            description: "Pay the data-defined fee, then roll and move in this same turn.",
+          },
+        ];
+      }
+      if (optionId.startsWith("use-release-card:")) {
+        const cardId = optionId.slice("use-release-card:".length);
+        return [
+          {
+            action,
+            label: `Use ${cardTitle(snapshot, cardId)}`,
+            description: "Use a held Neighborly Word to leave Noise Complaint without rolling.",
+          },
+        ];
+      }
+      return [];
+    });
+  return {
+    attempts: self.detentionTurnsRemaining ?? 0,
+    maxAttempts: bundle.economy.detentionMaxAttempts,
+    releaseFee: bundle.economy.detentionReleaseFee,
+    routes,
+  };
+}
+
+/** Builds the visible creditor, amount, and liquidation choices for an Owed state. */
+export function obligationDecisionContext(
+  snapshot: GameSnapshotProjection,
+): ObligationDecisionContext | undefined {
+  if (snapshot.obligation === undefined) return undefined;
+  const obligation = snapshot.obligation;
+  const creditor =
+    obligation.creditorSeatId === undefined
+      ? undefined
+      : snapshot.seats.find((seat) => seat.seatId === obligation.creditorSeatId);
+  const debtor = snapshot.seats.find((seat) => seat.seatId === obligation.debtorSeatId);
+  const balance = selfBalance(snapshot);
+  const liquidationTypes = new Set<LegalAction["type"]>([
+    "MortgageDeed",
+    "SellImprovement",
+    "ProposeTrade",
+  ]);
+  return {
+    debtorName: debtor?.name ?? "A player",
+    viewerIsDebtor: snapshot.viewerSeatId === obligation.debtorSeatId,
+    amount: obligation.amount,
+    creditorName: creditor?.name ?? "The Committee",
+    creditorIsBank: obligation.creditorSeatId === undefined,
+    reason: obligation.reason,
+    balance,
+    shortfall: Math.max(0, obligation.amount - balance),
+    liquidation: snapshot.legalActions.filter((action) => liquidationTypes.has(action.type)),
+    blocked: snapshot.actionAvailability.filter((action) => liquidationTypes.has(action.type)),
+    canPay: snapshot.legalActions.some((action) => action.type === "PayObligation"),
+    canDeclareBankruptcy: snapshot.legalActions.some(
+      (action) => action.type === "DeclareBankruptcy",
+    ),
+  };
 }
 
 function cardTitle(snapshot: GameSnapshotProjection, cardId: string): string {

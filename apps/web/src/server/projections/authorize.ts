@@ -77,6 +77,7 @@ export function buildSeatProjection(
       ...(state.phase === "Lobby" ? {} : { balance: seat.balance }),
       ...(state.phase === "Lobby" ? {} : { position: seat.position }),
       ...(state.phase === "Lobby" ? {} : { detained: seat.detained }),
+      ...(state.phase === "Lobby" ? {} : { detentionTurnsRemaining: seat.detentionTurnsRemaining }),
       ...(state.phase === "Lobby"
         ? {}
         : { detentionReleaseCardCount: seat.detentionReleaseCardIds.length }),
@@ -127,6 +128,7 @@ export function buildSeatProjection(
     state.obligation === undefined
       ? undefined
       : {
+          debtorSeatId: state.obligation.debtorSeatId,
           amount: state.obligation.amount,
           ...(state.obligation.creditorSeatId === undefined
             ? {}

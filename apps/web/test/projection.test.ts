@@ -113,6 +113,7 @@ describe("authorized seat projections", () => {
       balance: 145000,
       deedIds: ["d-sawhorse-lane"],
       detentionReleaseCardCount: 1,
+      detentionTurnsRemaining: 0,
       detentionReleaseCardIds: ["card-secret-release"],
       isSelf: true,
     });

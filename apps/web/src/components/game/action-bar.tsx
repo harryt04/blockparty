@@ -58,21 +58,45 @@ function constraintText(action: LegalAction): string | undefined {
 function ActionOptions({
   legalActions,
   actionAvailability,
+  decisionSnapshot,
   disabled,
   onAction,
 }: {
   legalActions: readonly LegalAction[];
   actionAvailability: readonly ActionAvailability[];
+  decisionSnapshot?: GameSnapshotProjection;
   disabled: boolean;
   onAction: (action: LegalAction, amount?: number) => void;
 }) {
   const managementActionTypes = new Set<LegalAction["type"]>(MANAGEMENT_ACTION_TYPES);
   const tradeActionTypes = new Set<LegalAction["type"]>(["ProposeTrade"]);
   const visibleLegalActions = legalActions.filter(
-    (action) => !managementActionTypes.has(action.type) && !tradeActionTypes.has(action.type),
+    (action) =>
+      !managementActionTypes.has(action.type) &&
+      !tradeActionTypes.has(action.type) &&
+      !(
+        decisionSnapshot?.obligation !== undefined &&
+        (action.type === "PayObligation" || action.type === "DeclareBankruptcy")
+      ) &&
+      !(
+        decisionSnapshot?.phase === "AwaitChoice" &&
+        decisionSnapshot.seats.some((seat) => seat.isSelf && seat.detained) &&
+        action.type === "ChoosePendingOption"
+      ),
   );
   const visibleAvailability = actionAvailability.filter(
-    (action) => !managementActionTypes.has(action.type) && !tradeActionTypes.has(action.type),
+    (action) =>
+      !managementActionTypes.has(action.type) &&
+      !tradeActionTypes.has(action.type) &&
+      !(
+        decisionSnapshot?.obligation !== undefined &&
+        (action.type === "PayObligation" || action.type === "DeclareBankruptcy")
+      ) &&
+      !(
+        decisionSnapshot?.phase === "AwaitChoice" &&
+        decisionSnapshot.seats.some((seat) => seat.isSelf && seat.detained) &&
+        action.type === "ChoosePendingOption"
+      ),
   );
   const [bidAmount, setBidAmount] = useState<string>();
   const [bidError, setBidError] = useState<string>();
@@ -286,6 +310,7 @@ export function ActionBar({
                 <ActionOptions
                   legalActions={legalActions}
                   actionAvailability={actionAvailability}
+                  decisionSnapshot={decisionSnapshot}
                   disabled={disabled || pending}
                   onAction={(action, amount) => {
                     submit(action, amount);

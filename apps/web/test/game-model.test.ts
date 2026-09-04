@@ -11,6 +11,8 @@ import {
   enabledVariantLabels,
   latestDiceResult,
   managementDecisionContext,
+  detentionDecisionContext,
+  obligationDecisionContext,
   orderedBoard,
   latestTradeOutcome,
   tradeComposerContext,
@@ -264,6 +266,59 @@ describe("game presentation model", () => {
         }),
       ),
     ).toEqual({ first: 3, second: 5 });
+  });
+
+  it("presents detention routes and untimed debt details from canonical state", () => {
+    const detained = snapshot({
+      phase: "AwaitChoice",
+      activeSeatId: "seat-a",
+      seats: [{ ...snapshot().seats[0]!, detained: true, detentionTurnsRemaining: 2 }],
+      legalActions: [
+        {
+          type: "ChoosePendingOption",
+          constraints: { choiceId: "detention:seat-a", optionId: "attempt-roll" },
+        },
+        {
+          type: "ChoosePendingOption",
+          constraints: { choiceId: "detention:seat-a", optionId: "use-release-card:c-flyer-04" },
+        },
+      ],
+    });
+    expect(detentionDecisionContext(detained)).toMatchObject({
+      attempts: 2,
+      maxAttempts: 3,
+      releaseFee: 5_000,
+      routes: [{ label: "Attempt a matching roll" }, { label: "Use A neighbourly word" }],
+    });
+
+    const debt = snapshot({
+      viewerSeatId: "seat-a",
+      phase: "AwaitDebt",
+      seats: [
+        snapshot().seats[0]!,
+        { ...snapshot().seats[0]!, seatId: "seat-b", name: "Maya", isSelf: false },
+      ],
+      obligation: {
+        debtorSeatId: "seat-a",
+        amount: 20_000,
+        creditorSeatId: "seat-b",
+        reasonCode: "RENT",
+        reason: "A rent payment is due.",
+      },
+      legalActions: [
+        { type: "MortgageDeed", constraints: { deedId: "d-sawhorse-lane" } },
+        { type: "DeclareBankruptcy" },
+      ],
+    });
+    expect(obligationDecisionContext(debt)).toMatchObject({
+      debtorName: "North Star",
+      viewerIsDebtor: true,
+      amount: 20_000,
+      creditorName: "Maya",
+      shortfall: 0,
+      liquidation: [{ type: "MortgageDeed" }],
+      canDeclareBankruptcy: true,
+    });
   });
 
   it("maps named-party trade offers to display assets and explicit mortgage charges", () => {
