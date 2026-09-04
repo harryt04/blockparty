@@ -19,13 +19,17 @@ import {
   type HostCapabilityDocument,
   type InvitationDocument,
 } from "@/server/games/create-game";
-import { guardMutation } from "@/server/http/guards";
+import { checkJsonContentType, checkRequestBodySize, guardMutation } from "@/server/http/guards";
 import { jsonError, jsonOk } from "@/server/http/responses";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  const size = await checkRequestBodySize(request);
+  if (!size.ok) return jsonError(size.code, { reason: size.reason });
+  const contentType = checkJsonContentType(request);
+  if (!contentType.ok) return jsonError(contentType.code, { reason: contentType.reason });
   const guard = guardMutation(request, "create");
   if (!guard.ok) return jsonError(guard.code, { reason: guard.reason });
 

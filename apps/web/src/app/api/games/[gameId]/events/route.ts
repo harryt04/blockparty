@@ -17,7 +17,7 @@ import { recover, recoveryStore, type RecoveryEnvelope } from "@/server/sync/rec
 import { canSubscribe, formatFrame, KEEP_ALIVE_FRAME, subscribe } from "@/server/sse/registry";
 import { ensureChangeStream } from "@/server/sse/change-stream";
 import { readSeatCapability } from "@/server/auth/session";
-import { checkRateLimit } from "@/server/http/guards";
+import { checkOrigin, checkRateLimit, corsHeaders } from "@/server/http/guards";
 import { jsonError } from "@/server/http/responses";
 import { SseConnectionLimitError } from "@/server/sse/registry";
 import { installPresenceRecovery } from "@/server/recovery/presence-recovery";
@@ -31,6 +31,8 @@ const KEEP_ALIVE_MS = 15_000;
 export async function GET(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = await params;
 
+  const origin = checkOrigin(request);
+  if (!origin.ok) return jsonError(origin.code, { gameId, reason: origin.reason });
   const limit = checkRateLimit(request, "sse");
   if (!limit.ok) return jsonError(limit.code, { gameId, reason: limit.reason });
 
@@ -144,6 +146,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ game
         Connection: "keep-alive",
         // Stops nginx-style proxies buffering the stream.
         "X-Accel-Buffering": "no",
+        ...corsHeaders(request),
       },
     });
   } catch (error) {

@@ -7,7 +7,7 @@ import type { CommandAckEnvelope } from "@blockparty/contracts";
 import { readHostCapability, readReclaimClaim, readSeatCapability } from "@/server/auth/session";
 import { handleCommand } from "@/server/commands/handle-command";
 import { COOKIE_NAMES, COOKIE_OPTIONS } from "@/server/auth/capabilities";
-import { checkPayloadSize, guardMutation } from "@/server/http/guards";
+import { checkJsonContentType, checkRequestBodySize, guardMutation } from "@/server/http/guards";
 import { jsonError, jsonOk } from "@/server/http/responses";
 
 export const runtime = "nodejs";
@@ -15,8 +15,10 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = await params;
-  const size = checkPayloadSize(request);
+  const size = await checkRequestBodySize(request);
   if (!size.ok) return jsonError(size.code, { reason: size.reason });
+  const contentType = checkJsonContentType(request);
+  if (!contentType.ok) return jsonError(contentType.code, { gameId, reason: contentType.reason });
 
   const guard = guardMutation(request, "commands");
   if (!guard.ok) return jsonError(guard.code, { gameId, reason: guard.reason });

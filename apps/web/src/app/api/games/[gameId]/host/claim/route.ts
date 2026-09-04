@@ -17,7 +17,7 @@ import type {
   HostCapabilityDocument,
 } from "@/server/games/create-game";
 import { COOKIE_NAMES, COOKIE_OPTIONS } from "@/server/auth/capabilities";
-import { guardMutation } from "@/server/http/guards";
+import { checkPayloadSize, guardMutation } from "@/server/http/guards";
 import { jsonError, jsonOk } from "@/server/http/responses";
 
 export const runtime = "nodejs";
@@ -25,6 +25,8 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
   const { gameId } = await params;
+  const size = checkPayloadSize(request);
+  if (!size.ok) return jsonError(size.code, { gameId, reason: size.reason });
   const guard = guardMutation(request, "commands");
   if (!guard.ok) return jsonError(guard.code, { gameId, reason: guard.reason });
 

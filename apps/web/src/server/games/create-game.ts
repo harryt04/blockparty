@@ -24,7 +24,9 @@ import {
 import {
   COOKIE_NAMES,
   COOKIE_OPTIONS,
+  CSRF_COOKIE_OPTIONS,
   generateCapability,
+  generateCsrfToken,
   generateInviteId,
   hashCapability,
 } from "../auth/capabilities";
@@ -378,14 +380,21 @@ export async function createGameInTransaction(
   return { lobby, capabilities: { seat, host, reclaim } };
 }
 
-/** Set only the three command/recovery cookies after the DB transaction commits. */
+/** Set command/recovery cookies and the independent CSRF token after commit. */
 export function setCreationCookies(
   response: {
-    cookies: { set: (name: string, value: string, options: typeof COOKIE_OPTIONS) => void };
+    cookies: {
+      set: (
+        name: string,
+        value: string,
+        options: typeof COOKIE_OPTIONS | typeof CSRF_COOKIE_OPTIONS,
+      ) => void;
+    };
   },
   capabilities: IssuedCreationCapabilities,
 ): void {
   response.cookies.set(COOKIE_NAMES.seat, capabilities.seat, COOKIE_OPTIONS);
   response.cookies.set(COOKIE_NAMES.host, capabilities.host, COOKIE_OPTIONS);
   response.cookies.set(COOKIE_NAMES.reclaim, capabilities.reclaim, COOKIE_OPTIONS);
+  response.cookies.set(COOKIE_NAMES.csrf, generateCsrfToken(), CSRF_COOKIE_OPTIONS);
 }

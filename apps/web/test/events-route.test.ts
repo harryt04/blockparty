@@ -3,7 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 const mocks = vi.hoisted(() => ({
+  checkOrigin: vi.fn(() => ({ ok: true as const })),
   checkRateLimit: vi.fn(() => ({ ok: true as const })),
+  corsHeaders: vi.fn(() => ({})),
   readSeatCapability: vi.fn(),
   getDb: vi.fn(),
   ensureChangeStream: vi.fn(),
@@ -17,7 +19,11 @@ const mocks = vi.hoisted(() => ({
   installPresenceRecovery: vi.fn(),
 }));
 
-vi.mock("@/server/http/guards", () => ({ checkRateLimit: mocks.checkRateLimit }));
+vi.mock("@/server/http/guards", () => ({
+  checkOrigin: mocks.checkOrigin,
+  checkRateLimit: mocks.checkRateLimit,
+  corsHeaders: mocks.corsHeaders,
+}));
 vi.mock("@/server/auth/session", () => ({ readSeatCapability: mocks.readSeatCapability }));
 vi.mock("@/server/db/client", () => ({ getDb: mocks.getDb }));
 vi.mock("@/server/sse/change-stream", () => ({ ensureChangeStream: mocks.ensureChangeStream }));

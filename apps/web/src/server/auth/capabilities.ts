@@ -44,8 +44,22 @@ export const COOKIE_OPTIONS = {
   maxAge: RETENTION_DAYS * 24 * 60 * 60,
 } as const;
 
+/** The synchronizer token is readable by same-origin browser code, never a capability. */
+export const CSRF_COOKIE_OPTIONS = {
+  httpOnly: false,
+  secure: usePrefix,
+  sameSite: "lax",
+  path: "/",
+  maxAge: RETENTION_DAYS * 24 * 60 * 60,
+} as const;
+
 /** Minimum 32 bytes of CSPRNG entropy. SEC-002. */
 export function generateCapability(): string {
+  return randomBytes(32).toString("base64url");
+}
+
+/** Generate the double-submit token independently from all game authorities. SEC-003. */
+export function generateCsrfToken(): string {
   return randomBytes(32).toString("base64url");
 }
 

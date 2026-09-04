@@ -417,12 +417,14 @@ seat. Each ticket removes the corresponding builder from
       Proves: clock-controlled replica-set tests cover exact 30-day boundaries, non-extending activity, transition-before-delete, retries, and cascades; TEST-002 protocol-integration layer.
       Implemented the authenticated bounded retention workflow with transactional `GameExpired` journaling, capability revocation, and idempotent cascades; `apps/web/test/retention.test.ts` and `apps/web/test/cleanup-route.test.ts` prove boundary, ordering, retry, cascade, and scheduler-authentication behavior.
 
-- [ ] **B11 — Rate limits, CSRF, origin checks, and log redaction**
+- [x] **B11 — Rate limits, CSRF, origin checks, and log redaction**
       Blocked by: B4
       Requirements: PRD-NFR-003, SEC-001, SEC-003, SEC-004, SEC-006
       Read: docs/engineering/security-privacy-analytics.md, docs/engineering/realtime-and-data.md
       Acceptance: all state-changing and stream routes enforce bounded input, origin/CSRF and configured per-action/connection limits; safe errors/logs redact capabilities, cookies, seeds, payloads, pseudonyms, and private state, and the last stub builder is deleted.
       Proves: adversarial integration matrix covers spoofed origin/CSRF, limit reset/isolation, oversized bodies, enumeration, headers, and redaction canaries; TEST-002 security-boundary layer.
+      Implemented synchronizer-token cookies/checks, origin validation, hashed per-route rate limits, bounded JSON admission, SSE protection, retry headers, logger redaction, and removal of fabricated game projections.
+      Proven by `apps/web/test/security-boundary.test.ts` plus the route suites; full CI and production build pass.
 
 ---
 

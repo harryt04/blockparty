@@ -21,7 +21,7 @@ import {
   JoinUnavailableError,
   setJoinCookies,
 } from "@/server/games/join-game";
-import { guardMutation } from "@/server/http/guards";
+import { checkJsonContentType, checkRequestBodySize, guardMutation } from "@/server/http/guards";
 import { jsonError, jsonOk } from "@/server/http/responses";
 
 export const runtime = "nodejs";
@@ -31,6 +31,10 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ inviteId: string }> },
 ) {
+  const size = await checkRequestBodySize(request);
+  if (!size.ok) return jsonError(size.code, { reason: size.reason });
+  const contentType = checkJsonContentType(request);
+  if (!contentType.ok) return jsonError(contentType.code, { reason: contentType.reason });
   const guard = guardMutation(request, "join");
   if (!guard.ok) return jsonError(guard.code, { reason: guard.reason });
 

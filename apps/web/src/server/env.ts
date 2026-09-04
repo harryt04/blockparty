@@ -38,6 +38,7 @@ const EnvSchema = z.object({
   RATE_LIMIT_COMMANDS_PER_MINUTE: z.coerce.number().int().min(1).default(120),
   RATE_LIMIT_SYNC_PER_MINUTE: z.coerce.number().int().min(1).default(60),
   RATE_LIMIT_SSE_CONNECTIONS: z.coerce.number().int().min(1).default(8),
+  RATE_LIMIT_INTERNAL_PER_MINUTE: z.coerce.number().int().min(1).default(10),
 });
 
 const parsed = EnvSchema.safeParse(process.env);
@@ -54,7 +55,7 @@ export const allowedOrigins: readonly string[] = env.ALLOWED_ORIGINS.split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-/** True when a database is configured. False is a valid scaffold state. */
+/** True when a database is configured. False remains valid for build/health checks. */
 export const isDatabaseConfigured = env.MONGODB_URI !== undefined;
 
 export const isProduction = env.NODE_ENV === "production";

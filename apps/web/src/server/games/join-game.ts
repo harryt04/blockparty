@@ -15,6 +15,8 @@ import type {
 import {
   COOKIE_NAMES,
   COOKIE_OPTIONS,
+  CSRF_COOKIE_OPTIONS,
+  generateCsrfToken,
   generateCapability,
   hashCapability,
 } from "../auth/capabilities";
@@ -256,10 +258,17 @@ export async function claimSeatInTransaction(
 /** Set newly issued authorities only after the claim transaction commits. */
 export function setJoinCookies(
   response: {
-    cookies: { set: (name: string, value: string, options: typeof COOKIE_OPTIONS) => void };
+    cookies: {
+      set: (
+        name: string,
+        value: string,
+        options: typeof COOKIE_OPTIONS | typeof CSRF_COOKIE_OPTIONS,
+      ) => void;
+    };
   },
   capabilities: IssuedJoinCapabilities,
 ): void {
   response.cookies.set(COOKIE_NAMES.seat, capabilities.seat, COOKIE_OPTIONS);
   response.cookies.set(COOKIE_NAMES.reclaim, capabilities.reclaim, COOKIE_OPTIONS);
+  response.cookies.set(COOKIE_NAMES.csrf, generateCsrfToken(), CSRF_COOKIE_OPTIONS);
 }

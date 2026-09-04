@@ -1,12 +1,10 @@
 ## Repository state
 
 The workspace and the application scaffolding exist. `apps/web` builds and runs
-with **no MongoDB configured**: every page and Route Handler from ENG-003 is
-present and returns a shaped placeholder. No game rules, persistence,
-capabilities, or realtime fan-out are implemented.
-
-Every fake response is built in one file, `apps/web/src/server/stub-data.ts`.
-Making a route real means deleting its builder there, not hunting for it.
+with **no MongoDB configured**. Route Handlers from ENG-003 are present, while
+live game/lobby/summary screens require the authenticated sync client and must
+not fabricate state. No browser sync client or full playable surface is
+implemented until the remaining backlog tickets land.
 
 `docs/` is the implementation authority. Read the relevant spec before you write code. Do not invent behavior that a document already defines.
 

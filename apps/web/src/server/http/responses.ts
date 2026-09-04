@@ -61,7 +61,10 @@ export function jsonError(
   };
   return NextResponse.json(envelope, {
     status: ERROR_HTTP_STATUS[code],
-    headers: { "Cache-Control": "no-store" },
+    headers: {
+      "Cache-Control": "no-store",
+      ...(code === "RATE_LIMITED" ? { "Retry-After": "60" } : {}),
+    },
   });
 }
 
