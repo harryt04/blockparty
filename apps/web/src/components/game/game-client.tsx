@@ -272,13 +272,16 @@ export function GameClient({ gameId }: { gameId: string }) {
   }
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-6">
+    <div className="game-shell mx-auto flex max-w-7xl flex-col gap-5" data-responsive-shell>
       <LiveAnnouncements
         snapshot={snapshot}
         connection={state.connection}
         command={commandAnnouncement}
       />
-      <header className="flex flex-wrap items-start justify-between gap-4">
+      <header
+        className="game-shell-header flex flex-wrap items-start justify-between gap-4"
+        data-responsive-region="header"
+      >
         <div>
           <p className="text-sm text-muted-ink">Live game</p>
           <h1 className="mt-1 text-3xl">{turnText}</h1>
@@ -305,8 +308,12 @@ export function GameClient({ gameId }: { gameId: string }) {
         </Alert>
       ) : null}
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <section aria-label="Game board" className="min-w-0 space-y-5">
+      <div className="game-workspace" data-responsive-region="workspace">
+        <section
+          aria-label="Game board"
+          className="game-board-column min-w-0 space-y-5"
+          data-responsive-region="board"
+        >
           <Card>
             <CardHeader>
               <CardTitle>Neighborhood route</CardTitle>
@@ -316,14 +323,14 @@ export function GameClient({ gameId }: { gameId: string }) {
                 spaces={spaces}
                 layout={boardLayout(snapshot)}
                 selectedSpaceId={selectedSpace?.spaceId}
-                className="h-[22rem] sm:h-[30rem]"
+                className="game-board-viewport"
               />
             </CardContent>
           </Card>
 
           <section
             aria-labelledby="board-list-heading"
-            className="rounded-(--radius-lg) border border-line bg-surface-raised p-4"
+            className="game-board-list rounded-(--radius-lg) border border-line bg-surface-raised p-4"
           >
             <h2 id="board-list-heading" className="mb-3 font-serif text-xl">
               Board list ({spaces.length} stops)
@@ -339,7 +346,11 @@ export function GameClient({ gameId }: { gameId: string }) {
           </section>
         </section>
 
-        <aside className="min-w-0 space-y-5" aria-label="Game information">
+        <aside
+          className="game-context min-w-0 space-y-5"
+          aria-label="Game information"
+          data-responsive-region="context-panel"
+        >
           <section
             aria-labelledby="turn-heading"
             className="rounded-(--radius-lg) border-2 border-brand bg-surface-raised p-4"
@@ -370,6 +381,13 @@ export function GameClient({ gameId }: { gameId: string }) {
             canManage={canManageSelectedSpace}
             onManage={() => setManagementOpen(true)}
           />
+
+          <section aria-labelledby="players-heading" data-responsive-region="player-strip">
+            <h2 id="players-heading" className="mb-2 font-serif text-xl">
+              Players
+            </h2>
+            <PlayerStrip seats={snapshot.seats} activeSeatId={snapshot.activeSeatId} />
+          </section>
 
           <ManagementPanel
             snapshot={snapshot}
@@ -408,13 +426,6 @@ export function GameClient({ gameId }: { gameId: string }) {
           )}
 
           <AcquisitionAuctionSummary snapshot={snapshot} />
-
-          <section aria-labelledby="players-heading">
-            <h2 id="players-heading" className="mb-2 font-serif text-xl">
-              Players
-            </h2>
-            <PlayerStrip seats={snapshot.seats} activeSeatId={snapshot.activeSeatId} />
-          </section>
 
           <BankAssets bank={snapshot.bank} board={snapshot.board} currencyLabel="Tabs" />
 

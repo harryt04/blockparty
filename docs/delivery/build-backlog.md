@@ -624,12 +624,13 @@ recorded draws.
       Proves: token contrast tests and Playwright visual/DOM assertions in forced-colors/reduced-motion/non-color modes; TEST-002 component/browser layer.
       Implemented visible token stroke patterns and semantic status markers, AA-checked light/dark tokens, forced-colors system fallbacks, and immediate reduced-motion overrides; `apps/web/test/accessibility-tokens.test.ts` proves the token and CSS contracts, while Playwright/manual assistive-technology evidence remains planned because the browser harness is not configured.
 
-- [ ] **E5 — The responsive matrix at 375, 768, 1024, and landscape**
+- [x] **E5 — The responsive matrix at 375, 768, 1024, and landscape**
       Blocked by: E4
       Requirements: PRD-FUN-016, UX-030, UX-031, UX-032, UX-033, DS-050
       Read: docs/product/prd.md, docs/design/ux-spec.md, docs/design/design-system.md
       Acceptance: required decisions/cash/dice/position work without page-level horizontal scrolling across named widths and landscape, with documented board/panel/sidebar modes and 320px core-play fallback.
       Proves: Playwright screenshot/interaction matrix at 320, 375, 768, 1024 and phone/tablet landscape; TEST-002 browser-responsive layer.
+      Implemented CSS-defined focused-board, tablet-context-panel, desktop-context-sidebar, and short-landscape modes with safe-area spacing, 320px overflow protection, and a phone-first player/context order in `apps/web/src/app/globals.css` and `apps/web/src/components/game/game-client.tsx`; `apps/web/test/responsive-layout.test.ts` proves the responsive contract, while Playwright screenshot evidence remains planned because the browser harness is not configured.
 
 - [ ] **E6 — axe coverage and the manual assistive-technology checklist**
       Blocked by: E5

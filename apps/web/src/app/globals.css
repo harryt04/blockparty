@@ -251,6 +251,7 @@
     font-size: 1rem;
     line-height: 1.5;
     min-height: 100dvh;
+    overflow-x: clip;
   }
 
   h1,
@@ -279,6 +280,128 @@
       animation: none !important;
       transition: none !important;
       scroll-behavior: auto !important;
+    }
+  }
+}
+
+/*
+ * Responsive game shell. The named modes are deliberately CSS-only so a
+ * viewport change never changes authoritative game state:
+ *
+ * - default / 320–767 px: focused board, one contextual column, fixed action
+ *   bar; the semantic board list remains available below the board.
+ * - 768–1023 px: board plus a 320–400 px contextual panel.
+ * - 1024 px and up: board plus a persistent contextual sidebar.
+ * - short landscape: board-first split view with a scrollable context panel.
+ *
+ * PRD-FUN-016, UX-030–033, and DS-050. Keep every grid track minmax(0, ...)
+ * so labels and action controls cannot create page-level horizontal scrolling.
+ */
+@layer components {
+  .game-shell {
+    --game-gutter: 1rem;
+    width: 100%;
+    padding-inline: max(var(--game-gutter), env(safe-area-inset-left))
+      max(var(--game-gutter), env(safe-area-inset-right));
+    padding-block: 1.5rem calc(1.5rem + 5.25rem + env(safe-area-inset-bottom));
+    overflow-x: clip;
+  }
+
+  .game-workspace {
+    display: grid;
+    min-width: 0;
+    gap: 1.25rem;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .game-board-column,
+  .game-context,
+  .game-board-column > *,
+  .game-context > * {
+    min-width: 0;
+  }
+
+  .game-board-viewport {
+    height: clamp(16rem, 75vw, 22rem);
+  }
+
+  .game-action-bar {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    padding: 0.75rem max(var(--game-gutter), env(safe-area-inset-left))
+      calc(0.75rem + env(safe-area-inset-bottom))
+      max(var(--game-gutter), env(safe-area-inset-right));
+  }
+
+  @media (min-width: 48rem) {
+    .game-shell {
+      --game-gutter: 1.5rem;
+      padding-block: 1.5rem;
+    }
+
+    .game-workspace {
+      gap: 1.5rem;
+      grid-template-columns: minmax(0, 1fr) minmax(20rem, 25rem);
+    }
+
+    .game-board-viewport {
+      height: min(30rem, 62dvh);
+      min-height: 22rem;
+    }
+
+    .game-action-bar {
+      position: sticky;
+      inset-inline: auto;
+      bottom: 0;
+      padding: 0.75rem 0;
+    }
+  }
+
+  @media (min-width: 64rem) {
+    .game-shell {
+      --game-gutter: 2rem;
+    }
+
+    .game-workspace {
+      grid-template-columns: minmax(0, 1fr) minmax(20rem, 22rem);
+    }
+
+    .game-board-viewport {
+      height: 30rem;
+    }
+  }
+
+  /* UX-033: landscape prioritizes the board and keeps secondary context
+   * independently scrollable instead of forcing rotation or a wide page. */
+  @media (orientation: landscape) and (max-height: 40rem) {
+    .game-shell {
+      --game-gutter: 1rem;
+      padding-block: 1rem calc(1rem + 4.25rem + env(safe-area-inset-bottom));
+    }
+
+    .game-shell-header {
+      gap: 0.75rem;
+    }
+
+    .game-workspace {
+      gap: 1rem;
+      grid-template-columns: minmax(0, 1fr) minmax(17rem, 43%);
+    }
+
+    .game-board-viewport {
+      height: min(28rem, calc(100dvh - 8rem));
+      min-height: 14rem;
+    }
+
+    .game-context {
+      max-height: calc(100dvh - 5rem);
+      overflow-y: auto;
+      padding-right: 0.25rem;
+    }
+
+    .game-action-bar {
+      padding-block: 0.5rem;
     }
   }
 }
