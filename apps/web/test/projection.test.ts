@@ -4,6 +4,7 @@ import { PLACEHOLDER_BUNDLE } from "@blockparty/game-content";
 import { deriveInitialState, type GameState } from "@blockparty/game-engine";
 import type { ProjectionContext } from "../src/server/projections/authorize";
 import { buildSeatProjection } from "../src/server/projections/authorize";
+import { readPublicEvents } from "../src/server/sync/recovery";
 
 vi.mock("server-only", () => ({}));
 
@@ -119,6 +120,7 @@ describe("authorized seat projections", () => {
       detentionReleaseCardCount: 1,
       isSelf: false,
     });
+    expect(projection.bank).toMatchObject({ cash: 700000, deedIds: expect.any(Array) });
 
     const serialized = JSON.stringify(projection);
     expect(serialized).not.toContain("future-card");
@@ -128,5 +130,49 @@ describe("authorized seat projections", () => {
     expect(serialized).not.toContain("decks");
     expect(projection).not.toHaveProperty("secretSeed");
     expect(projection).not.toHaveProperty("contentHash");
+  });
+
+  it("orders recent history and removes private card facts before projection", async () => {
+    const events = [
+      {
+        gameId: GAME_ID,
+        sequence: 2,
+        aggregateVersion: 2,
+        type: "CardDrawn",
+        eventVersion: 1,
+        actorSeatId: "seat-a",
+        occurredAt: "2026-09-03T15:00:02.000Z",
+        payload: {
+          cardId: "secret-card",
+          deckId: "secret-deck",
+          remainingCardIds: ["future-card"],
+        },
+      },
+      {
+        gameId: GAME_ID,
+        sequence: 1,
+        aggregateVersion: 1,
+        type: "DiceRolled",
+        eventVersion: 1,
+        actorSeatId: "seat-a",
+        occurredAt: "2026-09-03T15:00:01.000Z",
+        payload: { first: 2, second: 3 },
+      },
+    ] as const;
+    const publicEvents = await readPublicEvents(
+      {
+        find: vi.fn(() => ({
+          sort: vi.fn(() => ({
+            limit: vi.fn(() => ({ toArray: vi.fn().mockResolvedValue(events) })),
+          })),
+        })),
+      } as never,
+      GAME_ID,
+    );
+
+    expect(publicEvents.map((event) => event.sequence)).toEqual([1, 2]);
+    expect(publicEvents[1]?.payload).not.toHaveProperty("cardId");
+    expect(publicEvents[1]?.payload).not.toHaveProperty("remainingCardIds");
+    expect(publicEvents[1]?.payload).not.toHaveProperty("deckId");
   });
 });

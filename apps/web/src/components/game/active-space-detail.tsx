@@ -14,11 +14,13 @@ import {
 export function ActiveSpaceDetail({
   space,
   seats,
-  currencyLabel = "credits",
+  currencyLabel = "Tabs",
+  districtName,
 }: {
   space?: BoardSpaceProjection;
   seats: readonly SeatProjection[];
   currencyLabel?: string;
+  districtName?: string;
 }) {
   if (space === undefined) {
     return (
@@ -46,6 +48,7 @@ export function ActiveSpaceDetail({
         <CardTitle>{space.name}</CardTitle>
         <div className="flex flex-wrap gap-1">
           <Badge>{deedCategory?.label ?? category.label}</Badge>
+          {districtName === undefined ? null : <Badge variant="info">{districtName}</Badge>}
           <span className="tabular text-sm text-muted-ink">Stop {space.routeIndex}</span>
         </div>
       </CardHeader>

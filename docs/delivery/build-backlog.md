@@ -466,12 +466,13 @@ separate player contexts.
       Proves: multi-context Playwright lobby tests cover seat/presence changes, host authority, copied invite, variants, and start blockers; TEST-002 browser layer.
       Implemented the authenticated lobby projection route and sync-backed lobby client with seat/presence states, invite copy/share feedback, host-only rules/start controls, and safe error/loading states; `apps/web/test/lobby-route.test.ts`, `apps/web/test/lobby-model.test.ts`, and `apps/web/test/command-path.test.ts` prove projection secrecy, readiness guards, invite safety, and atomic rules lock. The repository still has no Playwright harness or configured MongoDB, so the required multi-context browser evidence remains follow-up evidence.
 
-- [ ] **C5 — Board, player strip, and event feed on live state**
+- [x] **C5 — Board, player strip, and event feed on live state**
       Blocked by: C4
       Requirements: PRD-FUN-008, PRD-FUN-010, UX-002, UX-013, DS-040
       Read: docs/product/prd.md, docs/design/ux-spec.md, docs/design/design-system.md
       Acceptance: winding board, non-spatial list, players, bank assets, active state, deeds/districts, variants, and ordered public history render only the authorized live projection with display vocabulary at presentation.
       Proves: Playwright multi-seat state/event updates plus projection-to-display component cases; TEST-002 browser/component layers.
+      Implemented the authorized sync-backed game shell, winding SVG route with keyboard-inspectable board list, live player/turn/detail/bank/variant panels, and bounded redacted public history; `apps/web/test/game-model.test.ts` and `apps/web/test/projection.test.ts` prove route/display mapping, bank projection, and history ordering/redaction. The repository still has no Playwright harness or configured MongoDB, so multi-seat browser evidence remains follow-up evidence.
 
 - [ ] **C6 — Active turn and the action sheet**
       Blocked by: C5

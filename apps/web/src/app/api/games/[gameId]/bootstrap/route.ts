@@ -17,6 +17,8 @@ import type { GameDocument } from "@/server/games/create-game";
 import { buildSeatProjection } from "@/server/projections/authorize";
 import { jsonError } from "@/server/http/responses";
 import { subscriberCount } from "@/server/sse/registry";
+import type { GameEventDocument } from "@/server/commands/handle-command";
+import { readPublicEvents } from "@/server/sync/recovery";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,6 +45,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ gam
     if (!game.snapshot.seats.some((seat) => seat.seatId === actor.seatId)) {
       return jsonError("FORBIDDEN", { gameId });
     }
+
+    const publicEvents = await readPublicEvents(
+      database.collection<GameEventDocument>(COLLECTIONS.gameEvents),
+      gameId,
+    );
 
     const snapshot = buildSeatProjection(game.snapshot, actor.seatId, {
       rules: { content: bundle, configuration: game.configuration },
@@ -71,6 +78,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ gam
             false),
       })),
       paused: game.paused ?? false,
+      publicEvents,
     });
     const response: BootstrapResponse = {
       snapshot,

@@ -110,7 +110,16 @@ describe("GET /api/games/[gameId]/bootstrap", () => {
       kind: "seat",
     });
     mocks.getDb.mockReturnValue({
-      collection: () => ({ findOne: vi.fn().mockResolvedValue(storedGame) }),
+      collection: (name: string) =>
+        name === "games"
+          ? { findOne: vi.fn().mockResolvedValue(storedGame) }
+          : {
+              find: vi.fn(() => ({
+                sort: vi.fn(() => ({
+                  limit: vi.fn(() => ({ toArray: vi.fn().mockResolvedValue([]) })),
+                })),
+              })),
+            },
     });
 
     const response = await GET(new Request(`http://localhost/api/games/${GAME_ID}/bootstrap`), {

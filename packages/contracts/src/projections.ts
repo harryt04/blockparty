@@ -26,6 +26,7 @@ import {
   ServerTime,
 } from "./common";
 import { CommandTypeSchema } from "./commands";
+import { DomainEvent } from "./events";
 import { RulesConfiguration } from "./variants";
 
 /** Non-color-carrying identity for a seat. See DS-020 and DS-041. */
@@ -88,6 +89,7 @@ export const BoardSpaceProjection = z
     /** Original space name from the content bundle. */
     name: z.string().min(1).max(64),
     category: SpaceCategory,
+    deedId: z.string().max(64).optional(),
     deedCategory: DeedCategory.optional(),
     districtId: z.string().max(64).optional(),
     ownerSeatId: SeatId.optional(),
@@ -100,6 +102,16 @@ export const BoardSpaceProjection = z
   })
   .strict();
 export type BoardSpaceProjection = z.infer<typeof BoardSpaceProjection>;
+
+/** Public bank inventory. Deed identities are safe; private deck state is not. */
+export const BankProjection = z
+  .object({
+    cash: NonNegativeMoney,
+    deedIds: z.array(z.string().max(64)).max(128),
+    improvementInventory: z.record(z.string().max(64), z.int().min(0)),
+  })
+  .strict();
+export type BankProjection = z.infer<typeof BankProjection>;
 
 /**
  * A command this seat may execute right now, with bounded parameters.
@@ -181,6 +193,10 @@ export const GameSnapshotProjection = z
     prioritySeatId: SeatId.optional(),
     seats: z.array(SeatProjection).max(6),
     board: z.array(BoardSpaceProjection).max(128),
+    /** Public bank-controlled inventory, never future deck order. */
+    bank: BankProjection.optional(),
+    /** Bounded, already-redacted history for the readable event feed. */
+    publicEvents: z.array(DomainEvent).max(256).optional(),
     auction: AuctionProjection.optional(),
     obligation: ObligationProjection.optional(),
     /** Present only when a variant enables it. See VAR-001. */

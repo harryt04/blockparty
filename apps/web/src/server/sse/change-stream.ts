@@ -15,6 +15,7 @@ import { isDatabaseConfigured, isProduction } from "../env";
 import type { GameEventDocument } from "../commands/handle-command";
 import type { GameDocument } from "../games/create-game";
 import { buildSeatProjection, type ProjectionSeatSource } from "../projections/authorize";
+import { readPublicEvents } from "../sync/recovery";
 import { publishSnapshot, subscriberCount, subscribedSeatIds } from "./registry";
 
 interface ChangeDocument {
@@ -83,6 +84,11 @@ export async function publishCommittedProjection(
   const bundle = getBundle(game.contentVersion, { production: isProduction });
   if (bundle === undefined || canonicalHashBundle(bundle) !== game.contentHash) return;
 
+  const publicEvents = await readPublicEvents(
+    database.collection<GameEventDocument>(COLLECTIONS.gameEvents),
+    game._id,
+  );
+
   for (const seatId of subscribedSeatIds(game._id)) {
     const snapshot = buildSeatProjection(game.snapshot, seatId, {
       rules: { content: bundle, configuration: game.configuration },
@@ -100,6 +106,7 @@ export async function publishCommittedProjection(
       hostSeatId: game.hostSeatId,
       seats: projectionSeats(game),
       paused: game.paused ?? false,
+      publicEvents,
     });
     publishSnapshot(game._id, seatId, snapshot);
   }

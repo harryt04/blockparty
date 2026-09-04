@@ -14,6 +14,7 @@ import "server-only";
  */
 import type {
   CapturedVersions,
+  DomainEvent,
   GameSnapshotProjection,
   GameStatus,
   LobbyProjection,
@@ -48,6 +49,8 @@ export interface ProjectionContext {
   readonly seats: readonly ProjectionSeatSource[];
   readonly hostSeatId: string;
   readonly paused?: boolean;
+  /** Already-redacted journal entries for the public history panel. */
+  readonly publicEvents?: readonly DomainEvent[];
 }
 
 /**
@@ -102,6 +105,7 @@ export function buildSeatProjection(
       routeIndex: space.routeIndex,
       name: space.name,
       category: space.type,
+      ...(space.deedId === undefined ? {} : { deedId: space.deedId }),
       ...(deed === undefined ? {} : { deedCategory: deed.category, price: deed.price }),
       ...(deed?.districtId === undefined ? {} : { districtId: deed.districtId }),
       ...(deedState?.ownerSeatId === undefined ? {} : { ownerSeatId: deedState.ownerSeatId }),
@@ -141,6 +145,12 @@ export function buildSeatProjection(
     ...(state.prioritySeatId === undefined ? {} : { prioritySeatId: state.prioritySeatId }),
     seats,
     board,
+    bank: {
+      cash: state.bank.cash,
+      deedIds: [...state.bank.deedIds],
+      improvementInventory: { ...state.bank.improvementInventory },
+    },
+    ...(context.publicEvents === undefined ? {} : { publicEvents: [...context.publicEvents] }),
     ...(auction === undefined ? {} : { auction }),
     ...(obligation === undefined ? {} : { obligation }),
     legalActions:

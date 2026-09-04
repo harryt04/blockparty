@@ -9,7 +9,6 @@
  */
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ConnectionStatus } from "@/components/shell/connection-status";
 import { ShellFooter } from "@/components/shell/app-shell";
 import { Wordmark } from "@/components/shell/wordmark";
 
@@ -29,8 +28,6 @@ export default async function GameLayout({
           <Wordmark />
         </Link>
         <div className="flex items-center gap-3">
-          {/* TODO(PROTO-003): drive this from the sync client. */}
-          <ConnectionStatus state="reconnecting" />
           <nav aria-label="Game">
             <Link href={`/game/${gameId}/lobby`} className="text-sm underline underline-offset-4">
               Lobby

@@ -119,7 +119,16 @@ describe("authenticated SSE delivery", () => {
     const secondUnsubscribe = subscribe(subscriber(game._id, secondSeatId, secondFrames));
 
     await publishCommittedProjection({ gameId: game._id, sequence: 0, aggregateVersion: 0 }, {
-      collection: () => ({ findOne: vi.fn(async () => game) }),
+      collection: (name: string) =>
+        name === "games"
+          ? { findOne: vi.fn(async () => game) }
+          : {
+              find: vi.fn(() => ({
+                sort: vi.fn(() => ({
+                  limit: vi.fn(() => ({ toArray: vi.fn(async () => []) })),
+                })),
+              })),
+            },
     } as never);
 
     const firstProjection = JSON.parse(

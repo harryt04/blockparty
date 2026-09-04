@@ -28,6 +28,8 @@ import { subscriberCount } from "../sse/registry";
 
 /** The transport schema and the recovery contract both cap one range at 256. */
 export const MAX_RECOVERY_EVENTS = 256;
+/** The game shell needs recent history, but never an unbounded journal dump. */
+export const MAX_PUBLIC_HISTORY = 100;
 
 export type RecoveryEnvelope = EventsEnvelopeType | SnapshotEnvelopeType;
 
@@ -57,10 +59,28 @@ export function projectionSeats(game: GameDocument): ProjectionSeatSource[] {
   }));
 }
 
+/** Reads only redacted, ordered journal entries for the public event feed. */
+export async function readPublicEvents(
+  gameEvents: Pick<Collection<GameEventDocument>, "find">,
+  gameId: string,
+): Promise<readonly DomainEventType[]> {
+  const stored = await gameEvents
+    .find({ gameId })
+    .sort({ sequence: -1 })
+    .limit(MAX_PUBLIC_HISTORY)
+    .toArray();
+
+  return stored
+    .reverse()
+    .map((event) => DomainEvent.safeParse(publicEvent(event)))
+    .flatMap((parsed) => (parsed.success ? [parsed.data] : []));
+}
+
 /** Builds the only snapshot shape that recovery may return to a seat. */
 export function authorizedSnapshot(
   game: GameDocument,
   seatId: string,
+  publicEvents: readonly DomainEventType[] = [],
 ): GameSnapshotProjection | undefined {
   if (!game.seats.some((seat) => seat.seatId === seatId)) return undefined;
   const bundle = getBundle(game.contentVersion, { production: isProduction });
@@ -82,6 +102,7 @@ export function authorizedSnapshot(
     hostSeatId: game.hostSeatId,
     seats: projectionSeats(game),
     paused: game.paused ?? false,
+    publicEvents,
   });
 }
 
@@ -133,7 +154,8 @@ export async function recover(
   lastSequence: number,
   aggregateVersion: number,
 ): Promise<RecoveryEnvelope | undefined> {
-  const snapshot = authorizedSnapshot(game, seatId);
+  const publicEvents = await readPublicEvents(store.gameEvents, game._id);
+  const snapshot = authorizedSnapshot(game, seatId, publicEvents);
   if (snapshot === undefined) return undefined;
 
   const needsSnapshot =

@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 export function PlayerStrip({
   seats,
   activeSeatId,
-  currencyLabel = "credits",
+  currencyLabel = "Tabs",
   className,
 }: {
   seats: readonly SeatProjection[];
@@ -47,6 +47,11 @@ export function PlayerStrip({
                   ? "No balance yet"
                   : formatMoney(seat.balance, currencyLabel)}
               </p>
+              {seat.position === undefined ? null : (
+                <p className="text-xs text-muted-ink">
+                  Stop {seat.position} · {seat.deedIds?.length ?? 0} Addresses
+                </p>
+              )}
 
               <div className="mt-2 flex flex-wrap gap-1">
                 {isActive ? <Badge variant="brand">Their turn</Badge> : null}
