@@ -303,3 +303,14 @@ surface and maps it to the player-facing `Request a Stall` label. The
 regression is covered by `apps/web/test/management-actions.regression-1.test.ts`,
 preventing the wire action name from appearing in the active action sheet;
 this extends UX-013, UX-016, and DS-030 evidence.
+
+Iteration 3 keeps the D5 bot policy's obligation liquidation priority from
+being selected during ordinary management. Healthy bots now preserve
+unmortgaged deeds for rent, while `MortgageDeed` and `SellImprovement` remain
+available to settle an active obligation. `packages/game-engine/test/bot-management.regression-1.test.ts`
+proves the healthy-deed decision path for PRD-FUN-011 and ENG-026.
+
+The same iteration also keeps a cross-seat `CollectEachPlayer` obligation on
+the actual payer, transfers control to that required actor, and resumes the
+card at the next unpaid leg. `packages/game-engine/test/card-collection-debt.regression-1.test.ts`
+covers this continuation for RULE-007, RULE-009, ENG-023, and ENG-025.

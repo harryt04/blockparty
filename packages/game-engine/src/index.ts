@@ -80,6 +80,8 @@ export interface PendingObligation {
   readonly creditorSeatId?: SeatId;
   readonly amount: Money;
   readonly reasonCode: string;
+  /** The card-acting seat to restore when another seat pays a card leg. */
+  readonly continuationActorSeatId?: SeatId;
   /** VAR-001: a bank fee that funds the Rest pot after settlement. */
   readonly jackpotEligible?: boolean;
   readonly continuation: readonly QueuedEffect[];
@@ -1274,6 +1276,7 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
     case "ObligationCreated": {
       const debtorSeatId = payloadSeatId(event, "debtorSeatId");
       const creditorSeatId = payloadSeatId(event, "creditorSeatId");
+      const continuationActorSeatId = payloadSeatId(event, "continuationActorSeatId");
       const amount = payloadNumber(event, "amount");
       const reasonCode = payloadSeatId(event, "reasonCode");
       const jackpotEligible = payloadBoolean(event, "jackpotEligible");
@@ -1284,6 +1287,9 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
       return freezeState({
         ...state,
         phase: "AwaitDebt",
+        ...(continuationActorSeatId === undefined
+          ? {}
+          : { activeSeatId: debtorSeatId, prioritySeatId: debtorSeatId }),
         effectQueue: continuation,
         pendingChoice: undefined,
         obligation: {
@@ -1291,6 +1297,7 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
           creditorSeatId,
           amount,
           reasonCode,
+          ...(continuationActorSeatId === undefined ? {} : { continuationActorSeatId }),
           ...(jackpotEligible === true ? { jackpotEligible: true } : {}),
           continuation,
         },
@@ -1299,6 +1306,7 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
     case "ObligationSettled": {
       const debtorSeatId = payloadSeatId(event, "debtorSeatId");
       const creditorSeatId = payloadSeatId(event, "creditorSeatId");
+      const continuationActorSeatId = payloadSeatId(event, "continuationActorSeatId");
       const amount = payloadNumber(event, "amount");
       const continuation = payloadQueuedEffects(event);
       if (
@@ -1330,6 +1338,9 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
       return freezeState({
         ...state,
         phase: "ResolveMove",
+        ...(continuationActorSeatId === undefined
+          ? {}
+          : { activeSeatId: continuationActorSeatId, prioritySeatId: continuationActorSeatId }),
         effectQueue: continuation,
         obligation: undefined,
         seats: state.seats.map((seat) =>
@@ -2793,16 +2804,19 @@ function paymentObligation(
   reasonCode: string,
   continuation: readonly QueuedEffect[],
   jackpotEligible = false,
+  debtorSeatId = actorSeatId,
+  continuationActorSeatId?: SeatId,
 ): QueueResolution {
   const event = freezeEvent({
     type: "ObligationCreated",
     eventVersion: 1,
     actorSeatId,
     payload: {
-      debtorSeatId: actorSeatId,
+      debtorSeatId,
       ...(creditorSeatId === undefined ? {} : { creditorSeatId }),
       amount,
       reasonCode,
+      ...(continuationActorSeatId === undefined ? {} : { continuationActorSeatId }),
       ...(jackpotEligible ? { jackpotEligible: true } : {}),
       remainingEffects: continuation,
     },
@@ -3255,7 +3269,12 @@ function resolveEffectQueue(
               amount,
               recipientSeatId,
               effect.type === "PayEachPlayer" ? "CARD_PAY_EACH_PLAYER" : "CARD_COLLECT_EACH_PLAYER",
-              [{ ...entry, playerIndex }, ...remaining],
+              // The obligation represents this payment leg. Resume at the
+              // next player after settlement so it is not charged twice.
+              [{ ...entry, playerIndex: playerIndex + 1 }, ...remaining],
+              false,
+              payerSeatId,
+              actorSeatId,
             );
           }
           const payment = freezeEvent({
@@ -5510,6 +5529,9 @@ function resolvePayObligation(state: GameState, actorSeatId: SeatId, rules: Rule
         : { creditorSeatId: obligation.creditorSeatId }),
       amount: obligation.amount,
       reasonCode: obligation.reasonCode,
+      ...(obligation.continuationActorSeatId === undefined
+        ? {}
+        : { continuationActorSeatId: obligation.continuationActorSeatId }),
       ...(obligation.jackpotEligible ? { jackpotEligible: true } : {}),
       remainingEffects: obligation.continuation,
     },
@@ -5549,7 +5571,12 @@ function resolvePayObligation(state: GameState, actorSeatId: SeatId, rules: Rule
   }
 
   if (nextState.resolvingCard !== undefined || obligation.continuation.length > 0) {
-    const resumed = resolveEffectQueue(nextState, actorSeatId, rules, obligation.continuation);
+    const resumed = resolveEffectQueue(
+      nextState,
+      obligation.continuationActorSeatId ?? actorSeatId,
+      rules,
+      obligation.continuation,
+    );
     return {
       ok: true,
       state: resumed.state,

@@ -250,15 +250,17 @@ function actionCandidate(
       };
     case "SellImprovement":
     case "MortgageDeed":
-      return {
-        action,
-        command,
-        category: "settle-obligation",
-        reasonCode: "LIQUIDATE_FOR_OBLIGATION",
-        priority: 1,
-        stableKey: `${action.type}:${deedId ?? ""}`,
-        factors,
-      };
+      return state.obligationAmount !== undefined
+        ? {
+            action,
+            command,
+            category: "settle-obligation",
+            reasonCode: "LIQUIDATE_FOR_OBLIGATION",
+            priority: 1,
+            stableKey: `${action.type}:${deedId ?? ""}`,
+            factors,
+          }
+        : undefined;
     case "DeclareBankruptcy":
       return {
         action,
