@@ -336,3 +336,10 @@ over value. `packages/game-engine/test/bot-auction.regression-1.test.ts` covers
 the policy boundary for PRD-FUN-011 and ENG-026; live browser evidence reached
 the prior failure with three bots and showed the auction loop consuming the
 server bot-action bound.
+
+Iteration 25 keeps a game running after the human seat is eliminated: when all
+remaining active seats are bots, `runBotTurns` resumes another bounded slice
+after yielding to the event loop instead of leaving the next bot at `AwaitRoll`.
+`apps/web/test/bot-turn.test.ts` covers the bot-only boundary, and live standard
+game evidence crossed the former 64-action limit with continued bot events and
+no browser errors. This extends PRD-FUN-011 and ENG-026.
