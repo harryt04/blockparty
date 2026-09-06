@@ -230,7 +230,7 @@ describe("GameSyncClient", () => {
 
     await client.start();
     sources[0]!.open();
-    client.refresh();
+    sources[0]!.emit(eventsEnvelope(1, 1));
     sources[0]!.emit(snapshotEnvelope(snapshot(2)));
     await vi.waitFor(() => expect(fetchImpl).toHaveBeenCalledTimes(3));
 
@@ -242,12 +242,11 @@ describe("GameSyncClient", () => {
     expect(sources).toHaveLength(1);
   });
 
-  it("reconciles an ACK-driven refresh without replacing the live stream", async () => {
+  it("does not open a redundant ACK refresh while the live stream is healthy", async () => {
     const sources: FakeEventSource[] = [];
     const fetchImpl = vi
       .fn<typeof fetch>()
-      .mockResolvedValueOnce(response(bootstrapBody(snapshot(0))))
-      .mockResolvedValueOnce(response(snapshotEnvelope(snapshot(1))));
+      .mockResolvedValueOnce(response(bootstrapBody(snapshot(0))));
     const client = new GameSyncClient({
       gameId: GAME_ID,
       fetchImpl,
@@ -263,10 +262,11 @@ describe("GameSyncClient", () => {
     await client.start();
     sources[0]!.open();
     client.refresh();
-    await vi.waitFor(() => expect(client.currentState.snapshot?.sequence).toBe(1));
+    await Promise.resolve();
 
     expect(sources[0]!.closed).toBe(false);
     expect(sources).toHaveLength(1);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
   it("resyncs a gap and retries transport loss with exponential backoff", async () => {

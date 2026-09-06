@@ -106,12 +106,14 @@ export class GameSyncClient {
   /** Reconciles immediately after a command or an explicit retry request. */
   refresh(): void {
     // An ACK can race the SSE event for the same committed command. Let the
-    // in-flight event-driven sync finish instead of closing its live stream
-    // and making it reopen after every command.
-    if (this.closed || !this.started || this.syncing) return;
-    // The stream is delivery evidence and remains useful while the ACK-driven
-    // sync catches up. Closing it here creates one new connection per command
-    // when the ACK wins the race against the SSE event.
+    // healthy stream deliver the authoritative snapshot instead of opening a
+    // redundant /sync request for every command. This matters in bot games:
+    // the command route can commit several bot turns in one browser-visible
+    // interaction, and the per-minute sync limit must not block play. A
+    // reconnecting/resyncing stream still needs the explicit catch-up read.
+    if (this.closed || !this.started || this.syncing || this.state.connection === "live") return;
+    // The stream remains useful while fallback synchronization catches up.
+    // Closing it here would create a new connection for each recovery read.
     void this.synchronize(false);
   }
 

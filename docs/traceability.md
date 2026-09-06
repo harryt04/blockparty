@@ -320,3 +320,11 @@ auction authority: `AwaitAuction` and `ImprovementAuction` use
 `prioritySeatId`, while ordinary turns and pending trades retain their existing
 actors. `apps/web/test/bot-turn.test.ts` covers the auction, ordinary-turn, and
 trade-counterparty selections for PRD-FUN-011, ENG-023, and ENG-026.
+
+Iteration 7 keeps a healthy authenticated SSE stream as the delivery path for
+authoritative command results. `GameSyncClient.refresh()` no longer issues a
+redundant `/sync` read after every accepted command while the stream is live;
+it still catches up when the stream is reconnecting or resyncing. This prevents
+fast bot-assisted play from exhausting the normal sync request limit and
+blocking the action bar, extending PROTO-004/UX-018 evidence in
+`apps/web/test/sync-client.test.ts`.
