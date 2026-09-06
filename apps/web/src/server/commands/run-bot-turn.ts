@@ -6,7 +6,12 @@ import "server-only";
  * server-derived actor and the policy decision. See PRD-FUN-011 and ENG-026.
  */
 import { CommandEnvelope, PROTOCOL_VERSION } from "@blockparty/contracts";
-import { chooseBotAction, legalActions, toBotPublicState } from "@blockparty/game-engine";
+import {
+  chooseBotAction,
+  legalActions,
+  toBotPublicState,
+  type GameState,
+} from "@blockparty/game-engine";
 import { randomUUID } from "node:crypto";
 import { getDb } from "../db/client";
 import { COLLECTIONS } from "../db/collections";
@@ -17,6 +22,20 @@ import type { AuthenticatedSeat } from "../auth/session";
 import { handleCommand } from "./handle-command";
 
 const MAX_BOT_ACTIONS_PER_TRIGGER = 64;
+
+/**
+ * Selects the seat that owns the next server-driven decision. Auction and
+ * improvement-auction priority rotates independently from the enclosing turn;
+ * a pending trade likewise waits on its named counterparty. See ENG-023 and
+ * ENG-026.
+ */
+export function botActorSeatId(state: GameState): string | undefined {
+  if (state.pendingTrade !== undefined) return state.pendingTrade.counterpartySeatId;
+  if (state.phase === "AwaitAuction" || state.phase === "ImprovementAuction") {
+    return state.prioritySeatId;
+  }
+  return state.activeSeatId;
+}
 
 /**
  * Runs bot turns until a human is active, the game pauses/finishes, or the
@@ -33,7 +52,7 @@ export async function runBotTurns(gameId: string): Promise<void> {
     if (persistedGame === null || persistedGame.status !== "ACTIVE" || persistedGame.paused) return;
 
     const game = { ...persistedGame, snapshot: normalizeGameState(persistedGame.snapshot) };
-    const actorSeatId = game.snapshot.activeSeatId;
+    const actorSeatId = botActorSeatId(game.snapshot);
     const actorSeat = game.snapshot.seats.find((seat) => seat.seatId === actorSeatId);
     if (actorSeatId === undefined || actorSeat?.kind !== "bot") return;
 

@@ -314,3 +314,9 @@ The same iteration also keeps a cross-seat `CollectEachPlayer` obligation on
 the actual payer, transfers control to that required actor, and resumes the
 card at the next unpaid leg. `packages/game-engine/test/card-collection-debt.regression-1.test.ts`
 covers this continuation for RULE-007, RULE-009, ENG-023, and ENG-025.
+
+Iteration 4 keeps server bot dispatch aligned with the engine's rotating
+auction authority: `AwaitAuction` and `ImprovementAuction` use
+`prioritySeatId`, while ordinary turns and pending trades retain their existing
+actors. `apps/web/test/bot-turn.test.ts` covers the auction, ordinary-turn, and
+trade-counterparty selections for PRD-FUN-011, ENG-023, and ENG-026.
