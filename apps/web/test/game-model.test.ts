@@ -11,6 +11,7 @@ import {
   commandForLegalAction,
   districtNames,
   enabledVariantLabels,
+  hasAuthoritativeActionResult,
   latestDiceResult,
   managementDecisionContext,
   detentionDecisionContext,
@@ -88,6 +89,13 @@ const snapshot = (overrides: Partial<GameSnapshotProjection> = {}): GameSnapshot
 });
 
 describe("game presentation model", () => {
+  it("clears an acknowledgement only after the snapshot reaches its committed version", () => {
+    expect(hasAuthoritativeActionResult(9, 8)).toBe(false);
+    expect(hasAuthoritativeActionResult(9, 9)).toBe(true);
+    expect(hasAuthoritativeActionResult(9, 25)).toBe(true);
+    expect(hasAuthoritativeActionResult(undefined, 25)).toBe(false);
+  });
+
   it("keeps the winding board in route order and resolves the active stop", () => {
     const value = snapshot();
     expect(orderedBoard(value.board).map((space) => space.routeIndex)).toEqual([0, 1]);

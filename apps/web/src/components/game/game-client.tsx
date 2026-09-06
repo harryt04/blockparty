@@ -37,6 +37,7 @@ import {
   commandForLegalAction,
   districtNames,
   enabledVariantLabels,
+  hasAuthoritativeActionResult,
   latestDiceResult,
   managementDecisionContext,
   orderedBoard,
@@ -78,9 +79,11 @@ export function GameClient({ gameId }: { gameId: string }) {
   const previousConnection = useRef(state.connection);
   const previousPhase = useRef(state.snapshot?.phase);
   const previousActiveSpaceId = useRef<string | undefined>(undefined);
+  const authoritativeSnapshotVersion = state.snapshot?.aggregateVersion;
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>();
   const [pendingAction, setPendingAction] = useState<LegalAction>();
   const [actionStatus, setActionStatus] = useState<string>();
+  const [acknowledgedActionVersion, setAcknowledgedActionVersion] = useState<number>();
   const [actionError, setActionError] = useState<string>();
   const [commandAnnouncement, setCommandAnnouncement] = useState<CommandAnnouncement>();
   const [managementOpen, setManagementOpen] = useState(false);
@@ -139,6 +142,13 @@ export function GameClient({ gameId }: { gameId: string }) {
     }
     previousPhase.current = snapshot?.phase;
   }, [snapshot, track]);
+
+  useEffect(() => {
+    if (hasAuthoritativeActionResult(acknowledgedActionVersion, authoritativeSnapshotVersion)) {
+      setAcknowledgedActionVersion(undefined);
+      setActionStatus(undefined);
+    }
+  }, [acknowledgedActionVersion, authoritativeSnapshotVersion]);
 
   useEffect(() => {
     const nextSelectedSpaceId = selectedSpaceAfterActiveChange(
@@ -219,6 +229,7 @@ export function GameClient({ gameId }: { gameId: string }) {
     if (snapshot === undefined || state.connection !== "live" || pendingAction !== undefined)
       return false;
     setPendingAction({ type: payload.type });
+    setAcknowledgedActionVersion(undefined);
     setActionError(undefined);
     setActionStatus(`Submitting ${payload.type.replace(/([a-z])([A-Z])/g, "$1 $2")}…`);
     try {
@@ -264,6 +275,7 @@ export function GameClient({ gameId }: { gameId: string }) {
         retry();
         return false;
       }
+      setAcknowledgedActionVersion(ack.data.aggregateVersion);
       setActionStatus("Action accepted. Waiting for the authoritative result.");
       announceCommand("Action accepted. Waiting for the authoritative result.", "polite");
       setPendingAction(undefined);

@@ -104,6 +104,23 @@ export function selectedSpaceAfterActiveChange(
     : selectedSpaceId;
 }
 
+/**
+ * An acknowledgement is reflected only when the authorized snapshot has
+ * reached the committed command version. Delivery cursors may move ahead of
+ * that snapshot while /sync is still loading, so callers must pass the
+ * snapshot's version rather than the transport cursor. See UX-013.
+ */
+export function hasAuthoritativeActionResult(
+  acknowledgedVersion: number | undefined,
+  snapshotVersion: number | undefined,
+): boolean {
+  return (
+    acknowledgedVersion !== undefined &&
+    snapshotVersion !== undefined &&
+    snapshotVersion >= acknowledgedVersion
+  );
+}
+
 /** Verb + object labels for server-advertised actions. Never leak wire names to players. DS-030. */
 const ACTION_LABELS: Partial<Record<LegalAction["type"], string>> = {
   RollDice: "Roll and advance",
