@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import { actionLabel } from "./action-bar";
+import { actionRenderKey } from "./action-bar-model";
 import { detentionDecisionContext, obligationDecisionContext } from "./game-model";
 
 function commandTarget(action: LegalAction): string {
@@ -58,9 +59,9 @@ export function DetentionDebtPanel({
               {formatMoney(detention.releaseFee, "Tabs")} release fee is required before the roll.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
-              {detention.routes.map((route) => (
+              {detention.routes.map((route, index) => (
                 <div
-                  key={commandTarget(route.action)}
+                  key={actionRenderKey(route.action, "legal", index)}
                   className="rounded-(--radius-md) border border-line p-3"
                 >
                   <Button
