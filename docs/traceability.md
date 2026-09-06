@@ -328,3 +328,11 @@ it still catches up when the stream is reconnecting or resyncing. This prevents
 fast bot-assisted play from exhausting the normal sync request limit and
 blocking the action bar, extending PROTO-004/UX-018 evidence in
 `apps/web/test/sync-client.test.ts`.
+
+Iteration 10 keeps the D5 bot policy from deadlocking a live acquisition auction:
+when the minimum legal bid reaches the content-derived valuation, the bot now
+selects `PassAuction` instead of repeatedly incrementing a bid that is already
+over value. `packages/game-engine/test/bot-auction.regression-1.test.ts` covers
+the policy boundary for PRD-FUN-011 and ENG-026; live browser evidence reached
+the prior failure with three bots and showed the auction loop consuming the
+server bot-action bound.

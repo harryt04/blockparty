@@ -294,6 +294,11 @@ function actionCandidate(
         factors: { ...factors, valuation: price },
       };
     case "PlaceAuctionBid": {
+      const valuation = auctionValuation(state);
+      const minBid = constraint(action, "minBid");
+      if (valuation > 0 && typeof minBid === "number" && minBid > valuation - 1) {
+        return undefined;
+      }
       const amount = (command as { type: "PlaceAuctionBid"; amount: number }).amount;
       return {
         action,
