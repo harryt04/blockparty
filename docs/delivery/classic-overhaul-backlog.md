@@ -447,7 +447,7 @@ accidental collapse in coverage.
       awaiting product-owner approval.
       Completion mark: `[?]` until original card copy is owner-approved.
 
-- [ ] **CO-014 — Implement four-House and Hotel transitions**
+- [x] **CO-014 — Implement four-House and Hotel transitions**
       Blocked by: CO-013
       Requirements: RULE-014, CONTENT-015, ENG-030
       Read: updated engine spec, improvement resolver, mortgage/debt/bankruptcy code
@@ -459,6 +459,15 @@ accidental collapse in coverage.
       buy, sell, transfer, bankruptcy, and replay paths.
       Proves: exhaustive transition table for levels 0–5, inventory boundary tests,
       bankruptcy scenarios, and conservation property tests.
+      Evidence: the reducer now performs finite-supply-safe Hotel downgrades,
+      simulates only legal even-building liquidation steps, and rejects an unsafe
+      improvement-bearing estate instead of looping or transferring it. The
+      improvement and bankruptcy suites cover the 0–5 round trip, multi-kind
+      replay, blocked replacement-House supply, and bankruptcy inventory return;
+      mutation of the sell direction failed the boundary test. Formatting,
+      typecheck, build, and 329 tests (2 skipped) pass. Repository CI remains
+      blocked only by the pre-existing `prettier.config.cjs` ESLint `module`
+      `no-undef` error.
 
 - [ ] **CO-015 — Reconcile all standard classic rule scenarios**
       Blocked by: CO-014

@@ -5271,23 +5271,108 @@ function resolveRollDice(state: GameState, actorSeatId: SeatId, rules: RuleSet):
   return { ok: true, state: queued.state, events: Object.freeze([...events, ...queued.events]) };
 }
 
+interface BankruptcySale {
+  readonly deedId: string;
+  readonly fromLevel: number;
+  readonly toLevel: number;
+  readonly amount: number;
+  readonly inventoryDeltas: Readonly<Record<string, number>>;
+  readonly nextInventory: Readonly<Record<string, number>>;
+}
+
+function bankruptcySaleCandidate(
+  state: GameState,
+  actorSeatId: SeatId,
+  rules: RuleSet,
+): BankruptcySale | undefined {
+  const ratio = rules.content.economy.improvementResaleRatio;
+  const candidates = state.deeds
+    .filter((deed) => deed.ownerSeatId === actorSeatId && deed.improvementLevel > 0)
+    .sort(
+      (left, right) =>
+        right.improvementLevel - left.improvementLevel || left.deedId.localeCompare(right.deedId),
+    );
+
+  for (const deedState of candidates) {
+    const context = improvementContext(state, rules, deedState.deedId);
+    if ("ok" in context) continue;
+    const currentLevel = context.deedState.improvementLevel;
+    const previousLevel = context.deed.improvementLevels?.find(
+      (level) => level.level === currentLevel,
+    );
+    if (
+      previousLevel === undefined ||
+      context.deed.improvementCost === undefined ||
+      !Number.isSafeInteger(context.deed.improvementCost) ||
+      context.deed.improvementCost < 0
+    ) {
+      continue;
+    }
+    if (!rules.configuration.relaxedEvenBuilding) {
+      const highestLevel = Math.max(
+        ...context.districtDeedStates.map((deed) => deed.improvementLevel),
+      );
+      const nextLevels = context.districtDeedStates.map((deed) =>
+        deed.deedId === deedState.deedId ? deed.improvementLevel - 1 : deed.improvementLevel,
+      );
+      if (currentLevel !== highestLevel || Math.max(...nextLevels) - Math.min(...nextLevels) > 1) {
+        continue;
+      }
+    }
+    const inventoryDeltas = completeInventoryDeltas(
+      previousLevel.inventoryDeltas,
+      state.bank.improvementInventory,
+    );
+    if (inventoryDeltas === undefined) continue;
+    const nextInventory = applyInventoryDeltas(state.bank.improvementInventory, inventoryDeltas, 1);
+    const amount = Math.floor((context.deed.improvementCost * ratio.numerator) / ratio.denominator);
+    if (
+      nextInventory === undefined ||
+      !Number.isSafeInteger(amount) ||
+      amount < 0 ||
+      !Number.isSafeInteger(ratio.numerator) ||
+      !Number.isSafeInteger(ratio.denominator) ||
+      ratio.numerator < 0 ||
+      ratio.denominator <= 0
+    ) {
+      continue;
+    }
+    return {
+      deedId: deedState.deedId,
+      fromLevel: currentLevel,
+      toLevel: currentLevel - 1,
+      amount,
+      inventoryDeltas,
+      nextInventory,
+    };
+  }
+  return undefined;
+}
+
+function applyBankruptcySale(state: GameState, sale: BankruptcySale): GameState {
+  return freezeState({
+    ...state,
+    deeds: state.deeds.map((deed) =>
+      deed.deedId === sale.deedId ? { ...deed, improvementLevel: sale.toLevel } : deed,
+    ),
+    bank: { ...state.bank, improvementInventory: sale.nextInventory },
+  });
+}
+
 function bankruptcyLiquidity(state: GameState, actorSeatId: SeatId, rules: RuleSet): number {
   const actor = findSeat(state, actorSeatId);
   if (actor === undefined) return 0;
+  let working = state;
   let proceeds = actor.balance;
-  const ratio = rules.content.economy.improvementResaleRatio;
-  for (const deedState of state.deeds.filter(
-    (deed) => deed.ownerSeatId === actorSeatId && deed.improvementLevel > 0,
-  )) {
-    const deed = rules.content.deeds.find((candidate) => candidate.deedId === deedState.deedId);
-    if (deed?.improvementCost === undefined) continue;
-    for (let level = deedState.improvementLevel; level > 0; level -= 1) {
-      proceeds += Math.floor((deed.improvementCost * ratio.numerator) / ratio.denominator);
-    }
+  while (true) {
+    const sale = bankruptcySaleCandidate(working, actorSeatId, rules);
+    if (sale === undefined) break;
+    proceeds += sale.amount;
+    working = applyBankruptcySale(working, sale);
   }
   // Improvements are sold first during bankruptcy, so every currently
   // unmortgaged deed is a potential mortgage source after liquidation.
-  for (const deedState of state.deeds.filter(
+  for (const deedState of working.deeds.filter(
     (deed) => deed.ownerSeatId === actorSeatId && !deed.mortgaged,
   )) {
     const deed = rules.content.deeds.find((candidate) => candidate.deedId === deedState.deedId);
@@ -5299,8 +5384,8 @@ function bankruptcyLiquidity(state: GameState, actorSeatId: SeatId, rules: RuleS
     const districtHasImprovements =
       district?.deedIds.some(
         (districtDeedId) =>
-          state.deeds.find((candidate) => candidate.deedId === districtDeedId)?.improvementLevel !==
-          0,
+          working.deeds.find((candidate) => candidate.deedId === districtDeedId)
+            ?.improvementLevel !== 0,
       ) ?? false;
     if (!districtHasImprovements) proceeds += deed.mortgageValue;
   }
@@ -5336,49 +5421,42 @@ function resolveDeclareBankruptcy(
 
   let working = state;
   const events: EngineEvent[] = [];
-  const ratio = rules.content.economy.improvementResaleRatio;
   // Liquidate highest levels first so every generated sale remains even-building legal.
   while (true) {
-    const candidates = working.deeds
-      .filter((deed) => deed.ownerSeatId === actorSeatId && deed.improvementLevel > 0)
-      .sort(
-        (left, right) =>
-          right.improvementLevel - left.improvementLevel || left.deedId.localeCompare(right.deedId),
-      );
-    const candidate = candidates[0];
-    if (candidate === undefined) break;
-    const deed = rules.content.deeds.find((item) => item.deedId === candidate.deedId);
-    const level = deed?.improvementLevels?.find(
-      (item) => item.level === candidate.improvementLevel,
-    );
-    const inventoryDeltas =
-      level === undefined
-        ? undefined
-        : completeInventoryDeltas(level.inventoryDeltas, working.bank.improvementInventory);
-    if (deed?.improvementCost === undefined || inventoryDeltas === undefined) {
+    const sale = bankruptcySaleCandidate(working, actorSeatId, rules);
+    if (sale === undefined) break;
+    const sold = freezeEvent({
+      type: "ImprovementSold",
+      eventVersion: IMPROVEMENT_EVENT_VERSION,
+      actorSeatId,
+      payload: {
+        deedId: sale.deedId,
+        seatId: actorSeatId,
+        fromLevel: sale.fromLevel,
+        toLevel: sale.toLevel,
+        amount: sale.amount,
+        inventoryDeltas: sale.inventoryDeltas,
+        reason: "BANKRUPTCY_LIQUIDATION",
+      },
+    } satisfies EngineEvent);
+    events.push(sold);
+    const nextWorking = freezeState(applyEvent(working, sold));
+    if (nextWorking === working) {
       return reject(
         "INVALID_PAYLOAD",
         "INVALID_BANKRUPTCY_LIQUIDATION_DATA",
         "The content bundle cannot describe the required improvement liquidation.",
       );
     }
-    const amount = Math.floor((deed.improvementCost * ratio.numerator) / ratio.denominator);
-    const sold = freezeEvent({
-      type: "ImprovementSold",
-      eventVersion: IMPROVEMENT_EVENT_VERSION,
-      actorSeatId,
-      payload: {
-        deedId: candidate.deedId,
-        seatId: actorSeatId,
-        fromLevel: candidate.improvementLevel,
-        toLevel: candidate.improvementLevel - 1,
-        amount,
-        inventoryDeltas,
-        reason: "BANKRUPTCY_LIQUIDATION",
-      },
-    } satisfies EngineEvent);
-    events.push(sold);
-    working = freezeState(applyEvent(working, sold));
+    working = nextWorking;
+  }
+
+  if (working.deeds.some((deed) => deed.ownerSeatId === actorSeatId && deed.improvementLevel > 0)) {
+    return reject(
+      "INVALID_PAYLOAD",
+      "INVALID_BANKRUPTCY_LIQUIDATION_DATA",
+      "The bank cannot accept every improvement in the debtor's estate.",
+    );
   }
 
   const debtor = findSeat(working, actorSeatId);

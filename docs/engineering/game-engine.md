@@ -134,7 +134,9 @@ changes. A replay either applies the full cash, deed-level, House, and Hotel
 transition or rejects it; it may not infer a first inventory kind from map
 iteration order. CO-011 emits improvement events at version 2 and runs new
 states at schema 2.0.0; archived 1.0.0 fixtures remain readable for the
-non-improvement replay seam.
+non-improvement replay seam. CO-014 also validates finite-supply Hotel
+downgrades, even-building bankruptcy liquidation, and refusal to transfer an
+estate when replacement Houses cannot be returned safely.
 
 ### ENG-031 — Placeholder-game retirement
 

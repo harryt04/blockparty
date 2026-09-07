@@ -150,6 +150,58 @@ describe("A14 bankruptcy and endgame", () => {
     expect(result.state.bank.improvementInventory.stall).toBe(33);
   });
 
+  it("returns the Hotel and replacement House inventory during bankruptcy liquidation", () => {
+    const before = stateWithDebt({ amount: 100_000, improvementLevel: 5 });
+    const state: GameState = {
+      ...before,
+      seats: before.seats.map((seat) =>
+        seat.seatId === "seat-a"
+          ? { ...seat, deedIds: ["d-sawhorse-lane", "d-chalk-arrow-walk"] }
+          : seat,
+      ),
+      deeds: before.deeds.map((deed) =>
+        deed.deedId === "d-chalk-arrow-walk"
+          ? { ...deed, ownerSeatId: "seat-a", improvementLevel: 4 }
+          : deed,
+      ),
+      bank: {
+        ...before.bank,
+        deedIds: before.bank.deedIds.filter((deedId) => deedId !== "d-chalk-arrow-walk"),
+        improvementInventory: { stall: 28, stage: 11 },
+      },
+    };
+    const result = resolve(
+      state,
+      { actorSeatId: "seat-a", command: { type: "DeclareBankruptcy" } },
+      RULES,
+    );
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) throw new Error("expected Hotel liquidation");
+    expect(result.events[0]).toMatchObject({
+      type: "ImprovementSold",
+      payload: { fromLevel: 5, toLevel: 4, inventoryDeltas: { stall: -4, stage: 1 } },
+    });
+    expect(result.state.bank.improvementInventory).toEqual({ stall: 32, stage: 12 });
+    expect(result.state.deeds.find((deed) => deed.deedId === "d-sawhorse-lane"))?.toMatchObject({
+      improvementLevel: 0,
+      ownerSeatId: undefined,
+    });
+  });
+
+  it("does not count a blocked Hotel downgrade as bankruptcy liquidity", () => {
+    const before = stateWithDebt({ amount: 1_000, improvementLevel: 5 });
+    const state: GameState = {
+      ...before,
+      bank: { ...before.bank, improvementInventory: { stall: 3, stage: 11 } },
+    };
+    expect(
+      resolve(state, { actorSeatId: "seat-a", command: { type: "DeclareBankruptcy" } }, RULES),
+    ).toMatchObject({
+      ok: false,
+      reasonCode: "INVALID_BANKRUPTCY_LIQUIDATION_DATA",
+    });
+  });
+
   it("rejects bankruptcy while a legal liquidation sequence can pay", () => {
     const result = resolve(
       stateWithDebt({ amount: 1_000, debtorBalance: 0 }),

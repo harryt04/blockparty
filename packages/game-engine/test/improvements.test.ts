@@ -206,6 +206,64 @@ describe("A7 improvements", () => {
     expect(improve(state, "d-sawhorse-lane", "SellImprovement")).toMatchObject({ ok: true });
   });
 
+  it("exchanges four Houses for a Hotel and reverses the exchange atomically", () => {
+    const before = districtState([0, 0], { balance: 150_000 });
+    let state = before;
+    const events = [];
+    const deeds = ["d-sawhorse-lane", "d-chalk-arrow-walk"] as const;
+    for (let level = 1; level <= 4; level += 1) {
+      for (const deedId of deeds) {
+        const result = improve(state, deedId, "BuyImprovement");
+        expect(result).toMatchObject({ ok: true });
+        if (!result.ok) throw new Error("expected House purchase");
+        state = result.state;
+        events.push(...result.events);
+      }
+    }
+    expect(state.bank.improvementInventory).toEqual({ stall: 24, stage: 12 });
+
+    const hotel = improve(state, deeds[0], "BuyImprovement");
+    expect(hotel).toMatchObject({
+      ok: true,
+      events: [{ payload: { fromLevel: 4, toLevel: 5, inventoryDeltas: { stall: -4, stage: 1 } } }],
+    });
+    if (!hotel.ok) throw new Error("expected Hotel purchase");
+    state = hotel.state;
+    events.push(...hotel.events);
+    expect(state.bank.improvementInventory).toEqual({ stall: 28, stage: 11 });
+
+    const downgrade = improve(state, deeds[0], "SellImprovement");
+    expect(downgrade).toMatchObject({ ok: true });
+    if (!downgrade.ok) throw new Error("expected Hotel sale");
+    state = downgrade.state;
+    events.push(...downgrade.events);
+    expect(state.bank.improvementInventory).toEqual({ stall: 24, stage: 12 });
+    expect(state.deeds.find((deed) => deed.deedId === deeds[0])?.improvementLevel).toBe(4);
+
+    for (let level = 4; level >= 1; level -= 1) {
+      for (const deedId of deeds) {
+        const result = improve(state, deedId, "SellImprovement");
+        expect(result).toMatchObject({ ok: true });
+        if (!result.ok) throw new Error("expected improvement sale");
+        state = result.state;
+        events.push(...result.events);
+      }
+    }
+    expect(state.bank.improvementInventory).toEqual(before.bank.improvementInventory);
+    expect(state.deeds.find((deed) => deed.deedId === deeds[0])?.improvementLevel).toBe(0);
+    expect(state.deeds.find((deed) => deed.deedId === deeds[1])?.improvementLevel).toBe(0);
+    expect(replay(before, events, RULES)).toEqual(state);
+  });
+
+  it("blocks a Hotel downgrade when the bank lacks four replacement Houses", () => {
+    const before = districtState([5, 4], { inventory: { stall: 3, stage: 11 } });
+    expect(improve(before, "d-sawhorse-lane", "SellImprovement")).toMatchObject({
+      ok: false,
+      reasonCode: "IMPROVEMENT_INVENTORY_INVALID",
+    });
+    expect(before).toEqual(districtState([5, 4], { inventory: { stall: 3, stage: 11 } }));
+  });
+
   it("replays complete multi-kind transitions atomically and rejects partial maps", () => {
     const content: ContentBundle = {
       ...PLACEHOLDER_BUNDLE,
