@@ -73,11 +73,11 @@ https://ui.shadcn.com/docs/components/base/sidebar
 | Navigation and inspection             | `Tabs`, `Accordion`, `Popover`, `DropdownMenu`, `Command` for searchable asset list, `NavigationMenu` only outside active play          |
 | System states                         | `Skeleton`, `Alert`, `EmptyState` composition, `Tooltip` plus visible disabled reason                                                   |
 
-Buttons use a verb + object (“Acquire 4 Maple Stoop”), not vague “Confirm.” Primary action appears once per decision. Mobile sheets are bottom-anchored with drag affordance **and** close button; tablet promotes contextual content to split panel; desktop uses persistent panels per [UX-030–UX-033](ux-spec.md#4-responsive-game-shell). Tables collapse to labelled definition/list rows at narrow widths; player strip remains horizontally scrollable with visible clipping affordance.
+Buttons use a verb + object (“Acquire this Property”), not vague “Confirm.” Primary action appears once per decision. Mobile sheets are bottom-anchored with drag affordance **and** close button; tablet promotes contextual content to split panel; desktop uses persistent panels per [UX-030–UX-033](ux-spec.md#6-state-announcements-and-responsive-behavior). Tables collapse to labelled definition/list rows at narrow widths; player strip remains horizontally scrollable with visible clipping affordance.
 
 ## DS-040 — Board and space grammar
 
-Implement the board as semantic DOM controls and scalable SVG decoration, with an equivalent ordered board list. Never use an opaque canvas ([UX-040](ux-spec.md#6-accessibility-acceptance-requirements--ux-040)). Each space is a `button`/link-like inspectable element only when it has an available action; otherwise use a labelled group with a separate inspect control. SVG must not be the only source of names/statuses.
+Implement the board as semantic DOM controls and scalable SVG decoration, with an equivalent ordered board list. Never use an opaque canvas ([UX-040](ux-spec.md#7-accessibility-and-implementation-handoff)). Each space is a `button`/link-like inspectable element only when it has an available action; otherwise use a labelled group with a separate inspect control. SVG must not be the only source of names/statuses.
 
 Each cell contains, in reading order: route index, original category pictogram, space name, ownership marker/owner token glyph, economic indicator (when public), and state badges. Cell identity uses a distinctive edge pattern and icon family; district color is supplemental. A selected cell has `aria-current`/pressed state, 2 px focus/selection outline, and a text label in active-space detail. Current player position uses a shaped token plus player initial/pattern; stacked tokens collapse to a count with an accessible list.
 
@@ -105,12 +105,12 @@ Motion is functional and brief: 120–180 ms control feedback, 180–260 ms shee
 
 ## DS-060 — Accessibility implementation rules
 
-Meet [UX-040](ux-spec.md#6-accessibility-acceptance-requirements--ux-040): visible 3:1+ focus ring against adjacent colors, 44 px targets, semantic landmarks, focus-managed dialogs, restrained live announcements, keyboard board navigation, 320–400% reflow, and high-contrast/forced-colors support. Do not suppress browser zoom. Status icons include accessible names; decorative pattern is never the sole indicator. Test touch, keyboard-only, VoiceOver/NVDA, reduced motion, dark mode, and 200%/400% zoom before release.
+Meet [UX-040](ux-spec.md#7-accessibility-and-implementation-handoff): visible 3:1+ focus ring against adjacent colors, 44 px targets, semantic landmarks, focus-managed dialogs, restrained live announcements, keyboard board navigation, 320–400% reflow, and high-contrast/forced-colors support. Do not suppress browser zoom. Status icons include accessible names; decorative pattern is never the sole indicator. Test touch, keyboard-only, VoiceOver/NVDA, reduced motion, dark mode, and 200%/400% zoom before release.
 
 ## DS-070 — Implementation checklist
 
 1. Define semantic Tailwind variables for light, dark, and forced-colors fallback; no component uses raw brand/district hex values.
 2. Self-host the licensed fonts and preload only the UI face/weights used above the fold.
-3. Create board cell, player token, status badge, action sheet, active-space detail, mini-map, and event-feed components with the state contracts in [UX-013–UX-019](ux-spec.md#3-end-to-end-flows).
+3. Create board cell, player token, status badge, action sheet, active-space detail, mini-map, and event-feed components with the state contracts in [UX-013–UX-019](ux-spec.md#4-table-play-flows).
 4. Verify all ownership and game states without color, with reduced motion, and in the DOM board list.
 5. Keep naming, artwork, rules, and legal review aligned with [Brand strategy](../brand/brand-strategy.md), [IP safety](../legal/ip-safety.md), and [Game content](../product/game-content.md); this system is an implementation direction, not legal clearance.

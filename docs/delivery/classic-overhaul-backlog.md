@@ -241,7 +241,7 @@ accidental collapse in coverage.
       LEGAL-011 to traceability. Final public release remains gated on named
       owner and attorney approval.
 
-- [ ] **CO-005 — Rewrite the UX specification around table setup and table play**
+- [x] **CO-005 — Rewrite the UX specification around table setup and table play**
       Blocked by: CO-004
       Requirements: UX-041–047, PRD-FUN-021–024
       Read: `docs/design/ux-spec.md`, updated PRD/rules/content specification
@@ -255,6 +255,14 @@ accidental collapse in coverage.
       disconnected, and recovery behavior where applicable; no screen invents
       state not supplied by projections.
       Proves: flow review against all legal actions and protocol failure classes.
+      Evidence: `docs/design/ux-spec.md` now specifies the one-page composer,
+      entry-time piece conflicts, table-preview lobby, desktop digital hand,
+      phone overview/focus/list equivalence, one dominant decision, property
+      management, blocking decisions, recovery, completion, rematch, and
+      `CONTENT_RETIRED` summaries. UX-041–047 are registered in
+      `docs/traceability.md`; formatting, typecheck, build, and 292 tests (2
+      skipped) pass. Full CI remains blocked by the pre-existing ESLint
+      `prettier.config.cjs` `module` no-undef error.
 
 - [ ] **CO-006 — Rewrite the design system for the classic table**
       Blocked by: CO-005

@@ -1,133 +1,280 @@
-# UX Specification — Browser Economic Board Game
+# UX Specification — Blockparty classic table
 
-**Status:** implementation-ready · **Product context:** [PRD](../product/prd.md), [rules](../product/rules.md), [variants](../product/rule-variants.md), [game content](../product/game-content.md), and [glossary](../product/glossary.md) · **Visual rules:** [Design system](design-system.md)
+**Status:** classic-overhaul implementation authority · **Product context:**
+[PRD](../product/prd.md), [rules](../product/rules.md), [variants](../product/rule-variants.md),
+[game content](../product/game-content.md), and [glossary](../product/glossary.md) ·
+**Visual rules:** [Design system](design-system.md)
 
-This specification describes an original, private-session economic board game for 2–6 guest or bot players. It must not present itself as, copy the naming, artwork, board geometry, currency, rules text, or trade dress of any commercial board game. Product terminology, spaces, cards, tokens, and rules content must be original and finalized with the game-rules specification before implementation.
+This specification defines the player experience for the original magical city
+of Blockparty. It uses the familiar generic terms Property, Color Set, Rent,
+Mortgage, Auction, House, Hotel, Detention, Bank, and Trade. The board is a
+classic 40-space perimeter table; its names, copy, art, pieces, and visual
+expression remain original to Blockparty.
 
-## 1. Product principles
+The browser renders an authorized projection. It never invents a player,
+balance, property, die result, card effect, legal action, or completion state.
+Only a server-accepted command changes the game.
 
-- **UX-001 — One shared game, many personal views.** Every participant sees authoritative live state while their own actionable choices stay prominent.
-- **UX-002 — Phone-first, not phone-shrunken.** At 375 CSS px, the player acts from a focused board region and a single action surface; they never need to read a full board at once.
-- **UX-003 — Deliberate social play.** Important state changes are visible, attributable, confirmable, and announced. There is intentionally **no in-game chat**; invitees use their existing communication channel.
-- **UX-004 — Seats are durable without accounts.** An invite opens admission; a secure game-seat command capability resumes only that seat. Active games expire 30 days after the last authoritative gameplay action and completed games 30 days after completion.
-- **UX-005 — Network truth.** The app may provide an offline app shell, but live gameplay, commands, and state synchronization require a network connection.
-- **UX-006 — Accessible equivalence.** Board, log, controls, and every decision have a keyboard and screen-reader usable path; visual color is never the sole carrier of meaning.
+## 1. Experience principles
 
-## 2. Information architecture and routes
+- **UX-001 — One shared table, many personal views.** The full table is the
+  shared visual anchor; each player sees the same authoritative public state and
+  their own private capabilities only.
+- **UX-002 — Classic table, digital hand.** Desktop shows the complete board
+  and a local property hand. Phone shows a fitted overview, focused inspection,
+  and the same information in an ordered accessible list.
+- **UX-003 — One dominant decision.** Every blocking phase presents one primary
+  decision for the required actor. Secondary inspection and management actions
+  never compete with it.
+- **UX-004 — Untimed, attributable play.** No turn, auction, trade, or debt
+  timer expires. A disconnected required actor pauses the relevant decision;
+  the UI never fabricates a pass, bid, payment, or bankruptcy.
+- **UX-005 — Network truth.** A reconnecting player keeps the last confirmed
+  projection. Commands are disabled until the server re-authenticates and
+  reconciles state.
+- **UX-006 — Accessible equivalence.** Color, position, animation, and shape
+  are never the only way to understand ownership, urgency, a result, or an
+  action. Every board fact and decision has a semantic, keyboard, and screen
+  reader path.
 
-Routes are server-rendered shell pages in Next.js; live state hydrates after capability validation. Admission URLs use opaque invite IDs. Game IDs locate state but grant no authority; host, seat, and reclaim capabilities never appear in URLs.
+## 2. Routes and information architecture
 
-| Route/screen                          | Purpose and required content                                                                                                                                                                                                     |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/` — Landing                         | Name/mark, concise “create a private game” promise, **Create game** primary CTA, **Join with link** field/CTA, how-it-works, rules/age notice (13+), accessibility/settings links, install education. No account wall.           |
-| `/create` — Create                    | Game name (optional, length-limited), player count 2–6, bot seats, ruleset/variant selector, privacy note, and **Create lobby**. Invalid combinations explain the fix inline.                                                    |
-| `/join/[inviteId]` — Join gate        | Validates invitation; choose a game-scoped pseudonym and token/avatar, acknowledge 13+, and join. Expired/invalid/full/ended states give a safe exit without revealing private room details.                                     |
-| `/game/[gameId]/lobby` — Lobby        | Invite link with copy/share, participant seats, readiness, bot controls, selected settings summary, host start control, leave. The host alone changes settings and starts; guests change only personal presentation preferences. |
-| `/game/[gameId]` — Game               | Responsive game shell defined in §4. Includes board, player state, event feed, active decision surface, settings and reconnect state. Authorization comes from the game-seat cookie, not the path.                               |
-| `/game/[gameId]/summary` — Completion | Winner, rules-defined no-winner, or host-ended no-contest outcome; standings, key events, rematch, copy result, return home. Do not auto-reuse an invite or gameplay identity.                                                   |
-| `/settings` — Personal settings       | Theme, contrast, reduced sound/haptics, animation preference, board labels, text scale guidance, install status, data/session controls. These do not change game rules.                                                          |
-| `/rules` and `/accessibility`         | Versioned original rules, variants, keyboard guide, and accessibility statement. Link from every shell footer/menu.                                                                                                              |
+Routes are server-rendered shells. Live state hydrates only after the server
+validates the relevant capability. Game IDs locate state but grant no authority;
+invite, seat, host, and reclaim capabilities never appear in URLs, storage,
+logs, or analytics.
 
-Room navigation must warn before leaving an unresolved decision; browser Back must not silently discard a submitted command. History/replay is rendered from the authoritative event log, never inferred from animation.
+| Route/screen | Required experience |
+| --- | --- |
+| `/` — Landing | Explain the private Blockparty table in one sentence. Make **Create game** the primary action and **Join with link** the secondary action. Include the 13+ notice, accessibility/settings links, install education, and no account wall. |
+| `/create` — Create | One page for the host pseudonym, host piece, optional table name, Human count, Computer count, collapsed house-rule summary, and age acknowledgement. Show the resulting seat tray before submission. |
+| `/join/[inviteId]` — Join | Validate the invite before collecting input. Show only server-reported open Human seats and available pieces. Collect a game-scoped pseudonym, one remaining piece, and age acknowledgement. |
+| `/game/[gameId]/lobby` — Lobby | Show a miniature classic board, seat tray, claimed/open Human seats, Computer seats, selected Standard/Custom summary, invite/share action, and host-only start or seat controls. Explain the exact unmet start condition. |
+| `/game/[gameId]` — Table | Show the authoritative board, player rail, current decision, local property hand, event history, connection state, and contextual inspection/management surfaces. |
+| `/game/[gameId]/summary` — Summary | Show the authoritative winner, standings, key events, no-contest or retired-game explanation, read-only board/history, and a fresh rematch action. Never silently reuse an invite, balance, capability, or identity. |
+| `/settings`, `/rules`, `/accessibility` | Keep personal presentation preferences, original rules/variants, keyboard help, and accessibility information outside the game state. |
 
-## 3. End-to-end flows
+Room navigation warns before leaving an unresolved decision. Browser Back never
+silently discards an entered bid or trade. History is rendered from the
+authoritative event log, never inferred from animation.
 
-### UX-010 Landing → create → invite
+## 3. Creation and admission flows
 
-1. Visitor selects **Create game**, chooses 2–6 total seats, fills unused seats with bots if desired, selects a named variant, and accepts the 13+ notice.
-2. The server creates a game, separate host and game-seat capabilities, and the documented rolling 30-day expiry. Show the lobby and an obvious **Copy invite link** plus native share where available.
-3. The link grants admission to the lobby/game, not host privileges. Copy feedback is textual and announced; users can rotate/disable an invite from host controls if the product supports it.
-4. Host reviews seats and starts only when ruleset minimums are met. Starting locks rule-changing settings and writes a visible event.
+<a id="3-end-to-end-flows"></a>
 
-### UX-011 Join → lobby
+### UX-041 — One-page table composer
 
-1. Invitee opens `/join/[inviteId]`; validate availability before displaying the join form.
-2. They select an unclaimed seat, game-scoped pseudonym, and distinguishable token. Enforce [PRD-FUN-003](../product/prd.md#entry-lobby-and-seats) and never request a real name.
-3. On success, announce “Joined [room name], [n] of [max] seats filled,” focus the lobby heading, and retain the resumable identity locally/securely.
-4. A valid command capability reconnects only its original human seat. A replaced player instead presents the separate reclaim claim and follows UX-018; neither capability grants host authority.
+The host completes creation without a multi-step wizard:
 
-### UX-012 Lobby → settings → start
+1. Enter a required game-scoped pseudonym and choose one of the six available
+   pieces: Lantern, Key, Crescent, Tower, Fox, or Teapot. Render each piece
+   with its distinct color and pattern as redundant cues.
+2. Optionally enter a length-limited table name.
+3. Set **Human players** with minus/value/plus buttons. The count includes the
+   host. Set **Computer players** with the same buttons. Do not use numeric text
+   fields, wheel-sensitive inputs, or hidden seat-count fields.
+4. Keep the combined table size from 2 through 6. Humans are 1 through 6 and
+   Computers are 0 through 5, with an invalid total explained inline. The
+   default is 2 Humans, 0 Computers.
+5. Keep Standard selected by default. House rules are collapsed; expanding them
+   shows exactly the eight documented toggles, their plain-language effects,
+   conflict validation, and the locked-after-start rule.
+6. Show a visible seat tray preview: the host's seat, open Human seats, and
+   Computer seats. The preview updates immediately but is not authoritative.
+7. Submit once. Disable duplicate submission while pending and issue no
+   capability in the request body, URL, storage, or analytics. On success,
+   route to the lobby with the server projection.
 
-Host opens **Game settings** in a dialog/sheet: `standard` or `short-game`, exactly the eight documented toggles, and 2–6 human/bot seat types. The one MVP bot difficulty is not selectable. Starting resources come from the immutable content bundle, and gameplay has no timers. Each variant has plain-language impact and conflict validation. Changes update viewers and emit a domain event; after start, rules are read-only while sound/theme remain personal.
+Error, empty, and recovery behavior:
 
-### UX-013 Active turn
+- Missing or invalid pseudonym, piece, count, or acknowledgement is marked at
+  the field and summarized at the form heading; safe values remain entered.
+- If the server rejects a stale piece or contract version, preserve the safe
+  form values, refresh availability, and require a new piece selection.
+- If the request is pending, announce **Creating table** and keep the submit
+  control unavailable. A retry is permitted only after a definitive failure;
+  a timeout never implies that a table was not created.
 
-1. Live connection establishes; board shell shows current turn and `Waiting for [player]` for everyone else.
-2. Active player selects **Roll/advance** (or the rule-equivalent action). Disable duplicate submission immediately; retain an accessible pending label until authoritative result arrives.
-3. Animate only after the authoritative event; update player strip, focused board viewport, active-space detail, event feed, and possible decision sheet.
-4. If no decision is due, show **End turn** with a concise consequence summary. Other players may inspect board details and permitted trade offers but cannot invoke turn actions.
+### UX-042 — Join and piece-conflict recovery
 
-### UX-014 Acquisition and auction
+The join gate first resolves the invite status. Invalid, expired, full, ended,
+or retired invitations receive a plain-language explanation and a safe route
+home without revealing private room details.
 
-When landing on an unowned acquirable space, the active player receives a decision sheet: space name/type, price, projected balance, income/risk summary, **Acquire**, and **Decline**. Declining immediately opens an untimed auction visible to all eligible players. Auction uses labelled increment controls and direct amount entry with validation; current leader, minimum next bid, priority bidder, affordability, pass status, and outcome have text equivalents. A disconnected priority bidder pauses the auction. Bids are atomic; conflicting bids receive an authoritative result, not a client-side promise.
+For an open invite, the server supplies the available Human seats and pieces.
+The player enters a normalized pseudonym, chooses one available piece, and
+acknowledges the 13+ notice. Occupied seats and pieces are visibly unavailable;
+the client does not guess availability from an earlier projection.
 
-### UX-015 Trade
+On a concurrent claim conflict, keep the pseudonym and acknowledgement, refresh
+the authoritative availability, identify the unavailable piece, move focus to
+the new piece choices, and require another selection. Never displace an
+occupied Human or Computer seat. On success, issue the secure seat capability
+and focus the lobby heading with a textual joined announcement.
 
-Any eligible human player opens **Propose trade**, chooses a counterpart, adds/removes permitted cash, deeds, and Detention-release cards, then reviews **You give / You receive**. Future promises and deferred consideration are unavailable. The recipient can accept, decline, or counter; acceptance revalidates current state. A trade becomes stale if an included asset changes and cancels if a party is eliminated or the game ends. During an obligation, only the debtor may use a valid immediate liquidity trade. Bots expose only rule-supported offers and never impersonate a human response.
+### UX-043 — Table-preview lobby
 
-### UX-016 Improve, mortgage, and sell
+The lobby is a preview of the shared table, not a second configuration wizard.
+The miniature board and seat tray show seat order, pseudonym, piece, Human or
+Computer kind, open Human slots, and connection/readiness status. A host may
+copy/share the invite, remove or replace a Computer, and start when every
+planned Human seat is claimed. A non-host can inspect the preview and copy the
+invite but cannot change settings or start.
 
-From an owned-space detail, **Manage** opens inventory grouped by executable and blocked actions. Explain prerequisites, cost/proceeds, resulting balance, and rule constraints before the action. Improvement, sale, mortgage, and redeem-mortgage actions use server validation and confirmation where irreversible. Render executable `legalActions` as enabled and relevant `actionAvailability` entries disabled with their reason.
+Keep Standard or Custom plus the selected toggle summary concise by default.
+Put editing behind **Game settings** and close it after a successful server
+acknowledgement. If start is unavailable, state the exact reason, such as
+“Waiting for 1 Human seat,” beside the disabled control. There is no separate
+ready state.
 
-When finite improvement inventory is contested, show the available count, each seat's eligible requested deed, current priority, minimum bid, and cost treatment. Use the same untimed ordered auction interaction as UX-014. Revalidate a target after each unit; explain and remove an ineligible request rather than silently moving it.
+When the host starts, lock rules and seat composition, announce the authoritative
+`GameStarted` transition, and navigate all connected players to the table. A
+rejected start leaves the preview unchanged and explains whether a seat,
+connection, or version must be repaired.
 
-### UX-017 Detention, debt, and bankruptcy
+## 4. Table play flows
 
-Forced Detention presents remaining turns/exit conditions and currently legal remedies. An obligation interrupts normal choices with allowed liquidation actions and an updated amount due; blocked options remain visible with reasons. When the engine proves no legal remedy remains, **Declare bankruptcy** is a destructive confirmed action whose creditor outcome is explained. Bankruptcy locks the eliminated seat, resolves assets, announces standings, and preserves the event log. Never trap a keyboard user in the sheet.
+<a id="4-responsive-game-shell"></a>
 
-### UX-018 Reconnect, resume, host departure, and disconnected seats
+### UX-044 — Desktop classic table and digital hand
 
-- Connection loss immediately changes the global status to **Reconnecting**; queued game commands are not replayed automatically. The last confirmed state remains inspectable and all game-changing controls are disabled with explanation.
-- Retry with exponential backoff; after recovery, fetch authoritative state, reconcile the UI, and announce changes. Active games expire 30 days after the last authoritative gameplay action; completed games expire 30 days after completion. Expired games show a neutral unavailable page.
-- A disconnected human keeps their seat and assets. Play pauses only when that seat is the required actor. At a safe command boundary, the host may explicitly replace it with the single MVP bot. Confirmation names the seat and explains that the old command token will be revoked while a separate reclaim claim remains. Journal and announce replacement.
-- A replaced human authenticates the reclaim claim and requests control. The host approves; at the next safe command boundary the bot is removed and a new command token is issued. Never change control during unresolved action execution. A disconnected host transfers at a safe boundary to the longest-tenured connected human, tie-broken by seat order; if no human is connected, play remains paused.
-- Host controls include **End game without a result**. A destructive confirmation explains that no winner will be recorded, shows the action to every connected player, and submits `EndNoContest` only at a safe command boundary. This is not a silent disconnect action and cannot be undone.
+At desktop widths, center the complete 40-space board as the visual anchor.
+Place the ordered player rail at the left with pseudonym, piece shape/color/
+pattern, cash, connectivity, elimination status, and turn marker. Place the
+current decision and active-space detail at the right. Place the local property
+hand below the board, grouped by Color Set, with deed-level and management
+status. Bank inventory, event history, and settings are secondary surfaces with
+their own headings and scroll regions.
 
-### UX-019 Completion and rematch
+The board communicates each space's canonical identity, display name, type,
+group, owner, mortgage state, improvement level, and pieces. Property bands,
+piece shapes/patterns, labels, borders, and text repeat meaning so color is
+never required. The ordered board list remains available at every width.
 
-When win conditions are authoritative, freeze actions, show the result sheet to all, announce winner/standings, and route to summary. Rematch creates a fresh room and invite link with explicit participant/variant choices; it never carries balances, assets, or host authority silently.
+### UX-045 — Phone overview, focus, zoom, and list equivalence
 
-## 4. Responsive game shell
+At 320–767 CSS px, use a safe-area-aware single-column shell:
 
-### Mobile (375 px first) — UX-030
+1. Keep a compact header with current player/decision, cash or debt, roll/result,
+   connection state, and a route to the ordered board list.
+2. Show a fitted overview of all 40 spaces without page-level horizontal scroll.
+   The overview is an inspection surface, not a substitute for readable detail.
+3. Follow the authoritative active movement and active space after a confirmed
+   event. If the player deliberately taps a different space, preserve that
+   inspection until the authoritative active space changes or the player uses
+   **Follow active space**.
+4. Permit deliberate tap-to-focus and zoom within the board viewport. Provide
+   an obvious reset/focus escape. Browser zoom remains enabled.
+5. Put the active-space detail and horizontally scrollable player strip below
+   the overview. Put the single current decision in a bottom action sheet that
+   never traps or hides its invoker.
+6. Make Board, Properties, Trade, and History navigation available without
+   discarding an unresolved decision. The ordered board list exposes every fact
+   and action conveyed by position or color.
 
-Use a single-column, safe-area-aware shell. The main region is a **focused board viewport**, showing the active player, their current/next-relevant space, and nearby spaces at readable scale; pan by drag plus keyboard controls, and expose a **mini-map** with a labelled viewport indicator and tappable regions. Below it: active-space detail (name, type, owner/status, value/rule summary) and a horizontally scrollable **player strip** with name, token shape/pattern, balance, status, and turn marker. A fixed bottom action bar opens a modal **bottom action sheet** for all turn decisions; it must not cover its invoker without a way to close. The event feed is a collapsible labelled panel. Board inspection never competes with an unresolved action: action sheet priority wins.
+### UX-046 — One decision and contextual property management
 
-### Tablet — UX-031
+Every phase has one foreground decision for the required actor:
 
-At approximately 768–1023 px, use a split layout: flexible board viewport/minimap on the left or top, and a 320–400 px contextual panel on the right/below for active space, player strip, feed, and actions. Preserve touch targets and allow portrait stacking. Avoid a dense desktop side rail when the panel would be below minimum readable width.
+| Phase | Primary surface | Required context |
+| --- | --- | --- |
+| Normal turn | **Roll** or the rule-defined advance action | Current player, cash, turn order, connection state |
+| Landing on an unowned Property | **Acquire** or **Decline** | Property, price, projected balance, and rent context |
+| Auction | **Bid** or **Pass** | Current leader, minimum bid, priority, affordability, and pass status |
+| Detention | The currently legal release/advance action | Remaining detention turns and legal remedies |
+| Debt | One allowed liquidation/payment continuation | Creditor, amount due, cash, assets, and blocked reasons |
+| Trade response | **Accept**, **Decline**, or **Counter** | You give, you receive, revalidation status, and expiry reason |
+| Build/sell/mortgage | Confirm the selected management action | Deed, set, level, cost/proceeds, inventory, and resulting balance |
+| Bankruptcy/no-contest | Destructive confirmation | Exact consequence and irreversible outcome |
 
-### Desktop — UX-032
+The required actor's primary control is visually and programmatically distinct.
+Other players see the current actor and a reason such as “Waiting for Maya”;
+they may inspect permitted public state but cannot invoke the decision.
 
-At 1024 px and above, render the complete board when its cells meet minimum legibility; otherwise retain the focused viewport. Use persistent side panels: player/turn state and active decision on one side, inspectable event feed/assets on the other. Panels are independently scrollable, have visible headings, and do not obscure board controls. Do not turn the experience into a generic analytics dashboard.
+The local property hand groups owned deeds by Color Set. Each deed exposes rent
+level, Houses/Hotel, mortgage status, build cost, and the authoritative reason
+an action is blocked. **Manage** opens Build, Sell, Mortgage, Redeem, and Trade
+actions derived from `legalActions` and `actionAvailability`; the client never
+turns a preview into confirmed state. Multi-step builds, sales, and trades stay
+atomic and return focus to the invoking deed or decision after acknowledgement.
 
-### Landscape — UX-033
+### UX-047 — Auctions, trades, detention, debt, and retired summaries
 
-On short landscape screens, prioritize board viewport and compact player strip; move detail/feed into a side drawer or bottom sheet. Respect notch/safe-area insets. Never require device rotation, and do not use orientation locks.
+Auctions, trades, Detention, and debt are blocking decisions, not background
+panels. Show the active actor, exact property/card/payment context, all current
+public participants, and the authoritative continuation. Use untimed ordered
+controls; disconnecting the required actor pauses the decision and announces it.
 
-## 5. State, feedback, and install behavior
+Debt keeps legal liquidation controls available until the engine proves that no
+legal remedy remains. Only then is **Declare bankruptcy** enabled. A retired
+placeholder game is not playable: show a read-only summary banner explaining
+that the earlier content version was retired as `CONTENT_RETIRED`, show its
+preserved standings and event history, revoke all gameplay controls, and offer
+safe navigation home. Never present it as migrated to the classic rules.
 
-| State      | Required behavior                                                                                                                                                                                                                                                      |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Loading    | Skeleton preserves board/panel geometry; announce a concise status once, not every animation frame. Avoid fake board state.                                                                                                                                            |
-| Empty      | Explain why (no events, no owned assets, no available trades) and give permitted next action where applicable.                                                                                                                                                         |
-| Error      | Plain-language error, scope (local action vs room), retry, and safe navigation. Preserve entered trade/bid data when safe; never claim a command succeeded until confirmed.                                                                                            |
-| Disabled   | Keep control visible with a reason: “Waiting for Maya,” “Need 40 more credits,” or “Reconnect to act.”                                                                                                                                                                 |
-| Connection | Persistent status icon plus text: Connected, Reconnecting, Offline, or Paused. Network errors use aria-live status and event feed entry.                                                                                                                               |
-| Install    | Detect eligibility without blocking play. Offer a dismissible, non-modal PWA prompt after meaningful engagement; explain offline shell vs network-required live games. On iOS, show concise manual install steps only after user requests install. Remember dismissal. |
+## 5. Reconnect, completion, rematch, and state handling
 
-## 6. Accessibility acceptance requirements — UX-040
+### UX-018/019 — Reconnect, completion, and rematch
 
-Target **WCAG 2.2 AA** at 320–400% zoom/reflow and with browser text enlargement. Use semantic DOM plus SVG board geometry, not an opaque canvas; SVG cells require text alternatives and corresponding DOM controls/list views ([DS-060](design-system.md#ds-060--accessibility-implementation-rules)).
+Connection status is persistent text plus a non-color icon: **Connected**,
+**Reconnecting**, **Offline**, or **Paused**. On loss, retain the last confirmed
+projection, disable game-changing controls, and never replay queued commands.
+On recovery, fetch authoritative state, reconcile by version, and announce any
+accepted or rejected transitions. A disconnected required Human keeps their
+seat and assets; play pauses until reconnect or an explicit safe-boundary bot
+replacement. Host transfer, reclaim, replacement, and `EndNoContest` are shown
+only after their command transaction commits.
 
-- Every interactive target is at least 44 × 44 CSS px or has equivalent spacing; focus is always visible and not obscured by sticky UI.
-- Keyboard: `Tab`/`Shift+Tab` move through logical landmarks and controls; `Enter`/`Space` activate; `Escape` closes dismissible dialogs/sheets; arrow keys pan the focused board viewport or navigate a roving-tabindex board cell grid; `Home`/`End` move to first/last board cell. Provide a visible keyboard-help entry and a non-spatial board list.
-- Dialogs/sheets trap focus while open, label their purpose, restore focus to the invoker, and never close on an irreversible action without confirmation.
-- Use named landmarks: header, main game, board/board-list, player status, action region, and event log. Headings describe current turn and active decision.
-- Screen-reader announcements use restrained `aria-live`: turn start, authoritative roll/result, required decision, accepted/rejected command, auction leader/outcome, reconnect, pause, elimination, and game end. Do not announce decorative movement or every visual update; provide a readable event log.
-- Convey ownership, player identity, selection, affordability, and urgency with text, icon/shape/pattern, and programmatic state in addition to color. Meet AA contrast for text and essential UI; provide high-contrast compatible borders/focus.
-- Support `prefers-reduced-motion`, reduced transparency, no sound, and no haptics. Animations never convey unrecoverable information and can be skipped.
+When the server reports a winner, last-solvent result, or no-contest outcome,
+freeze gameplay controls, announce the result, and route to the read-only
+summary. Show standings, key events, final board/property state, and the reason
+for a no-contest or `CONTENT_RETIRED` outcome. Rematch is an explicit fresh
+creation flow with new seat choices and invite; it never reuses balances,
+assets, capabilities, or identities silently.
 
-## 7. Implementation handoff
+## 6. State, announcements, and responsive behavior
 
-Apply the defined [DS requirements](design-system.md) to all routes. Original space names, economy, cards, variants, retention, and command authority come from the linked normative product and engineering specifications. This UX document is not legal clearance. Track UX IDs in implementation issues and [traceability](../traceability.md).
+| State | Required behavior |
+| --- | --- |
+| Loading | Preserve board/decision geometry with a skeleton and announce one concise loading status. Never render guessed game state. |
+| Empty | Explain why there are no owned properties, events, trades, or available pieces and provide the permitted next action. |
+| Rejected | Keep safe entered values, identify local versus room scope, explain the authoritative reason, and restore focus to the failed action. |
+| Disabled | Keep the control visible with a reason such as “Waiting for Maya,” “Need 40 more credits,” or “Reconnect to act.” |
+| Pending | Disable duplicate submission, label the action as pending, and wait for authoritative acknowledgement or a recoverable failure. |
+| Disconnected | Keep the last confirmed state; disable commands and show reconnect/pause explanation. |
+
+Announce only authoritative transitions in a polite `aria-live` region and the
+readable event history. The allowlist is: lobby start; turn start; dice/advance
+result; movement completion; landing effect; acquisition; auction bid/pass and
+outcome; trade offer/response/outcome; build/sell/mortgage/redeem; Detention
+entry/exit; debt payment/liquidation/bankruptcy; reconnect/pause/resume; bot
+replacement; reclaim; host transfer; no-contest; elimination; completion; and
+retirement. Do not announce decorative movement frames, presence churn, focus
+changes, or every feed item.
+
+At every width, provide named landmarks for header, main table, board/board
+list, players, decision, property hand, and event history. Interactive targets
+are at least 44×44 CSS px, controls have a visible focus state, fields use at
+least 16px text, and wide board/list content scrolls inside its own container.
+The 320, 375, 768, and 1280 CSS px states preserve the same legal actions and
+information; only layout and inspection affordances change. Respect reduced
+motion, forced colors, browser text enlargement, safe areas, and keyboard zoom.
+
+## 7. Accessibility and implementation handoff
+
+<a id="6-accessibility-acceptance-requirements--ux-040"></a>
+
+Target WCAG 2.2 AA. Use semantic DOM plus board geometry, never an opaque
+canvas. A spatial board cell must have an equivalent ordered board-list item;
+the list must expose canonical ID, display name, type, owner/status, value or
+effect, improvement state, and any permitted action.
+
+Keyboard users can move through landmarks, activate controls with Enter/Space,
+close dismissible sheets with Escape, move through board items with arrows, and
+use Home/End for the first/last board item. Dialogs trap focus while open,
+restore focus on close, and require confirmation for irreversible actions.
+
+The implementation must cite UX-041–047 and UX-018/019 plus the associated PRD, RULE, CONTENT,
+ENG, PROTO, and DS requirements in [traceability](../traceability.md). This
+document defines behavior and information hierarchy; it is not legal clearance
+for the original content or public release.
