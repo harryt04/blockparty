@@ -44,6 +44,34 @@ describe("classic 1.0.0 content bundle", () => {
     });
   });
 
+  it("covers every bounded card effect family with distinct authored IDs", () => {
+    const cards = CLASSIC_BUNDLE.decks.flatMap((deck) => deck.cards);
+    expect(new Set(cards.map((card) => card.cardId)).size).toBe(32);
+    expect(new Set(cards.map((card) => card.title)).size).toBe(32);
+    expect(new Set(cards.flatMap((card) => card.effects.map((effect) => effect.type)))).toEqual(
+      new Set([
+        "MoveTo",
+        "MoveBy",
+        "Choose",
+        "CollectBank",
+        "PayBank",
+        "RepairCharge",
+        "GrantDetentionReleaseCard",
+        "CollectEachPlayer",
+        "PayEachPlayer",
+        "SendToDetention",
+      ]),
+    );
+    expect(cards.filter((card) => card.retainable).map((card) => card.cardId)).toEqual([
+      "moon-06",
+      "moon-16",
+      "echo-09",
+      "echo-16",
+    ]);
+    expect(CLASSIC_BUNDLE.provenance.status).toBe("AUTHORED");
+    expect(CLASSIC_BUNDLE.provenance.sourceInputs).toContain("docs/product/game-content.md");
+  });
+
   it("is canonically hashed, frozen in the registry, and production-readable", () => {
     expect(CLASSIC_BUNDLE.contentVersion).toBe("1.0.0");
     expect(CLASSIC_BUNDLE.hash).toBe(canonicalHashBundle(CLASSIC_BUNDLE));

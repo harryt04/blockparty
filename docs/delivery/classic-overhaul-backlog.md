@@ -424,7 +424,7 @@ accidental collapse in coverage.
       exact route/count/economy reconciliation, and corruption rejection for
       route, deed, district, deck, economy, and hash data.
 
-- [ ] **CO-013 — Implement the two complete event-card decks**
+- [?] **CO-013 — Implement the two complete event-card decks**
       Blocked by: CO-012
       Requirements: CONTENT-012–014, RULE-013
       Read: CO-003 deck tables, effect DSL, card engine tests
@@ -437,6 +437,14 @@ accidental collapse in coverage.
       correctly, and future deck order remains private.
       Proves: one deterministic scenario per effect family, deck exhaustion/
       reshuffle tests, held-card lifecycle tests, and human prose review.
+      Evidence: `CLASSIC_BUNDLE` contains two distinct 16-card decks with
+      authored provenance and all bounded effect families; classic content tests
+      cover card identity, effect-family completeness, retention, and source
+      inputs. Engine card scenarios cover dynamic portal/district targeting,
+      fresh utility randomness, detention movement, held-card return, and the
+      existing deterministic reshuffle/private-order fixtures in
+      `packages/game-engine/test/cards.test.ts`. Original card copy remains
+      awaiting product-owner approval.
       Completion mark: `[?]` until original card copy is owner-approved.
 
 - [ ] **CO-014 — Implement four-House and Hotel transitions**

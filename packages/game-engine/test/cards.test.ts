@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { PLACEHOLDER_BUNDLE, type ContentBundle, type Deck } from "@blockparty/game-content";
+import {
+  CLASSIC_BUNDLE,
+  PLACEHOLDER_BUNDLE,
+  type ContentBundle,
+  type Deck,
+} from "@blockparty/game-content";
 import { STANDARD_CONFIGURATION } from "@blockparty/contracts";
 import { deriveInitialState, nextInt } from "../src/prng";
 import { replay, resolve, type GameState, type RuleSet, type SeatState } from "../src/index";
@@ -113,7 +118,145 @@ const cardState = (content: ContentBundle): GameState => ({
   prng: prngBeforeFirstRoll(),
 });
 
+const classicCardContent = (deckId: string): ContentBundle => ({
+  ...CLASSIC_BUNDLE,
+  spaces: CLASSIC_BUNDLE.spaces.map((space) =>
+    space.spaceId === "s07" ? { ...space, effects: [{ type: "Draw" as const, deckId }] } : space,
+  ),
+});
+
+const classicCardState = (cardId: string, deckId: string): GameState => {
+  const content = classicCardContent(deckId);
+  const state = cardState(content);
+  return {
+    ...state,
+    seats: state.seats.map((candidate) =>
+      candidate.seatId === "seat-a" ? { ...candidate, position: 1 } : candidate,
+    ),
+    decks: content.decks.map((deck) => ({
+      deckId: deck.deckId,
+      drawPile: deck.deckId === deckId ? [cardId] : [],
+      discardPile: [],
+    })),
+  };
+};
+
 describe("A10 cards and decks", () => {
+  it("resolves every classic dynamic card destination through the bounded queue", () => {
+    const cases = [
+      ["moon-03", "deck-moonletters", 15],
+      ["echo-04", "deck-echoes", 8],
+    ] as const;
+    for (const [cardId, deckId, expectedPosition] of cases) {
+      const content = classicCardContent(deckId);
+      const result = resolve(
+        classicCardState(cardId, deckId),
+        { actorSeatId: "seat-a", command: { type: "RollDice" } },
+        { ...RULES, content },
+      );
+      expect(result).toMatchObject({ ok: true });
+      if (!result.ok) throw new Error("expected classic dynamic card");
+      expect(result.state.seats[0]?.position).toBe(expectedPosition);
+      expect(result.events.map((event) => event.type)).toContain("CardDiscarded");
+    }
+  });
+
+  it.each([
+    ["moon-04", "deck-moonletters", "BankPaymentCollected"],
+    ["moon-10", "deck-moonletters", "FeePaid"],
+    ["moon-05", "deck-moonletters", "FeePaid"],
+    ["moon-08", "deck-moonletters", "PlayerPaymentCollected"],
+    ["moon-12", "deck-moonletters", "PlayerPaymentCollected"],
+  ] as const)("resolves classic %s through its ledger effect", (cardId, deckId, eventType) => {
+    const content = classicCardContent(deckId);
+    const result = resolve(
+      classicCardState(cardId, deckId),
+      { actorSeatId: "seat-a", command: { type: "RollDice" } },
+      { ...RULES, content },
+    );
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) throw new Error("expected classic ledger card");
+    expect(result.events.map((event) => event.type)).toContain(eventType);
+    expect(result.events.map((event) => event.type)).toContain("CardDiscarded");
+  });
+
+  it("records a fresh private card utility roll before resolving the next utility", () => {
+    const cardId = "moon-13";
+    const deckId = "deck-moonletters";
+    const content = {
+      ...CLASSIC_BUNDLE,
+      spaces: CLASSIC_BUNDLE.spaces.map((space) =>
+        space.spaceId === "s07"
+          ? { ...space, effects: [{ type: "Draw" as const, deckId }] }
+          : space,
+      ),
+    };
+    const result = resolve(
+      classicCardState(cardId, deckId),
+      { actorSeatId: "seat-a", command: { type: "RollDice" } },
+      { ...RULES, content },
+    );
+
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) throw new Error("expected utility card");
+    const cardRoll = result.events.find(
+      (event) => event.type === "DiceRolled" && event.payload.source === "card",
+    );
+    expect(cardRoll?.payload.dice).toEqual(result.state.lastRoll);
+    expect(result.state.seats[0]?.position).toBe(12);
+    expect(result.events.map((event) => event.type)).toContain("CardDiscarded");
+  });
+
+  it("sends the classic detention card to detention and returns a held card on use", () => {
+    const deckId = "deck-echoes";
+    const content = classicCardContent(deckId);
+    const rules = { ...RULES, content };
+    const sent = resolve(
+      classicCardState("echo-13", deckId),
+      { actorSeatId: "seat-a", command: { type: "RollDice" } },
+      rules,
+    );
+    expect(sent).toMatchObject({ ok: true });
+    if (!sent.ok) throw new Error("expected detention card");
+    expect(sent.state.seats[0]).toMatchObject({ position: 10, detained: true });
+
+    const held = resolve(
+      classicCardState("moon-06", "deck-moonletters"),
+      { actorSeatId: "seat-a", command: { type: "RollDice" } },
+      { ...RULES, content: classicCardContent("deck-moonletters") },
+    );
+    expect(held).toMatchObject({ ok: true });
+    if (!held.ok) throw new Error("expected retained release card");
+    const detained = {
+      ...held.state,
+      phase: "AwaitChoice" as const,
+      seats: held.state.seats.map((seat) =>
+        seat.seatId === "seat-a" ? { ...seat, detained: true, position: 10 } : seat,
+      ),
+      pendingChoice: { choiceId: "detention:seat-a", continuation: [] },
+    };
+    const used = resolve(
+      detained,
+      {
+        actorSeatId: "seat-a",
+        command: {
+          type: "ChoosePendingOption",
+          choiceId: "detention:seat-a",
+          optionId: "use-release-card:moon-06",
+        },
+      },
+      { ...RULES, content: classicCardContent("deck-moonletters") },
+    );
+    expect(used).toMatchObject({ ok: true });
+    if (!used.ok) throw new Error("expected release card use");
+    expect(used.state.seats[0]?.detentionReleaseCardIds).toEqual([]);
+    expect(used.state.decks?.[0]?.discardPile).toContain("moon-06");
+    expect(used.events.map((event) => event.type)).toEqual([
+      "DetentionReleaseCardUsed",
+      "DetentionReleased",
+    ]);
+  });
+
   it("records deterministic shuffles for every deck at game start", () => {
     const content = cardContent();
     const before = {

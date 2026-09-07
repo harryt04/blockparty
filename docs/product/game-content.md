@@ -218,7 +218,7 @@ returned by bankruptcy.
 | `echo-10` | Parade Turns East | Move forward 5 spaces, then resolve the destination. | `MoveBy(5)` | no |
 | `echo-11` | Old Debt Settled | Collect `2500` from each other player. | `CollectEachPlayer(2500)` | no |
 | `echo-12` | Rain on the Quays | Pay `2500` to the bank. | `PayBank(2500)` | no |
-| `echo-13` | Blackglass Notice | Go directly to `s10`. Do not collect Start payment. | `MoveTo(s10,false)` | no |
+| `echo-13` | Blackglass Notice | Go directly to `s10`. Do not collect Start payment. | `SendToDetention` | no |
 | `echo-14` | Exchange Credit | The bank pays you `5000`. | `CollectBank(5000)` | no |
 | `echo-15` | A Small Apology | Pay each other player `1000`. | `PayEachPlayer(1000)` | no |
 | `echo-16` | Unlatched Gate | Keep this release card for a later Detention departure. | `GrantDetentionReleaseCard` | yes |

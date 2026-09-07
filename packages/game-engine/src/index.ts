@@ -2438,6 +2438,62 @@ function queuedEffects(space: BoardSpace): readonly QueuedEffect[] {
   return space.effects.map((effect) => ({ sourceId: space.spaceId, effect }));
 }
 
+type CardChoiceResolution = {
+  readonly effect: Extract<ContentEffect, { type: "MoveTo" }>;
+  readonly dice?: readonly [number, number];
+  readonly prng?: PrngState;
+};
+
+/** Resolve the authored dynamic card destinations without exposing future deck state. */
+function resolveCardChoice(
+  state: GameState,
+  actorSeatId: SeatId,
+  choiceId: string,
+  rules: RuleSet,
+): CardChoiceResolution | undefined {
+  const seat = findSeat(state, actorSeatId);
+  if (seat === undefined) return undefined;
+
+  const targetType =
+    choiceId === "nextPortalLine"
+      ? "transit"
+      : choiceId === "nextDistrictDeed"
+        ? "district"
+        : choiceId === "utilityRoll"
+          ? "utility"
+          : undefined;
+  if (targetType === undefined) return undefined;
+
+  const routeLength = rules.content.spaces.length;
+  let target: BoardSpace | undefined;
+  for (let step = 1; step <= routeLength; step += 1) {
+    const movement = walkRoute(rules, seat.position, step, false);
+    if (!("toPosition" in movement)) return undefined;
+    const candidate = findSpaceAtPosition(rules, movement.toPosition);
+    if (candidate?.type !== "deed" || candidate.deedId === undefined) continue;
+    const deed = rules.content.deeds.find((entry) => entry.deedId === candidate.deedId);
+    if (deed?.category === targetType) {
+      target = candidate;
+      break;
+    }
+  }
+  if (target === undefined) return undefined;
+
+  if (choiceId !== "utilityRoll") {
+    return {
+      effect: { type: "MoveTo", spaceId: target.spaceId, collectStartWhenCrossed: true },
+    };
+  }
+
+  const first = nextInt(state.prng, 6);
+  const second = nextInt(first.next, 6);
+  return {
+    effect: { type: "MoveTo", spaceId: target.spaceId, collectStartWhenCrossed: true },
+    dice: [first.value + 1, second.value + 1],
+    prng: second.next,
+  };
+}
+
 interface RentCalculation {
   readonly amount: Money;
   readonly basis: Readonly<Record<string, boolean | number | string>>;
@@ -3523,6 +3579,30 @@ function resolveEffectQueue(
         return { state: nextState, events: Object.freeze(events) };
       }
       case "Choose": {
+        const cardChoice = resolveCardChoice(nextState, actorSeatId, effect.choiceId, rules);
+        if (cardChoice !== undefined) {
+          if (cardChoice.dice !== undefined && cardChoice.prng !== undefined) {
+            const diceEvent = freezeEvent({
+              type: "DiceRolled",
+              eventVersion: 1,
+              actorSeatId,
+              payload: {
+                dice: cardChoice.dice,
+                matching: cardChoice.dice[0] === cardChoice.dice[1],
+                consecutiveMatchingRolls: nextState.consecutiveMatchingRolls,
+                source: "card",
+              },
+            } satisfies EngineEvent);
+            events.push(diceEvent);
+            nextState = freezeState({ ...nextState, prng: cardChoice.prng });
+            nextState = freezeState(applyEvent(nextState, diceEvent));
+          }
+          nextState = freezeState({
+            ...nextState,
+            effectQueue: [{ sourceId: entry.sourceId, effect: cardChoice.effect }, ...remaining],
+          });
+          continue;
+        }
         const continuation = Object.freeze([...remaining]);
         nextState = freezeState({
           ...nextState,

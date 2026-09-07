@@ -520,7 +520,7 @@ const decks: readonly Deck[] = [
         "echo-13",
         "Blackglass Notice",
         "Go directly to Starhold Academy. Do not collect Start payment.",
-        [{ type: "MoveTo", spaceId: "s10", collectStartWhenCrossed: false }],
+        [{ type: "SendToDetention" }],
       ),
       card("echo-14", "Exchange Credit", "The bank pays you 5000.", [
         { type: "CollectBank", amount: 5_000 },
