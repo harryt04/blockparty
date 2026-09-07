@@ -37,6 +37,7 @@ When documents disagree, use this order and correct the lower-level document:
 | Delivery    | [Accessibility checklist](delivery/accessibility-checklist.md)            | E6 automated run record and human assistive-technology release evidence                               |
 | Delivery    | [Observability runbook](delivery/observability-runbook.md)                | F4 safe telemetry, alerts, and staging drill record                                                   |
 | Delivery    | [Build backlog](delivery/build-backlog.md)                                | Delivery plan: closed 64-ticket queue across Loops 0–F; one ticket per session                        |
+| Delivery    | [Classic overhaul backlog](delivery/classic-overhaul-backlog.md)          | Accepted sequential CO-* transition queue for the classic rules, magical-city content, and UI rebuild |
 | Delivery    | [gnhf prompt](gnhf-prompt.md)                                             | The per-iteration loop prompt for autonomous agents                                                   |
 | Delivery    | [gnhf CLI](gnhf-cli.md)                                                   | The exact gnhf commands, branch policy, and stop condition                                            |
 | Delivery    | [Operations](delivery/operations.md)                                      | Coolify deployment, observability, backup, recovery, and incidents                                    |

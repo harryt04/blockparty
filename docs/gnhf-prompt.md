@@ -4,7 +4,7 @@ Before starting work, read `AGENTS.md`. It is the durable project context and
 operating contract for this repository. Do not rely on hidden memory from
 previous iterations — read the file.
 
-Then open `docs/delivery/build-backlog.md`. Read **Claim protocol**, **The rule
+Then open `/Users/harry/Documents/git/blockparty/docs/delivery/classic-overhaul-backlog.md`. Read **Claim protocol**, **The rule
 that makes this loop terminate**, **What done means here**, and **Traps** in full
 before you touch a ticket. Those four sections outrank any instinct you have
 about how to improve this application.
