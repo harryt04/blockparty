@@ -99,9 +99,11 @@ for all 40 route spaces, 28 ownable deeds, eight Color Sets, four Transit
 Properties, two Utilities, two fee spaces, six draw spaces, both 16-card decks,
 the 32-House/12-Hotel bank, and the six pieces. Engine evidence adds fixed-seed
 scenarios for the Standard turn loop, acquisition/auction, rent, Detention,
-cards, debt, bankruptcy, improvement transitions, replay, and victory. These
-tests belong in `packages/game-content` and `packages/game-engine`; human
-review remains required for original names, copy, and provenance.
+cards, debt, bankruptcy, improvement transitions, replay, and victory. The bot
+matrix also runs seeded `CLASSIC_BUNDLE` games through every 2–6 seat count and
+records any rejected or stalled game with its seed. These tests belong in
+`packages/game-content` and `packages/game-engine`; human review remains
+required for original names, copy, and provenance.
 
 <a id="test-009-responsive-visual-and-interaction-regression"></a>
 

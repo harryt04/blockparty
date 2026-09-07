@@ -1,5 +1,5 @@
 /**
- * Reproducible bot simulation harness. See CONTENT-010 and TEST-006.
+ * Reproducible bot simulation harness. See CONTENT-013 and TEST-008.
  *
  * This is deliberately a pure, bounded runner: the seed is derived from the
  * game index, duration is command count, and a game that reaches the bound is
@@ -9,10 +9,11 @@ import {
   STANDARD_CONFIGURATION,
   SHORT_GAME_CONFIGURATION,
   VARIANT_KEYS,
+  type CommandType,
   type RulesConfiguration,
   type VariantKey,
 } from "@blockparty/contracts";
-import { PLACEHOLDER_BUNDLE } from "@blockparty/game-content";
+import { CLASSIC_BUNDLE } from "@blockparty/game-content";
 import {
   chooseBotAction,
   legalActions,
@@ -27,6 +28,10 @@ import { deriveInitialState } from "./prng";
 export interface BotSoakGameResult {
   readonly gameIndex: number;
   readonly seed: string;
+  readonly contentVersion: string;
+  readonly finalPhase: GameState["phase"];
+  readonly finalActorSeatId?: string;
+  readonly finalLegalActionTypes: readonly CommandType[];
   readonly seatCount: number;
   readonly preset: RulesConfiguration["preset"];
   readonly enabledToggles: readonly VariantKey[];
@@ -99,7 +104,7 @@ function initialState(gameIndex: number, seatCount: number): GameState {
   }));
   return Object.freeze({
     stateSchemaVersion: "1.0.0",
-    contentVersion: PLACEHOLDER_BUNDLE.contentVersion,
+    contentVersion: CLASSIC_BUNDLE.contentVersion,
     gameId: `soak-game-${gameIndex}`,
     aggregateVersion: 0,
     phase: "Lobby",
@@ -126,7 +131,7 @@ function runGame(
   maxCommandsPerGame: number,
 ): BotSoakGameResult {
   const seed = seedForGame(gameIndex);
-  const rules: RuleSet = { content: PLACEHOLDER_BUNDLE, configuration };
+  const rules: RuleSet = { content: CLASSIC_BUNDLE, configuration };
   let state = initialState(gameIndex, 2 + (gameIndex % 5));
   const start = resolve(
     state,
@@ -180,9 +185,17 @@ function runGame(
     (total, quantity) => total + quantity,
     0,
   );
+  const finalActorSeatId = state.phase === "Finished" ? undefined : publicActorId(state);
   return {
     gameIndex,
     seed: seedHex(seed),
+    contentVersion: CLASSIC_BUNDLE.contentVersion,
+    finalPhase: state.phase,
+    ...(finalActorSeatId === undefined ? {} : { finalActorSeatId }),
+    finalLegalActionTypes:
+      finalActorSeatId === undefined
+        ? Object.freeze([])
+        : Object.freeze(legalActions(state, finalActorSeatId, rules).map((action) => action.type)),
     seatCount: state.seats.length,
     preset: configuration.preset,
     enabledToggles: enabledToggles(configuration),

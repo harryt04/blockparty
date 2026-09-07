@@ -494,7 +494,7 @@ accidental collapse in coverage.
       332 tests (2 skipped) pass; repository CI remains blocked only by the
       pre-existing `prettier.config.cjs` ESLint `module` `no-undef` error.
 
-- [ ] **CO-016 — Upgrade bot policy and simulations for the full board**
+- [x] **CO-016 — Upgrade bot policy and simulations for the full board**
       Blocked by: CO-015
       Requirements: PRD-FUN-011, CONTENT-013, TEST-008
       Read: bot policy, soak runner, full classic bundle
@@ -506,6 +506,16 @@ accidental collapse in coverage.
       every seat count, and do not stall on Hotel scarcity or debt resolution.
       Proves: fixed-seed scenario matrix, property test against `legalActions`, and
       bounded soak/performance report with failure seeds recorded.
+      Evidence: the bot policy now uses public classic district membership for
+      deterministic, tradable cross-district swaps, accepts pending offers
+      deterministically, and filters encumbered deeds. The soak harness runs
+      against `CLASSIC_BUNDLE` and records content version plus final phase,
+      actor, and legal-action diagnostics for stalls. `bot.test.ts` proves a
+      legal classic trade and a 10-game seeded completion matrix covering 2–6
+      seats with zero rejected or stalled commands; the 5,000-game matrix
+      remains reproducible. Formatting, typecheck, build, and targeted bot,
+      trade, and legal-action tests pass. Repository lint remains blocked only
+      by the pre-existing `prettier.config.cjs` `module` `no-undef` error.
 
 ## Phase D — Retire placeholder games and activate the new default
 

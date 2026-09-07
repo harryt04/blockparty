@@ -4,7 +4,7 @@ import {
   STANDARD_CONFIGURATION,
   type LegalAction,
 } from "@blockparty/contracts";
-import { PLACEHOLDER_BUNDLE } from "@blockparty/game-content";
+import { CLASSIC_BUNDLE, PLACEHOLDER_BUNDLE } from "@blockparty/game-content";
 import {
   chooseBotAction,
   legalActions,
@@ -18,6 +18,7 @@ import { deriveInitialState } from "../src/prng";
 
 const SEED = Uint8Array.from(Array.from({ length: 32 }, (_, index) => (index * 29 + 7) & 0xff));
 const RULES: RuleSet = { content: PLACEHOLDER_BUNDLE, configuration: STANDARD_CONFIGURATION };
+const CLASSIC_RULES: RuleSet = { content: CLASSIC_BUNDLE, configuration: STANDARD_CONFIGURATION };
 
 const stateFor = (balance = 100_000): GameState => {
   const seat = (seatId: string): SeatState => ({
@@ -51,6 +52,65 @@ const stateFor = (balance = 100_000): GameState => {
     consecutiveMatchingRolls: 0,
     activeSeatId: "seat-a",
     prioritySeatId: "seat-a",
+    effectQueue: [],
+    prng: deriveInitialState(SEED),
+  };
+};
+
+const classicTradeState = (): GameState => {
+  const actorDeeds = ["deed-brasswick-lane", "deed-cinderbloom-way"];
+  const counterpartyDeeds = ["deed-whisperwell-walk", "deed-bellspire-avenue"];
+  const owned = new Set([...actorDeeds, ...counterpartyDeeds]);
+  return {
+    stateSchemaVersion: "2.0.0",
+    contentVersion: CLASSIC_BUNDLE.contentVersion,
+    gameId: "classic-bot-trade",
+    aggregateVersion: 0,
+    phase: "TurnStart",
+    seats: [
+      {
+        seatId: "seat-a",
+        kind: "bot",
+        status: "active",
+        balance: 100_000,
+        position: 0,
+        deedIds: actorDeeds,
+        detained: false,
+        detentionTurnsRemaining: 0,
+        detentionReleaseCardIds: [],
+      },
+      {
+        seatId: "seat-b",
+        kind: "bot",
+        status: "active",
+        balance: 100_000,
+        position: 0,
+        deedIds: counterpartyDeeds,
+        detained: false,
+        detentionTurnsRemaining: 0,
+        detentionReleaseCardIds: [],
+      },
+    ],
+    deeds: CLASSIC_BUNDLE.deeds.map((deed) => ({
+      deedId: deed.deedId,
+      ownerSeatId: actorDeeds.includes(deed.deedId)
+        ? "seat-a"
+        : counterpartyDeeds.includes(deed.deedId)
+          ? "seat-b"
+          : undefined,
+      mortgaged: false,
+      improvementLevel: 0,
+    })),
+    bank: {
+      cash: 0,
+      deedIds: CLASSIC_BUNDLE.deeds
+        .map((deed) => deed.deedId)
+        .filter((deedId) => !owned.has(deedId)),
+      improvementInventory: CLASSIC_BUNDLE.economy.improvementInventory,
+    },
+    activeSeatId: "seat-a",
+    prioritySeatId: "seat-a",
+    consecutiveMatchingRolls: 0,
     effectQueue: [],
     prng: deriveInitialState(SEED),
   };
@@ -109,6 +169,28 @@ describe("BotPolicy", () => {
     expect(decision?.event.payload).toMatchObject({ reasonCode: "BID_BELOW_VALUATION" });
   });
 
+  it("proposes a legal cross-district swap toward completed sets", () => {
+    const state = classicTradeState();
+    const actions = legalActions(state, "seat-a", CLASSIC_RULES);
+    const decision = chooseBotAction(toBotPublicState(state, CLASSIC_RULES), "seat-a", actions);
+
+    expect(decision?.command).toEqual({
+      type: "ProposeTrade",
+      counterpartySeatId: "seat-b",
+      offered: {
+        cash: 0,
+        deedIds: ["deed-brasswick-lane"],
+        detentionReleaseCardIds: [],
+      },
+      requested: {
+        cash: 0,
+        deedIds: ["deed-bellspire-avenue"],
+        detentionReleaseCardIds: [],
+      },
+    });
+    expect(decision?.event.payload.reasonCode).toBe("IMMEDIATE_TRADE_AVAILABLE");
+  });
+
   it("runs the reproducible 5,000-game matrix and records soak evidence", () => {
     const report = runBotSoak();
 
@@ -116,6 +198,9 @@ describe("BotPolicy", () => {
     expect(report.games).toHaveLength(5_000);
     expect(new Set(report.games.map((game) => game.seed)).size).toBe(5_000);
     expect(new Set(report.games.map((game) => game.seatCount))).toEqual(new Set([2, 3, 4, 5, 6]));
+    expect(
+      report.games.every((game) => game.contentVersion === CLASSIC_BUNDLE.contentVersion),
+    ).toBe(true);
     expect(new Set(report.games.flatMap((game) => game.enabledToggles))).toEqual(
       new Set([
         "restSpaceJackpot",
@@ -140,6 +225,15 @@ describe("BotPolicy", () => {
       seed: "000000001f62a5e82b6eb1f4377abd004386c90c4f92d5185b9ee12467aaed30",
     });
   }, 120_000);
+
+  it("completes a seeded classic game at every supported seat count", () => {
+    const report = runBotSoak({ gameCount: 10, maxCommandsPerGame: 10_000 });
+
+    expect(report.stalledGames).toBe(0);
+    expect(report.games.every((game) => game.rejectedCommands === 0)).toBe(true);
+    expect(report.games.every((game) => game.terminalReason === "WINNER")).toBe(true);
+    expect(new Set(report.games.map((game) => game.seatCount))).toEqual(new Set([2, 3, 4, 5, 6]));
+  }, 30_000);
 
   it("repeats a fixed matrix byte-for-byte", () => {
     expect(runBotSoak({ gameCount: 16, maxCommandsPerGame: 64 })).toEqual(

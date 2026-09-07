@@ -54,6 +54,8 @@ export interface BotPublicState {
   readonly startingCash: number;
   readonly deedPrices: Readonly<Record<string, number>>;
   readonly improvementCosts: Readonly<Record<string, number>>;
+  /** Public district membership lets the policy find complementary trades. */
+  readonly deedDistrictIds: Readonly<Record<string, string>>;
 }
 
 export interface BotDecision {
@@ -123,6 +125,13 @@ export function toBotPublicState(state: GameState, rules: RuleSet): BotPublicSta
         ),
       ),
     ),
+    deedDistrictIds: Object.freeze(
+      Object.fromEntries(
+        rules.content.deeds.flatMap((deed) =>
+          deed.districtId === undefined ? [] : [[deed.deedId, deed.districtId]],
+        ),
+      ),
+    ),
   });
 }
 
@@ -143,6 +152,68 @@ function auctionValuation(state: BotPublicState): number {
     return state.improvementCosts[state.pendingImprovementDeedId] ?? 0;
   }
   return 0;
+}
+
+interface TradePlan {
+  readonly counterpartySeatId: SeatId;
+  readonly offeredDeedId: string;
+  readonly requestedDeedId: string;
+}
+
+/** Find a deterministic deed-for-deed swap that moves both seats toward a set. */
+function complementaryTrade(state: BotPublicState, actorSeatId: SeatId): TradePlan | undefined {
+  const actor = state.seats.find((seat) => seat.seatId === actorSeatId);
+  if (actor === undefined) return undefined;
+  const actorDeeds = new Set(actor.deedIds);
+  const tradable = (deedId: string): boolean => {
+    const deed = state.deeds.find((candidate) => candidate.deedId === deedId);
+    return deed !== undefined && !deed.mortgaged && deed.improvementLevel === 0;
+  };
+
+  for (const counterparty of state.seats) {
+    if (
+      counterparty.seatId === actorSeatId ||
+      counterparty.status !== "active" ||
+      counterparty.kind === "open"
+    ) {
+      continue;
+    }
+    const counterpartyDeeds = new Set(counterparty.deedIds);
+    const actorOffer = actor.deedIds.find((offeredDeedId) => {
+      const offeredDistrictId = state.deedDistrictIds[offeredDeedId];
+      return (
+        tradable(offeredDeedId) &&
+        offeredDistrictId !== undefined &&
+        !counterpartyDeeds.has(offeredDeedId) &&
+        counterparty.deedIds.some(
+          (candidate) =>
+            tradable(candidate) &&
+            state.deedDistrictIds[candidate] === offeredDistrictId &&
+            candidate !== offeredDeedId,
+        )
+      );
+    });
+    if (actorOffer === undefined) continue;
+    const actorOfferDistrictId = state.deedDistrictIds[actorOffer];
+    const requestedDeedId = counterparty.deedIds.find((deedId) => {
+      const requestedDistrictId = state.deedDistrictIds[deedId];
+      return (
+        tradable(deedId) &&
+        requestedDistrictId !== undefined &&
+        requestedDistrictId !== actorOfferDistrictId &&
+        !actorDeeds.has(deedId) &&
+        actor.deedIds.some((candidate) => state.deedDistrictIds[candidate] === requestedDistrictId)
+      );
+    });
+    if (requestedDeedId !== undefined) {
+      return {
+        counterpartySeatId: counterparty.seatId,
+        offeredDeedId: actorOffer,
+        requestedDeedId,
+      };
+    }
+  }
+  return undefined;
 }
 
 function commandForAction(
@@ -189,6 +260,23 @@ function commandForAction(
       const counterparty = state.seats.find((seat) => seat.seatId === counterpartySeatId);
       if (counterpartySeatId === undefined || actor === undefined || counterparty === undefined) {
         return undefined;
+      }
+      const planned = complementaryTrade(state, actorSeatId);
+      if (planned?.counterpartySeatId === counterpartySeatId) {
+        return {
+          type: "ProposeTrade",
+          counterpartySeatId,
+          offered: {
+            cash: 0,
+            deedIds: [planned.offeredDeedId],
+            detentionReleaseCardIds: [],
+          },
+          requested: {
+            cash: 0,
+            deedIds: [planned.requestedDeedId],
+            detentionReleaseCardIds: [],
+          },
+        };
       }
       const offered = { cash: 0, deedIds: [] as string[], detentionReleaseCardIds: [] as string[] };
       const requested = {
@@ -337,7 +425,10 @@ function actionCandidate(
           }
         : undefined;
     case "ProposeTrade":
-      return state.pendingTradeId === undefined && state.obligationAmount !== undefined
+      return state.pendingTradeId === undefined &&
+        (complementaryTrade(state, actorSeatId)?.counterpartySeatId ===
+          stringConstraint(action, "counterpartySeatId") ||
+          state.obligationAmount !== undefined)
         ? {
             action,
             command,
@@ -359,6 +450,15 @@ function actionCandidate(
         factors,
       };
     case "AcceptTrade":
+      return {
+        action,
+        command,
+        category: "resolve-choice",
+        reasonCode: "IMMEDIATE_TRADE_AVAILABLE",
+        priority: 50,
+        stableKey: JSON.stringify(command),
+        factors,
+      };
     case "RejectTrade":
     case "CancelTrade":
       return {
@@ -366,7 +466,7 @@ function actionCandidate(
         command,
         category: "resolve-choice",
         reasonCode: "IMMEDIATE_TRADE_AVAILABLE",
-        priority: 51,
+        priority: 52,
         stableKey: JSON.stringify(command),
         factors,
       };

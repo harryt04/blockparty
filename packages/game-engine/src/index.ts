@@ -6420,12 +6420,9 @@ function managementCandidates(state: GameState, rules: RuleSet): readonly Action
   });
 }
 
-function tradeCandidate(state: GameState, actorSeatId: SeatId): ActionCandidate | undefined {
-  const counterparty = state.seats.find(
-    (seat) => seat.status === "active" && seat.seatId !== actorSeatId,
-  );
+function tradeCandidates(state: GameState, actorSeatId: SeatId): readonly ActionCandidate[] {
   const actor = findSeat(state, actorSeatId);
-  if (counterparty === undefined || actor === undefined) return undefined;
+  if (actor === undefined) return [];
 
   const emptySide = (): {
     cash: number;
@@ -6436,32 +6433,40 @@ function tradeCandidate(state: GameState, actorSeatId: SeatId): ActionCandidate 
     deedIds: [],
     detentionReleaseCardIds: [],
   });
-  const offered = emptySide();
-  const requested = emptySide();
-  if (actor.balance > 0) {
-    offered.cash = 1;
-  } else if (actor.deedIds[0] !== undefined) {
-    offered.deedIds = [actor.deedIds[0]];
-  } else if (actor.detentionReleaseCardIds[0] !== undefined) {
-    offered.detentionReleaseCardIds = [actor.detentionReleaseCardIds[0]];
-  } else if (counterparty.balance > 0) {
-    requested.cash = 1;
-  } else if (counterparty.deedIds[0] !== undefined) {
-    requested.deedIds = [counterparty.deedIds[0]];
-  } else if (counterparty.detentionReleaseCardIds[0] !== undefined) {
-    requested.detentionReleaseCardIds = [counterparty.detentionReleaseCardIds[0]];
-  } else {
-    return undefined;
-  }
-  return {
-    command: {
-      type: "ProposeTrade",
-      counterpartySeatId: counterparty.seatId,
-      offered,
-      requested,
-    },
-    constraints: { counterpartySeatId: counterparty.seatId },
-  };
+  return state.seats
+    .filter(
+      (counterparty) => counterparty.status === "active" && counterparty.seatId !== actorSeatId,
+    )
+    .flatMap((counterparty) => {
+      const offered = emptySide();
+      const requested = emptySide();
+      if (actor.balance > 0) {
+        offered.cash = 1;
+      } else if (actor.deedIds[0] !== undefined) {
+        offered.deedIds = [actor.deedIds[0]];
+      } else if (actor.detentionReleaseCardIds[0] !== undefined) {
+        offered.detentionReleaseCardIds = [actor.detentionReleaseCardIds[0]];
+      } else if (counterparty.balance > 0) {
+        requested.cash = 1;
+      } else if (counterparty.deedIds[0] !== undefined) {
+        requested.deedIds = [counterparty.deedIds[0]];
+      } else if (counterparty.detentionReleaseCardIds[0] !== undefined) {
+        requested.detentionReleaseCardIds = [counterparty.detentionReleaseCardIds[0]];
+      } else {
+        return [];
+      }
+      return [
+        {
+          command: {
+            type: "ProposeTrade",
+            counterpartySeatId: counterparty.seatId,
+            offered,
+            requested,
+          },
+          constraints: { counterpartySeatId: counterparty.seatId },
+        },
+      ];
+    });
 }
 
 function pendingTradeCandidates(state: GameState): readonly ActionCandidate[] {
@@ -6571,9 +6576,7 @@ function actionCandidates(
     case "TurnStart":
     case "ResolveMove": {
       const candidates = [...managementCandidates(state, rules)];
-      const trade =
-        state.pendingTrade === undefined ? tradeCandidate(state, actorSeatId) : undefined;
-      if (trade !== undefined) candidates.push(trade);
+      if (state.pendingTrade === undefined) candidates.push(...tradeCandidates(state, actorSeatId));
       candidates.push(...pendingTradeCandidates(state));
       candidates.push({ command: { type: "EndTurn" } });
       if (state.phase === "TurnStart") candidates.push({ command: { type: "EndNoContest" } });
@@ -6588,9 +6591,7 @@ function actionCandidates(
         { command: { type: "PayObligation" } } as ActionCandidate,
         { command: { type: "DeclareBankruptcy" } } as ActionCandidate,
       ];
-      const trade =
-        state.pendingTrade === undefined ? tradeCandidate(state, actorSeatId) : undefined;
-      if (trade !== undefined) candidates.push(trade);
+      if (state.pendingTrade === undefined) candidates.push(...tradeCandidates(state, actorSeatId));
       candidates.push(...pendingTradeCandidates(state));
       return candidates;
     }

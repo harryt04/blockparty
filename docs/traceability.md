@@ -281,6 +281,15 @@ the later application-surface test harness.
 | TEST-008 | [Classic content and engine scenarios](delivery/test-strategy.md#test-008-classic-content-and-engine-scenarios) | content and engine test owners | immutable 40-space/count/economy fixtures and fixed-seed classic scenarios | CO-003, CO-012–016, CO-030 | CO-015 adds fixed-seed `CLASSIC_BUNDLE` Standard scenarios for setup, acquisition, rent, fees, Detention, turn completion, and replay; `classic.test.ts` retains the immutable content/count/economy checks; browser and human-review evidence remain planned. |
 | TEST-009 | [Responsive, visual, and interaction regression](delivery/test-strategy.md#test-009-responsive-visual-and-interaction-regression) | web/browser test owners | cross-browser multi-context journeys, visual matrix, overflow, focus, and AT evidence | CO-019–031 | Planned; authority and evidence contract added by CO-007. |
 
+### CO-016 bot and classic simulation evidence
+
+`packages/game-engine/src/bot.ts` now consumes public classic district membership
+to select legal cross-district deed swaps toward completed sets, accepts pending
+offers deterministically, and avoids proposing mortgaged or improved deeds.
+`packages/game-engine/src/soak.ts` runs the deterministic matrix against
+`CLASSIC_BUNDLE`; `packages/game-engine/test/bot.test.ts` covers the trade plan,
+content version, and seeded completion across every 2–6 seat count.
+
 ## Delivery controls
 
 | IDs          | Source                                     | Purpose                                                   | Completion evidence        | Loop      | Status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
