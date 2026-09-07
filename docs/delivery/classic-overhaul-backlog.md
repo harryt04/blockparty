@@ -357,7 +357,7 @@ accidental collapse in coverage.
       was mutation-checked. Concurrent browser and accessibility evidence remains
       assigned to CO-019–022.
 
-- [ ] **CO-010 — Introduce multi-kind improvement content contracts**
+- [x] **CO-010 — Introduce multi-kind improvement content contracts**
       Blocked by: CO-009
       Requirements: CONTENT-015, ENG-030, RULE-014
       Read: game-content types/validator/canonicalizer and updated content spec
@@ -371,6 +371,15 @@ accidental collapse in coverage.
       first inventory kind.
       Proves: valid transition fixtures and targeted failures for missing,
       fractional, unknown, impossible, and non-conserving deltas.
+      Evidence: `ImprovementLevel` now carries immutable per-kind signed maps;
+      placeholder content expresses four House levels plus the House/Hotel
+      exchange; validator tests cover all targeted failure classes and a
+      mutation of unknown-kind rejection failed as expected. The current
+      canonical hash was updated while the archived scalar golden remains
+      unchanged. Formatting, typecheck, build, and 305 tests (2 skipped) pass;
+      `pnpm run ci` remains blocked only by the pre-existing `module` no-undef
+      error in `prettier.config.cjs`. Atomic engine event/state migration remains
+      assigned to CO-011.
 
 - [ ] **CO-011 — Version engine events, state, and projections for piece maps**
       Blocked by: CO-010

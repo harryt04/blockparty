@@ -84,7 +84,7 @@ const stallInventoryConservation = (state: GameState) => {
       total +
       (deed?.improvementLevels ?? [])
         .filter((level) => level.level <= deedState.improvementLevel)
-        .reduce((subtotal, level) => subtotal + level.inventoryDelta, 0)
+        .reduce((subtotal, level) => subtotal + (level.inventoryDeltas.stall ?? 0), 0)
     );
   }, 0);
   return (state.bank.improvementInventory.stall ?? 0) + consumed;

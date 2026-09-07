@@ -166,6 +166,13 @@ transition consumes all four Houses atomically; if any required unit is absent,
 the transition is unavailable. Returned pieces are immediately available and
 bankruptcy returns or transfers them according to [RULE-014](rules.md#rule-requirements).
 
+In the content contract, each district rent level carries an immutable
+`inventoryDeltas` map keyed by the economy's improvement kinds. A positive
+entry consumes that quantity from the bank when moving up one level; selling or
+downgrading applies the exact signed inverse. House-only transitions therefore
+use `{ house: 1 }`, while the level-four-to-Hotel transition can express
+`{ house: -4, hotel: 1 }` without relying on map order or an implicit first kind.
+
 ## Decks
 
 Both decks contain exactly 16 cards. The listed order is the stable authoring

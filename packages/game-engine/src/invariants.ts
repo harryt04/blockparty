@@ -308,7 +308,8 @@ function inventoryTotals(state: GameState, rules: RuleSet): Readonly<Record<stri
     for (const level of deed?.improvementLevels ?? []) {
       if (level.level <= deedState.improvementLevel) {
         const kind = Object.keys(rules.content.economy.improvementInventory)[0];
-        if (kind !== undefined) totals[kind] = (totals[kind] ?? 0) + level.inventoryDelta;
+        if (kind !== undefined)
+          totals[kind] = (totals[kind] ?? 0) + (level.inventoryDeltas[kind] ?? 0);
       }
     }
   }

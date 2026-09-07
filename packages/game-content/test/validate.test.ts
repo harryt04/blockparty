@@ -143,4 +143,61 @@ describe("validateBundle", () => {
     mutate(bundle);
     expectIssue(bundle, code, id);
   });
+
+  it("accepts sparse multi-kind House/Hotel transitions and their reversible shape", () => {
+    const deed = PLACEHOLDER_BUNDLE.deeds.find((candidate) => candidate.category === "district");
+    expect(deed?.improvementLevels?.map((level) => level.inventoryDeltas)).toEqual([
+      { stall: 1 },
+      { stall: 1 },
+      { stall: 1 },
+      { stall: 1 },
+      { stall: -4, stage: 1 },
+    ]);
+    expect({ stall: 4, stage: -1 }).toEqual(
+      Object.fromEntries(
+        Object.entries(deed?.improvementLevels?.at(-1)?.inventoryDeltas ?? {}).map(
+          ([kind, delta]) => [kind, -delta],
+        ),
+      ),
+    );
+    expect(validateBundle(PLACEHOLDER_BUNDLE)).toEqual({ valid: true, issues: [] });
+  });
+
+  it.each([
+    [
+      "missing delta map",
+      (bundle: Mutable<ContentBundle>) =>
+        delete (bundle.deeds[0].improvementLevels![0] as { inventoryDeltas?: unknown })
+          .inventoryDeltas,
+      "MISSING_INVENTORY_DELTAS",
+      "d-sawhorse-lane-level-1",
+    ],
+    [
+      "fractional delta",
+      (bundle: Mutable<ContentBundle>) =>
+        (bundle.deeds[0].improvementLevels![0].inventoryDeltas.stall = 1.5),
+      "NON_INTEGER_INVENTORY_DELTA",
+      "d-sawhorse-lane-level-1",
+    ],
+    [
+      "unknown inventory kind",
+      (bundle: Mutable<ContentBundle>) =>
+        (bundle.deeds[0].improvementLevels![0].inventoryDeltas.unknown = 1),
+      "UNKNOWN_INVENTORY_KIND",
+      "unknown",
+    ],
+    [
+      "non-conserving schedule",
+      (bundle: Mutable<ContentBundle>) => {
+        bundle.deeds[0].improvementLevels![0].inventoryDeltas.stall = Number.MAX_SAFE_INTEGER;
+        bundle.deeds[0].improvementLevels![1].inventoryDeltas.stall = 1;
+      },
+      "NON_CONSERVING_INVENTORY",
+      "d-sawhorse-lane-level-2",
+    ],
+  ] as const)("rejects %s with a targeted inventory issue", (_name, mutate, code, id) => {
+    const bundle = copyBundle();
+    mutate(bundle);
+    expectIssue(bundle, code, id);
+  });
 });

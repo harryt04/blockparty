@@ -17,18 +17,26 @@ type Mutable<T> = {
       : T[K];
 };
 
-// Compatibility fixture: the content is intentionally still placeholder data,
-// but its recorded version and hash exercise old-game lookup.
+// Compatibility fixture: preserve the pre-CO-010 scalar schedule and its
+// recorded digest so archived lookup remains a real historical golden.
 const ARCHIVED_V1_BUNDLE: ContentBundle = {
   ...PLACEHOLDER_BUNDLE,
   contentVersion: "1.0.0",
+  deeds: PLACEHOLDER_BUNDLE.deeds.map((deed) => ({
+    ...deed,
+    improvementLevels: deed.improvementLevels?.slice(0, 3).map((level, index) => ({
+      level: level.level,
+      rent: level.rent,
+      inventoryDelta: [1, 1, -2][index],
+    })),
+  })) as ContentBundle["deeds"],
   hash: "9766938cbc884f835a8ccd818af803488decbac2422d2c951917c84704b3a983",
-};
+} as unknown as ContentBundle;
 
 describe("canonical content identity", () => {
   it("matches the recorded canonical hash golden", () => {
     expect(canonicalHashBundle(PLACEHOLDER_BUNDLE)).toBe(
-      "a1e99bfdbfc78e6db5d6f2abad520e5ee54c16a3a485c7b67fde11a368c404a2",
+      "c713f174f1649645cc3857052b59d6807dc44543fdefeda8e36b7ec67da901d7",
     );
     expect(canonicalSerializeBundle(PLACEHOLDER_BUNDLE)).not.toContain(PLACEHOLDER_BUNDLE.hash);
     expect(validateBundle(PLACEHOLDER_BUNDLE)).toEqual({ valid: true, issues: [] });

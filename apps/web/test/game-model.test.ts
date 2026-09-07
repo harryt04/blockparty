@@ -299,7 +299,7 @@ describe("game presentation model", () => {
           deedId: "d-sawhorse-lane",
           categoryLabel: "Block",
           improvementLevel: 0,
-          maximumImprovementLevel: 3,
+          maximumImprovementLevel: 5,
           districtComplete: false,
           nextImprovementCost: 10_000,
           mortgageValue: 6_000,

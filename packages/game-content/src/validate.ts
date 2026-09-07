@@ -146,7 +146,7 @@ export function validateBundle(
 
   // --- Numeric primitive helpers (CONTENT-005, CONTENT-009) --------------
   const requireInteger = (value: unknown, path: string, id: string, label: string) => {
-    if (!Number.isSafeInteger(value) || (label !== "inventoryDelta" && (value as number) < 0)) {
+    if (!Number.isSafeInteger(value) || (value as number) < 0) {
       fail(
         "NON_INTEGER_VALUE",
         path,
@@ -496,7 +496,6 @@ export function validateBundle(
         );
       } else {
         let expectedLevel = 1;
-        let cumulativeInventory = 0;
         for (const level of levels) {
           const levelId = `${deedId}-level-${String(level.level)}`;
           if (level.level !== expectedLevel) {
@@ -518,21 +517,6 @@ export function validateBundle(
             levelId,
             "Rent",
           );
-          if (!Number.isSafeInteger(level.inventoryDelta)) {
-            fail(
-              "NON_INTEGER_VALUE",
-              `deeds.${deedId}.improvementLevels.${level.level}.inventoryDelta`,
-              idMessage("Inventory delta must be a safe integer.", levelId),
-            );
-          }
-          cumulativeInventory += level.inventoryDelta;
-          if (cumulativeInventory < 0) {
-            fail(
-              "IMPOSSIBLE_INVENTORY",
-              `deeds.${deedId}.improvementLevels.${level.level}`,
-              idMessage("A level consumes more inventory than the deed can have returned.", deedId),
-            );
-          }
           expectedLevel += 1;
         }
       }
@@ -658,7 +642,8 @@ export function validateBundle(
     fail("INVALID_CURRENCY_LABEL", "economy.currencyLabel", "Currency label must be non-empty.");
   }
   const inventory = isRecord(economy.improvementInventory) ? economy.improvementInventory : {};
-  let totalInventory = 0;
+  const knownInventoryKinds = new Set(Object.keys(inventory));
+  const startingInventory: Record<string, number> = {};
   for (const [kind, quantity] of Object.entries(inventory)) {
     if (!isSafeInteger(quantity) || quantity < 0) {
       fail(
@@ -667,7 +652,7 @@ export function validateBundle(
         idMessage("Inventory quantity must be a non-negative safe integer.", kind),
       );
     } else {
-      totalInventory += quantity;
+      startingInventory[kind] = quantity;
     }
   }
   if (Object.keys(inventory).length === 0) {
@@ -677,30 +662,104 @@ export function validateBundle(
       "At least one finite improvement inventory quantity is required.",
     );
   }
-  // Each schedule uses the same aggregate inventory counter in the current
-  // content schema. This catches a bundle that can never reach its declared
-  // levels while leaving VAR-008 to the engine.
-  const peakDemand = deeds.reduce((total, deed) => {
-    if (deed.category !== "district" || !Array.isArray(deed.improvementLevels)) return total;
-    let cumulative = 0;
-    let deedPeak = 0;
+  // --- Multi-kind improvement schedules (CONTENT-015, ENG-030) ----------
+  // A schedule stores the bank movement for one upward transition. The
+  // inverse transition is the exact negation of this map, so every accepted
+  // value must remain safe under both directions and every prefix must be
+  // reachable from the declared bank supply.
+  const peakDemandByKind: Record<string, number> = {};
+  for (const deed of deeds) {
+    if (deed.category !== "district" || !Array.isArray(deed.improvementLevels)) continue;
+    const cumulative: Record<string, number> = {};
+    const deedPeakDemand: Record<string, number> = {};
     for (const level of deed.improvementLevels) {
-      if (isSafeInteger(level.inventoryDelta)) {
-        cumulative += level.inventoryDelta;
-        deedPeak = Math.max(deedPeak, cumulative);
+      const levelId = `${deed.deedId}-level-${String(level.level)}`;
+      const path = `deeds.${deed.deedId}.improvementLevels.${level.level}.inventoryDeltas`;
+      if (!isRecord(level.inventoryDeltas)) {
+        fail(
+          "MISSING_INVENTORY_DELTAS",
+          path,
+          idMessage("Every improvement transition needs an inventory delta map.", levelId),
+        );
+        continue;
+      }
+      if (Object.keys(level.inventoryDeltas).length === 0) {
+        fail(
+          "MISSING_INVENTORY_DELTAS",
+          path,
+          idMessage("Every improvement transition needs at least one inventory kind.", levelId),
+        );
+      }
+      for (const [kind, delta] of Object.entries(level.inventoryDeltas)) {
+        if (!knownInventoryKinds.has(kind)) {
+          fail(
+            "UNKNOWN_INVENTORY_KIND",
+            `${path}.${kind}`,
+            idMessage(`Inventory kind ${kind} is not declared by the bank.`, kind),
+          );
+          continue;
+        }
+        if (!isSafeInteger(delta)) {
+          fail(
+            "NON_INTEGER_INVENTORY_DELTA",
+            `${path}.${kind}`,
+            idMessage("Inventory deltas must be safe integers.", levelId),
+          );
+          continue;
+        }
+        const next = (cumulative[kind] ?? 0) + delta;
+        if (!isSafeInteger(next)) {
+          fail(
+            "NON_CONSERVING_INVENTORY",
+            `${path}.${kind}`,
+            idMessage(
+              "Inventory transitions must remain representable in both directions.",
+              levelId,
+            ),
+          );
+          continue;
+        }
+        cumulative[kind] = next;
+        deedPeakDemand[kind] = Math.max(deedPeakDemand[kind] ?? 0, next);
+        const available = (startingInventory[kind] ?? 0) - next;
+        if (!isSafeInteger(available) || available < 0) {
+          fail(
+            "IMPOSSIBLE_INVENTORY",
+            `${path}.${kind}`,
+            idMessage(
+              "The improvement schedule consumes more bank inventory than it starts with.",
+              levelId,
+            ),
+          );
+        }
+        const reversed = available + delta;
+        if (!isSafeInteger(reversed)) {
+          fail(
+            "NON_CONSERVING_INVENTORY",
+            `${path}.${kind}`,
+            idMessage(
+              "An improvement transition cannot be reversed without numeric loss.",
+              levelId,
+            ),
+          );
+        }
       }
     }
-    return total + deedPeak;
-  }, 0);
-  if (peakDemand > totalInventory) {
-    fail(
-      "IMPOSSIBLE_INVENTORY",
-      "economy.improvementInventory",
-      idMessage(
-        "Finite inventory cannot satisfy every declared improvement schedule.",
-        "economy.improvementInventory",
-      ),
-    );
+    for (const [kind, peakDemand] of Object.entries(deedPeakDemand)) {
+      peakDemandByKind[kind] = Math.max(peakDemandByKind[kind] ?? 0, peakDemand);
+    }
+  }
+  for (const [kind, peakDemand] of Object.entries(peakDemandByKind)) {
+    if (peakDemand > (startingInventory[kind] ?? 0)) {
+      fail(
+        "IMPOSSIBLE_INVENTORY",
+        `economy.improvementInventory.${kind}`,
+        idMessage(
+          "Finite inventory cannot satisfy every declared improvement schedule.",
+          "economy.improvementInventory",
+        ),
+      );
+    }
   }
   if (!isRecord(economy.improvementResaleRatio)) {
     fail(

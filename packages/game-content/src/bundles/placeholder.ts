@@ -176,11 +176,13 @@ const spaces: readonly BoardSpace[] = [
   },
 ];
 
-/** Three improvement levels for every district deed. Placeholder values. */
+/** Five improvement levels for every district deed. Placeholder values. */
 const improvementLevels = [
-  { level: 1, rent: 4000, inventoryDelta: 1 },
-  { level: 2, rent: 12000, inventoryDelta: 1 },
-  { level: 3, rent: 30000, inventoryDelta: -2 },
+  { level: 1, rent: 4000, inventoryDeltas: { stall: 1 } },
+  { level: 2, rent: 12000, inventoryDeltas: { stall: 1 } },
+  { level: 3, rent: 30000, inventoryDeltas: { stall: 1 } },
+  { level: 4, rent: 50000, inventoryDeltas: { stall: 1 } },
+  { level: 5, rent: 70000, inventoryDeltas: { stall: -4, stage: 1 } },
 ] as const;
 
 const deeds: readonly Deed[] = [
@@ -383,7 +385,7 @@ export const PLACEHOLDER_BUNDLE: ContentBundle = {
     similarityDisposition: "Not reviewed. Blocks release until replaced by an authored bundle.",
   },
   // Canonical SHA-256 over this bundle without the hash field. CONTENT-001.
-  hash: "a1e99bfdbfc78e6db5d6f2abad520e5ee54c16a3a485c7b67fde11a368c404a2",
+  hash: "c713f174f1649645cc3857052b59d6807dc44543fdefeda8e36b7ec67da901d7",
   startSpaceId: "s00",
   detentionSpaceId: "s06",
   spaces,

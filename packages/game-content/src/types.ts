@@ -63,8 +63,12 @@ export type DeedCategory = "district" | "transit" | "utility";
 export interface ImprovementLevel {
   readonly level: number;
   readonly rent: Money;
-  /** Inventory pieces this level consumes, relative to the level below. */
-  readonly inventoryDelta: number;
+  /**
+   * Signed inventory movement relative to the level below, keyed by the
+   * content-defined improvement kind. Positive values consume pieces from the
+   * bank; selling the same transition applies the exact inverse map.
+   */
+  readonly inventoryDeltas: Readonly<Record<string, number>>;
 }
 
 export interface Deed {

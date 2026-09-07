@@ -4334,7 +4334,7 @@ function resolveBuyImprovement(
   const inventory = state.bank.improvementInventory[context.inventoryKind];
   const inventoryDelta = rules.configuration.unlimitedImprovementInventory
     ? 0
-    : nextLevel.inventoryDelta;
+    : (nextLevel.inventoryDeltas[context.inventoryKind] ?? 0);
   if (
     (!rules.configuration.unlimitedImprovementInventory && inventory === undefined) ||
     !Number.isSafeInteger(inventoryDelta)
@@ -4485,7 +4485,7 @@ function resolveSellImprovement(
   const inventory = state.bank.improvementInventory[context.inventoryKind];
   const inventoryDelta = rules.configuration.unlimitedImprovementInventory
     ? 0
-    : previousLevel.inventoryDelta;
+    : (previousLevel.inventoryDeltas[context.inventoryKind] ?? 0);
   if (
     (!rules.configuration.unlimitedImprovementInventory && inventory === undefined) ||
     !Number.isSafeInteger(inventoryDelta)
@@ -4591,14 +4591,19 @@ function scarceDemandContext(
     );
   }
   const inventory = state.bank.improvementInventory[context.inventoryKind];
-  if (!Number.isSafeInteger(nextLevel.inventoryDelta) || nextLevel.inventoryDelta <= 0) {
+  const inventoryDelta = nextLevel.inventoryDeltas[context.inventoryKind];
+  if (
+    inventoryDelta === undefined ||
+    !Number.isSafeInteger(inventoryDelta) ||
+    inventoryDelta <= 0
+  ) {
     return reject(
       "INVALID_PAYLOAD",
       "INVALID_SCARCE_INVENTORY_DELTA",
       "A scarce improvement demand must consume a positive inventory quantity.",
     );
   }
-  if (inventory === undefined || inventory < nextLevel.inventoryDelta) {
+  if (inventory === undefined || inventory < inventoryDelta) {
     return reject(
       "ILLEGAL_ACTION",
       "IMPROVEMENT_INVENTORY_EXHAUSTED",
@@ -4618,7 +4623,7 @@ function scarceDemandContext(
     fromLevel: currentLevel,
     toLevel: nextLevel.level,
     inventoryKind: context.inventoryKind,
-    inventoryDelta: nextLevel.inventoryDelta,
+    inventoryDelta,
     baseCost,
   };
 }
@@ -5232,7 +5237,7 @@ function resolveDeclareBankruptcy(
         toLevel: candidate.improvementLevel - 1,
         amount,
         inventoryKind,
-        inventoryDelta: level.inventoryDelta,
+        inventoryDelta: level.inventoryDeltas[inventoryKind] ?? 0,
         reason: "BANKRUPTCY_LIQUIDATION",
       },
     } satisfies EngineEvent);
