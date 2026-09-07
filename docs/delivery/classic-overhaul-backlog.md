@@ -469,7 +469,7 @@ accidental collapse in coverage.
       blocked only by the pre-existing `prettier.config.cjs` ESLint `module`
       `no-undef` error.
 
-- [ ] **CO-015 — Reconcile all standard classic rule scenarios**
+- [x] **CO-015 — Reconcile all standard classic rule scenarios**
       Blocked by: CO-014
       Requirements: RULE-013, PRD-FUN-020, TEST-008
       Read: updated canonical rules and all engine scenario suites
@@ -482,6 +482,17 @@ accidental collapse in coverage.
       without placeholder-specific assumptions or manual state mutation.
       Proves: immutable golden scenarios for each rule family and table tests for
       every variant independently and in documented interactions.
+      Evidence: the existing engine scenario suites cover the complete Standard
+      turn, acquisition/auction, rent, improvement, card, Detention, debt,
+      bankruptcy, trade, and victory matrix; `packages/game-engine/test/
+      classic-standard-scenarios.test.ts` adds fixed-seed production-bundle
+      coverage for setup, acquisition, complete-district/transit/utility rent,
+      fee ordering, and Send to Detention. Variant suites cover all eight
+      toggles and documented interactions. The new production scenarios were
+      mutation-checked by shifting normal dice movement and observing all three
+      tests fail, then restoring the reducer. Formatting, typecheck, build, and
+      332 tests (2 skipped) pass; repository CI remains blocked only by the
+      pre-existing `prettier.config.cjs` ESLint `module` `no-undef` error.
 
 - [ ] **CO-016 — Upgrade bot policy and simulations for the full board**
       Blocked by: CO-015
