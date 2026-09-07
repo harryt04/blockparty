@@ -7,11 +7,11 @@ the single Next.js App Router application. It replaces the earlier
 Socket.IO/PostgreSQL transport and persistence proposal. The application is
 authoritative; SSE is delivery, not authority.
 
-The authenticated HTTP/SSE path, MongoDB transaction boundary, and browser
-sync/recovery client are implemented. Classic contract versioning, multi-kind
-improvement events, and placeholder retirement remain staged changes in the
-active classic-overhaul queue; retained placeholder games keep their captured
-versions until the retirement workflow is implemented.
+The authenticated HTTP/SSE path, MongoDB transaction boundary, browser
+sync/recovery client, and placeholder retirement workflow are implemented.
+Classic contract versioning and multi-kind improvement events are also live;
+retired placeholder games keep their captured versions and remain readable
+through the normal completed-game summary path.
 
 ## PROTO-001: Transport and envelope
 
@@ -115,6 +115,9 @@ transition cannot partially update one inventory kind.
 
 `ENG-031` defines the safe-boundary retirement protocol: one committed
 `CONTENT_RETIRED` no-contest event, capability revocation, retained read-only
-summary, and post-commit broadcast. CO-017 will add dry-run, execution,
-rollback, and retry evidence; no current cleanup operation silently retires a
-placeholder game.
+summary, and post-commit broadcast. The operator-only
+`POST /api/internal/retire-placeholders` route and the
+`db:retire-placeholders --dry-run|--execute` command select only non-terminal
+`0.0.0-placeholder` games. Each selected game is retired in its own
+transaction, so a failed batch resumes from the remaining candidates without
+touching unrelated versions or already-terminal games.

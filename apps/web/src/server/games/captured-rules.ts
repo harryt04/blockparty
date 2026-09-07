@@ -12,7 +12,13 @@ import { isProduction } from "../env";
 import type { GameDocument } from "./create-game";
 
 export function capturedRuleSet(game: GameDocument): RuleSet | undefined {
-  const bundle = getBundle(game.contentVersion, { production: isProduction });
+  // Retired placeholders remain readable for their terminal projection, while
+  // active placeholder games stay rejected by the production policy.
+  const allowRetiredPlaceholder =
+    game.status === "NO_CONTEST" && game.contentVersion === "0.0.0-placeholder";
+  const bundle = getBundle(game.contentVersion, {
+    production: isProduction && !allowRetiredPlaceholder,
+  });
   if (
     bundle === undefined ||
     game.contentHash !== canonicalHashBundle(bundle) ||

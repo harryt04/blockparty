@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { CreateGameRequest, InviteStatusResponse, STANDARD_CONFIGURATION } from "../src/index";
+import {
+  CreateGameRequest,
+  InviteStatusResponse,
+  PlaceholderRetirementRequest,
+  PlaceholderRetirementResponse,
+  STANDARD_CONFIGURATION,
+} from "../src/index";
 
 const hostToken = { colorIndex: 1, pieceId: "piece-lantern", pattern: "solid" } as const;
 
@@ -69,5 +75,20 @@ describe("classic creation and admission contracts", () => {
         availablePieces: [{ ...hostToken, pieceId: "piece-unknown" }],
       }).success,
     ).toBe(false);
+  });
+
+  it("keeps placeholder retirement mode and results strict", () => {
+    expect(PlaceholderRetirementRequest.parse({ mode: "dry-run" })).toEqual({ mode: "dry-run" });
+    expect(PlaceholderRetirementRequest.safeParse({ mode: "execute", extra: true }).success).toBe(
+      false,
+    );
+    expect(
+      PlaceholderRetirementResponse.safeParse({
+        mode: "execute",
+        candidateGames: 2,
+        retiredGames: 2,
+        serverTime: "2026-09-07T15:00:00.000Z",
+      }).success,
+    ).toBe(true);
   });
 });

@@ -519,7 +519,7 @@ accidental collapse in coverage.
 
 ## Phase D — Retire placeholder games and activate the new default
 
-- [ ] **CO-017 — Implement idempotent placeholder-game retirement**
+- [x] **CO-017 — Implement idempotent placeholder-game retirement**
       Blocked by: CO-016
       Requirements: PRD-FUN-024, ENG-031, UX-047
       Read: command transaction path, maintenance/cleanup tooling, summary
@@ -534,6 +534,18 @@ accidental collapse in coverage.
       active, paused, and already-terminal cases behave explicitly.
       Proves: replica-set integration tests for dry-run counts, transaction rollback,
       retry/idempotency, revocation, ordering, and 30-day retention.
+      Evidence: `apps/web/src/server/retention/placeholder-retirement.ts` provides
+      strict dry-run/execute selection, one transaction per candidate, a
+      `CONTENT_RETIRED` no-contest event, terminal snapshot/status, capability
+      revocation, audit logging, completed-game retention, and post-commit
+      publication. The operator route and same-image CLI are covered by
+      `apps/web/test/placeholder-retirement-route.test.ts`; the service suite
+      covers lobby, active, paused, terminal, unrelated-version, interruption,
+      retry, ordering, and retention behavior, with replica-set cases enabled
+      when `MONGODB_TEST_URI` is present. Contracts and web tests pass (171
+      passed, 4 skipped without the replica set), as do formatting, typecheck,
+      and build; repository lint remains blocked by the pre-existing
+      `prettier.config.cjs` `module` `no-undef` error.
 
 - [ ] **CO-018 — Switch configuration and deployment defaults to content 1.0.0**
       Blocked by: CO-017

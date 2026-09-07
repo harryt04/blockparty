@@ -89,7 +89,9 @@ The classic creation/admission migration keeps invite admission, seat command,
 host, and reclaim capabilities distinct. The planned `ENG-029` contract may
 return only server-reported availability and safe projection data; it must not
 move a capability into a request body, URL, local storage, log, analytics event,
-or projection. The planned `ENG-031` retirement operation revokes gameplay
-capabilities in the same committed workflow that freezes the retired game,
-while its read-only summary remains subject to the existing projection and
-retention rules.
+or projection. The `ENG-031` retirement operation revokes gameplay capabilities
+in the same committed workflow that freezes the retired game, while its
+read-only summary remains subject to the existing projection and retention
+rules. The summary-only reader accepts a revoked former seat/reclaim hash only
+for an unexpired terminal placeholder game; command, bootstrap, sync, and
+rematch authority remain revoked.

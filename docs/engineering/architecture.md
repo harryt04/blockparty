@@ -247,6 +247,6 @@ Placeholder games are retained as readable historical games and are not
 migrated in place. The target retirement workflow selects only non-terminal
 games with `contentVersion=0.0.0-placeholder`, appends a committed no-contest
 `CONTENT_RETIRED` transition, revokes gameplay capabilities, preserves a
-read-only summary, and is safe to repeat. CO-017 owns the transactional
-implementation; until then, the current maintenance path must not claim that
-retirement has occurred.
+read-only summary, and is safe to repeat. CO-017 implements that workflow with
+an operator-authenticated dry-run/execute route, a same-image CLI, and one
+transaction per candidate; the classic default remains blocked until CO-018.

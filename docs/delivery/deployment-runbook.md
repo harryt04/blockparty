@@ -44,6 +44,19 @@ HTTPS `NEXT_PUBLIC_APP_URL` and matching `ALLOWED_ORIGINS`.
 4. In staging, smoke create, join, start, one authoritative command, SSE
    reconnect, and cleanup before shifting production traffic.
 
+Before CO-018 activates the classic default, run the same image's staged
+placeholder migration against staging and review the aggregate result:
+
+```text
+pnpm --filter @blockparty/web db:retire-placeholders --dry-run
+pnpm --filter @blockparty/web db:retire-placeholders --execute
+```
+
+The execute command is idempotent and must be rerun after an interrupted batch;
+it changes only non-terminal `0.0.0-placeholder` games. Retired summaries stay
+readable through the summary route until their normal 30-day completed-game
+expiry.
+
 ## Scheduled cleanup
 
 Configure a Coolify scheduled job using the same web revision to `POST` the

@@ -4,10 +4,14 @@ vi.mock("server-only", () => ({}));
 
 const mocks = vi.hoisted(() => ({
   readGameCapability: vi.fn(),
+  readRetiredGameSummaryCapability: vi.fn(),
   getDb: vi.fn(),
 }));
 
-vi.mock("@/server/auth/session", () => ({ readGameCapability: mocks.readGameCapability }));
+vi.mock("@/server/auth/session", () => ({
+  readGameCapability: mocks.readGameCapability,
+  readRetiredGameSummaryCapability: mocks.readRetiredGameSummaryCapability,
+}));
 vi.mock("@/server/db/client", () => ({ getDb: mocks.getDb }));
 vi.mock("@/server/env", () => ({ isProduction: false }));
 
@@ -169,5 +173,23 @@ describe("GET /api/games/[gameId]/summary", () => {
       params: Promise.resolve({ gameId: GAME_ID }),
     });
     expect(activeResponse.status).toBe(422);
+  });
+
+  it("keeps a retired placeholder summary readable after command capability revocation", async () => {
+    mocks.readGameCapability.mockResolvedValue(undefined);
+    mocks.readRetiredGameSummaryCapability.mockImplementation(
+      async (_gameId: string, kind: string) =>
+        kind === "seat" ? { gameId: GAME_ID, seatId: "seat-a", kind: "seat" } : undefined,
+    );
+    const retired = game("NO_CONTEST");
+    arrange(retired);
+
+    const response = await GET(new Request("http://localhost"), {
+      params: Promise.resolve({ gameId: GAME_ID }),
+    });
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).summary.finishReason).toBe("NO_CONTEST");
+    expect(mocks.readRetiredGameSummaryCapability).toHaveBeenCalledWith(GAME_ID, "seat");
   });
 });

@@ -106,6 +106,32 @@ export async function readReclaimClaim(gameId: string): Promise<AuthenticatedSea
 }
 
 /**
+ * Retired placeholder games keep a read-only summary after their gameplay
+ * capabilities are revoked. The revoked hash can identify the former seat for
+ * that terminal projection, but it is never accepted by the command path.
+ */
+export async function readRetiredGameSummaryCapability(
+  gameId: string,
+  kind: "seat" | "reclaim",
+): Promise<AuthenticatedSeat | undefined> {
+  const hash = await readCapabilityHash(kind);
+  if (hash === undefined) return undefined;
+  const database = getDb();
+  const game = await database.collection<GameDocument>(COLLECTIONS.games).findOne({
+    _id: gameId,
+    status: "NO_CONTEST",
+    contentVersion: "0.0.0-placeholder",
+    expiresAt: { $gt: new Date() },
+  });
+  if (game === null) return undefined;
+  const capability = await database
+    .collection<CapabilityDocument>(COLLECTIONS.capabilities)
+    .findOne({ tokenHash: hash, gameId, kind, status: "revoked" });
+  if (capability === null || !safeEqual(capability.tokenHash, hash)) return undefined;
+  return { gameId, seatId: capability.seatId, kind };
+}
+
+/**
  * Reads the game-view authority held by this device. A reclaim claim can view
  * the replaced seat's state long enough to request host-approved control, but
  * it is never treated as a seat command capability. See UX-018/SEC-002.

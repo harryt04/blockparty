@@ -112,7 +112,7 @@ export interface HostCapabilityDocument {
 export interface AuditDocument {
   readonly _id?: string;
   readonly gameId: GameId;
-  readonly seatId: SeatId;
+  readonly seatId?: SeatId;
   readonly action:
     | "game_created"
     | "game_joined"
@@ -124,7 +124,8 @@ export interface AuditDocument {
     | "seat_reclaim_approved"
     | "seat_replaced_with_bot"
     | "seat_capability_revoked"
-    | "seat_reclaim_transferred";
+    | "seat_reclaim_transferred"
+    | "game_retired";
   readonly reasonCode:
     | "CREATE"
     | "JOIN"
@@ -136,7 +137,8 @@ export interface AuditDocument {
     | "RECLAIM_APPROVED"
     | "SEAT_REPLACED"
     | "SEAT_CAPABILITY_REVOKED"
-    | "RECLAIM_TRANSFERRED";
+    | "RECLAIM_TRANSFERRED"
+    | "CONTENT_RETIRED";
   readonly occurredAt: Date;
 }
 

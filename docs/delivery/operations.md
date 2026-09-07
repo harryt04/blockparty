@@ -43,7 +43,8 @@ change.
 - request trust: `ALLOWED_ORIGINS`;
 - compatibility: `PROTOCOL_VERSION`, `APP_VERSION`, `CONTENT_VERSION`,
   `PWA_CACHE_VERSION`;
-- maintenance: `INTERNAL_CLEANUP_SECRET`;
+- maintenance: `INTERNAL_CLEANUP_SECRET` (also authorizes the staged
+  placeholder-retirement route);
 - limits: `RATE_LIMIT_CREATE_PER_MINUTE`, `RATE_LIMIT_JOIN_PER_MINUTE`,
   `RATE_LIMIT_COMMANDS_PER_MINUTE`, `RATE_LIMIT_SYNC_PER_MINUTE`,
   `RATE_LIMIT_SSE_CONNECTIONS`;
@@ -88,6 +89,14 @@ Coolify schedules the authenticated cleanup command from the web image. It first
 transitions overdue active games to `EXPIRED` with an authoritative event, then
 deletes expired game data and all related capability hashes in bounded,
 idempotent batches. Presence, reads, and rejected commands do not extend expiry.
+
+Before the classic default is activated, an operator runs
+`pnpm --filter @blockparty/web db:retire-placeholders --dry-run`, reviews the
+candidate count, then runs the same command with `--execute`. The execute path
+also exists as `POST /api/internal/retire-placeholders` with a strict
+`{"mode":"dry-run"}` or `{"mode":"execute"}` body. It retires only
+non-terminal `0.0.0-placeholder` games, preserves their captured versions for
+read-only summaries, and is safe to repeat after an interrupted batch.
 The job reports examined, transitioned, deleted, failed, and duration counts
 without player data.
 

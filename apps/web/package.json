@@ -14,6 +14,7 @@
     "start": "next start",
     "lint": "eslint .",
     "db:maintain": "tsx --conditions=react-server src/server/db/maintenance.ts",
+    "db:retire-placeholders": "tsx --conditions=react-server src/server/retention/retire-placeholders.ts",
     "db:verify-restore": "tsx --conditions=react-server src/server/backup/verify-restore.ts"
   },
   "dependencies": {

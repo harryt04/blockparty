@@ -7,7 +7,7 @@
  */
 import type { SummaryResponse } from "@blockparty/contracts";
 import { canonicalHashBundle, getBundle } from "@blockparty/game-content";
-import { readGameCapability } from "@/server/auth/session";
+import { readGameCapability, readRetiredGameSummaryCapability } from "@/server/auth/session";
 import { getDb } from "@/server/db/client";
 import { COLLECTIONS } from "@/server/db/collections";
 import { isProduction } from "@/server/env";
@@ -36,7 +36,10 @@ async function getSummary(params: Promise<{ gameId: string }>) {
   const { gameId } = await params;
 
   try {
-    const actor = await readGameCapability(gameId);
+    const actor =
+      (await readGameCapability(gameId)) ??
+      (await readRetiredGameSummaryCapability(gameId, "seat")) ??
+      (await readRetiredGameSummaryCapability(gameId, "reclaim"));
     if (actor === undefined) return jsonError("UNAUTHENTICATED", { gameId });
 
     const database = getDb();
@@ -52,7 +55,11 @@ async function getSummary(params: Promise<{ gameId: string }>) {
       return jsonError("FORBIDDEN", { gameId });
     }
 
-    const bundle = getBundle(game.contentVersion, { production: isProduction });
+    const allowRetiredPlaceholder =
+      game.status === "NO_CONTEST" && game.contentVersion === "0.0.0-placeholder";
+    const bundle = getBundle(game.contentVersion, {
+      production: isProduction && !allowRetiredPlaceholder,
+    });
     if (bundle === undefined || canonicalHashBundle(bundle) !== game.contentHash) {
       return jsonError("CONTENT_UNSUPPORTED", { gameId });
     }

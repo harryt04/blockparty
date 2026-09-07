@@ -181,5 +181,23 @@ export const CleanupResponse = z
   .strict();
 export type CleanupResponse = z.infer<typeof CleanupResponse>;
 
+// --- POST /api/internal/retire-placeholders -------------------------------
+
+/** Operator-only migration of non-terminal placeholder games. See ENG-031. */
+export const PlaceholderRetirementRequest = z
+  .object({ mode: z.enum(["dry-run", "execute"]) })
+  .strict();
+export type PlaceholderRetirementRequest = z.infer<typeof PlaceholderRetirementRequest>;
+
+export const PlaceholderRetirementResponse = z
+  .object({
+    mode: z.enum(["dry-run", "execute"]),
+    candidateGames: z.int().min(0),
+    retiredGames: z.int().min(0),
+    serverTime: ServerTime,
+  })
+  .strict();
+export type PlaceholderRetirementResponse = z.infer<typeof PlaceholderRetirementResponse>;
+
 /** InviteId is re-exported so route handlers validate the path parameter. */
 export { InviteId };
