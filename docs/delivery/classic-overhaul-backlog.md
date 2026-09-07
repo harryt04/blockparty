@@ -403,7 +403,7 @@ accidental collapse in coverage.
 
 ## Phase C — Build and prove the classic ruleset
 
-- [ ] **CO-012 — Implement and register the production 1.0.0 board bundle**
+- [x] **CO-012 — Implement and register the production 1.0.0 board bundle**
       Blocked by: CO-011
       Requirements: CONTENT-012–016, PRD-FUN-020
       Read: the complete CO-003 content table and game-content validator
@@ -415,6 +415,14 @@ accidental collapse in coverage.
       exact count/order/economy tests match the authoritative content table.
       Proves: immutable content golden, count tables, referential validation, and
       a deliberate corruption test for each major content category.
+      Evidence: `packages/game-content/src/bundles/classic.ts` encodes the
+      40-space route, 28 deeds, eight districts, 32/12 improvement inventory,
+      both 16-card decks, original provenance, and integer economy values. The
+      immutable `CLASSIC_BUNDLE` is registered under `1.0.0` while
+      `DEFAULT_CONTENT_VERSION` remains the placeholder. The classic content
+      tests prove canonical hashing, production validation, registry lookup,
+      exact route/count/economy reconciliation, and corruption rejection for
+      route, deed, district, deck, economy, and hash data.
 
 - [ ] **CO-013 — Implement the two complete event-card decks**
       Blocked by: CO-012

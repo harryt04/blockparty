@@ -9,8 +9,10 @@ export * from "./types";
 export * from "./canonical";
 export * from "./validate";
 export { PLACEHOLDER_BUNDLE } from "./bundles/placeholder";
+export { CLASSIC_BUNDLE } from "./bundles/classic";
 
 import { PLACEHOLDER_BUNDLE } from "./bundles/placeholder";
+import { CLASSIC_BUNDLE } from "./bundles/classic";
 import type { ContentBundle } from "./types";
 import { validateBundle } from "./validate";
 
@@ -51,7 +53,7 @@ export function createBundleRegistry(bundles: readonly ContentBundle[]): Content
 }
 
 /** Every bundle a deployment can read, keyed by contentVersion. ENG-027. */
-export const BUNDLES = createBundleRegistry([PLACEHOLDER_BUNDLE]);
+export const BUNDLES = createBundleRegistry([PLACEHOLDER_BUNDLE, CLASSIC_BUNDLE]);
 
 /**
  * The bundle a NEW game selects. A resumed game loads its captured version
