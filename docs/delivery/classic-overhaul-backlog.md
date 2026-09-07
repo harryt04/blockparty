@@ -150,7 +150,7 @@ accidental collapse in coverage.
 
 ## Phase A — Reset the implementation authority
 
-- [ ] **CO-001 — Adopt the classic product baseline in the PRD and traceability**
+- [x] **CO-001 — Adopt the classic product baseline in the PRD and traceability**
       Blocked by: none
       Requirements: PRD-FUN-020–024, PRD-NFR-011
       Read: this backlog, `docs/product/prd.md`, `docs/product/feature-parity.md`,
@@ -165,6 +165,11 @@ accidental collapse in coverage.
       misrepresented as complete.
       Proves: Markdown link check, requirement-ID uniqueness check, and a manual
       comparison of every locked decision against the PRD/parity matrix.
+      Evidence: PRD, parity, and traceability updates are complete; six new IDs
+      occur once in each owning register, locked baseline phrases/counts were
+      checked directly, `pnpm run format` and build passed, and the test suite
+      passed with 292 tests (2 skipped). Repository CI remains blocked by the
+      pre-existing `prettier.config.cjs` ESLint `module` no-undef error.
 
 - [ ] **CO-002 — Rewrite the canonical rules, variants, and glossary**
       Blocked by: CO-001

@@ -1,12 +1,14 @@
-# Product Requirements Document: private property-board game MVP
+# Product Requirements Document: Blockparty classic-table game
 
-**Status:** implementation-ready MVP scope  
+**Status:** accepted classic-overhaul target; implementation is in transition
 **Audience:** people aged 13+ who want a private, browser-based economic property board game with friends or bots.  
-**Product terms:** [Glossary](glossary.md) is normative for product and wire vocabulary. [Rules](rules.md), [game content](game-content.md), and [rule variants](rule-variants.md) define gameplay. These terms are provisional and are not a public brand.
+**Product terms:** [Glossary](glossary.md) is normative for product and wire vocabulary. [Rules](rules.md), [game content](game-content.md), and [rule variants](rule-variants.md) define gameplay. The product name is **Blockparty**; brand and licensing decisions are recorded in the [brand](../brand/brand-strategy.md) and [legal](../legal/ip-safety.md) documents.
 
 ## Product statement
 
-Deliver a free, open-source, mobile-first PWA for private 2–6 seat economic property board games. A host creates a game and shares an unguessable invite link. Seats may be occupied by guests or by one explainable bot difficulty. The game targets internal **mechanical completeness** across familiar property-board mechanic categories while using independently authored board content, card text, art, terminology, UI, and numerical data; it must not copy a particular commercial game's protected expression.
+Deliver a free, open-source PWA for private 2–6 seat games built around the faithful classic property-trading rules baseline, presented as the original magical city of Blockparty. The default table has 40 perimeter spaces, four corner anchors, 22 color-group properties in eight groups, four transit properties, two utilities, two fee spaces, and two distinct 16-card decks with three draw spaces each. A host creates a game and shares an unguessable invite link; seats may be occupied by guests or by one explainable bot difficulty. Names, prose, art, card copy, interface assets, and the Blockparty presentation remain independently authored, with release gated on provenance, licensing, and attorney review.
+
+The classic baseline is a product requirement, not a claim of affiliation or compatibility with another title. Existing scaffold pages, placeholder content, and earlier versioned games do not satisfy this target until the transition queue supplies the required content, contracts, engine behavior, and evidence.
 
 This document is a product specification, not legal advice. Renaming alone does not establish non-infringement. Before release, obtain qualified legal review of the complete combination of mechanics, board topology, values, names, visual trade dress, card themes, marketing, and the independent-authorship/provenance record. Research references are collected in [Mechanical completeness](feature-parity.md#research-and-expression-boundary).
 
@@ -22,11 +24,13 @@ This document is a product specification, not legal advice. Renaming alone does 
 
 ## Goals
 
-1. Complete an authoritative, resumable, private 2–6 seat game under the canonical rules in [Rules](rules.md).
+1. Complete an authoritative, resumable, private 2–6 seat game under the classic baseline and the canonical rules in [Rules](rules.md).
 2. Make all legal actions discoverable and usable with touch, keyboard, and screen readers.
 3. Make turns, money changes, dice results, and bot choices understandable from an event history.
 4. Offer a deliberately bounded MVP: one bot difficulty, private links, and no identity system.
 5. Provide a configurable rules engine with the presets/toggles in [Rule variants](rule-variants.md), locked after play begins.
+6. Present the shared board as a classic table on desktop and as an equivalent fitted, focusable overview on phones.
+7. Retire pre-overhaul `0.0.0-placeholder` games as explicit no-contest summaries rather than migrating their state.
 
 ## Non-goals
 
@@ -34,7 +38,8 @@ This document is a product specification, not legal advice. Renaming alone does 
 - Accounts, login, persistent player profiles, rankings, achievements, cloud-wide friend lists, or cross-game identity.
 - Native iOS/Android apps; installable PWA is the mobile deliverable.
 - More than one bot difficulty or opaque/learning bot behavior.
-- Reproducing a named commercial game's board, marks, wording, illustration style, card data, price/rent schedule, or visual trade dress.
+- Claiming affiliation with, compatibility with, or reproduction of a named commercial title, or shipping its protected names, wording, art, card copy, or trade dress.
+- Treating the classic baseline, by itself, as legal clearance; the complete product still requires provenance review and qualified counsel.
 - Automated legal clearance or a claim that this implementation is legally safe in every jurisdiction.
 
 ## Functional requirements
@@ -78,6 +83,16 @@ This document is a product specification, not legal advice. Renaming alone does 
 | PRD-FUN-018 | PostHog captures consent-aware, pseudonymous product events for game creation, joins, start, completion, reconnect, rule selection, and errors. Session replay is disabled by default until a reviewed consent and data-minimization design exists.                                           |
 | PRD-FUN-019 | At a safe command boundary, the host may end a private game as `NO_CONTEST` after a destructive confirmation visible to every connected player. The action records no winner, preserves the final event history until normal expiry, revokes further gameplay commands, and cannot be undone. |
 
+### Classic baseline and transition
+
+| ID          | Requirement                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| PRD-FUN-020 | The default game implements the faithful classic-scale baseline: a 40-space perimeter route with four corner anchors, 22 color-group properties in eight groups, four transit properties, two utilities, two fee spaces, and two distinct 16-card decks with three draw spaces each. The default economy includes 32 Houses and 12 Hotels, with the complete rules and schedules defined by the versioned content bundle.                                             |
+| PRD-FUN-021 | Creation separately controls Human players and Computer players with accessible buttons and a visible seat tray. Human count includes the host; defaults are two Humans, zero Computers, and Standard rules; the combined table size is 2–6. The host chooses a pseudonym and one of six original pieces during creation, and joiners choose one remaining piece during admission.                                          |
+| PRD-FUN-022 | The desktop operating surface centers the full board as the visual anchor, places player order/cash/connectivity at the side, places the active decision opposite the player rail, and places the local property hand below the board without hiding any legal action.                                                                                                                                                |
+| PRD-FUN-023 | The phone operating surface provides a fitted board overview, follows the authoritative active movement/space, permits deliberate tap-to-focus and zoom, and retains an ordered accessible board list equivalent to the spatial board. Required decisions, cash/debt, roll result, and position work at 320 CSS px without page-level horizontal scrolling.                  |
+| PRD-FUN-024 | Existing non-terminal games with `contentVersion=0.0.0-placeholder` are authoritatively ended as no-contest with reason `CONTENT_RETIRED`, their gameplay commands are frozen, capabilities are revoked, and their read-only summaries remain available through normal completed-game retention. They are never migrated to the classic ruleset. |
+
 ## Non-functional requirements
 
 | ID          | Requirement                                                                                                                                                                                                                                                                                                                                           |
@@ -92,6 +107,7 @@ This document is a product specification, not legal advice. Renaming alone does 
 | PRD-NFR-008 | Version board definitions, rules, variants, and event payloads. A resumed game always uses the immutable version captured at its start; deployments must retain readers for unexpired games.                                                                                                                                                          |
 | PRD-NFR-009 | Collect the minimum operational data: game-scoped pseudonym, opaque session/seat capabilities, game events, and service telemetry. Publish retention/deletion behavior and make telemetry configuration controllable by a self-host operator.                                                                                                         |
 | PRD-NFR-010 | Open-source licensing, third-party asset licenses, fonts, sounds, and dependencies must be inventoried before release. Do not include proprietary game scans, extracted datasets, or reference artwork. Version content and preserve the provenance fields and independent balancing/simulation evidence required by [Game content](game-content.md). |
+| PRD-NFR-011 | Source code is distributed under AGPL-3.0-or-later and original game content/assets under CC BY-SA 4.0, with third-party assets separately attributed and licensed. The repository maintains provenance and attribution records, and public release remains blocked on the attorney and licensing gates. |
 
 ## Success metrics
 
@@ -121,11 +137,12 @@ This document is a product specification, not legal advice. Renaming alone does 
 Release is permitted only when all of the following are true:
 
 1. Every requirement in this PRD is traced to implementation and test/QA evidence; all `RULE-*` and `VAR-*` requirements have deterministic engine tests.
-2. A 2-seat and 6-seat game can be created, joined by a mix of guests/bots, resumed after refresh/reconnect, completed, and observed as read-only afterward.
+2. A 2-seat and 6-seat classic-baseline game can be created, joined by a mix of guests/bots with distinct pieces, resumed after refresh/reconnect, completed, and observed as read-only afterward.
 3. The canonical flow and each configured variant run with immutable captured rules/board versions; invalid actions are rejected server-side with actionable errors.
 4. Mobile keyboard/touch and desktop keyboard QA pass, including screen-reader announcement checks and reduced-motion behavior.
 5. PWA install, offline/reconnect messaging, persistence/restart recovery, retention expiry, and Coolify deployment are exercised in a production-like environment.
 6. Security review covers invite/seat/host capabilities, authorization, rate limiting, logging, retention deletion, and analytics configuration.
 7. An IP/licensing attorney reviews and approves the complete mechanic combination, independently authored content/provenance record, and public marketing; no unreviewed third-party board/card/assets ship.
+8. Pre-overhaul `0.0.0-placeholder` games are retired with the `CONTENT_RETIRED` no-contest outcome before the classic bundle becomes the production default.
 
-Normative precedence is: this PRD → [Rules](rules.md), [game content](game-content.md), and [variants](rule-variants.md) → engineering contracts → UX/design → delivery/runbooks. Related specifications: [mechanical completeness matrix](feature-parity.md) and [glossary](glossary.md).
+Normative precedence is: this PRD → [Rules](rules.md), [game content](game-content.md), and [variants](rule-variants.md) → engineering contracts → UX/design → delivery/runbooks. Related specifications: the [classic mechanical-completeness matrix](feature-parity.md) and [glossary](glossary.md). The transition queue in [classic-overhaul-backlog.md](../delivery/classic-overhaul-backlog.md) is the accepted implementation sequence for the new baseline.
