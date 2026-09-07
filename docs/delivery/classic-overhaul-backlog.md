@@ -264,7 +264,7 @@ accidental collapse in coverage.
       skipped) pass. Full CI remains blocked by the pre-existing ESLint
       `prettier.config.cjs` `module` no-undef error.
 
-- [ ] **CO-006 — Rewrite the design system for the classic table**
+- [x] **CO-006 — Rewrite the design system for the classic table**
       Blocked by: CO-005
       Requirements: DS-071–073, UX-041–046
       Read: `docs/design/design-system.md`, updated UX specification
@@ -277,6 +277,13 @@ accidental collapse in coverage.
       colors, layout rules, component anatomy, or responsive breakpoints.
       Proves: token contrast calculations, 320/375/768/1280 layout sketches, and
       design-to-UX requirement mapping.
+      Evidence: `docs/design/design-system.md` now fixes the classic table
+      palette, eight Color Set roles, 11 × 11/40-cell grammar, component anatomy,
+      responsive breakpoints, accessibility states, motion, and the viewport/state
+      matrix; DS-071–073 are registered in `docs/traceability.md`. Prettier
+      formatting, typecheck, production build, and 292 tests (2 skipped) pass.
+      Full CI remains blocked by the pre-existing ESLint `prettier.config.cjs`
+      `module` no-undef error.
 
 - [ ] **CO-007 — Reconcile engineering, delivery, index, and agent documentation**
       Blocked by: CO-006
