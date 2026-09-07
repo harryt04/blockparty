@@ -34,8 +34,9 @@ export * from "./invariants";
 export * from "./bot";
 export * from "./soak";
 
-export const ENGINE_VERSION = "0.1.0";
-export const STATE_SCHEMA_VERSION = "1.0.0";
+export const ENGINE_VERSION = "0.2.0";
+export const STATE_SCHEMA_VERSION = "2.0.0";
+export const IMPROVEMENT_EVENT_VERSION = 2;
 
 /**
  * The resolved rules the engine runs under: the immutable content bundle plus
@@ -139,8 +140,8 @@ export interface ScarceImprovementDemand {
   readonly deedId: string;
   readonly fromLevel: number;
   readonly toLevel: number;
-  readonly inventoryKind: string;
-  readonly inventoryDelta: number;
+  /** Complete signed movement for every bank improvement kind. */
+  readonly inventoryDeltas: Readonly<Record<string, number>>;
   /** The content-defined normal improvement price used as the auction base cost. */
   readonly baseCost: Money;
 }
@@ -357,6 +358,70 @@ function payloadInventory(
   return Object.fromEntries(entries) as Readonly<Record<string, number>>;
 }
 
+function payloadInventoryDeltas(
+  event: EngineEvent,
+  key = "inventoryDeltas",
+): Readonly<Record<string, number>> | undefined {
+  return parseInventoryDeltas(event.payload[key]);
+}
+
+function parseInventoryDeltas(value: unknown): Readonly<Record<string, number>> | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const entries = Object.entries(value);
+  if (
+    entries.length === 0 ||
+    !entries.every(
+      ([kind, delta]) =>
+        kind.length > 0 && typeof delta === "number" && Number.isSafeInteger(delta),
+    )
+  ) {
+    return undefined;
+  }
+  return Object.fromEntries(entries) as Readonly<Record<string, number>>;
+}
+
+function completeInventoryDeltas(
+  deltas: Readonly<Record<string, number>>,
+  inventory: Readonly<Record<string, number>>,
+): Readonly<Record<string, number>> | undefined {
+  const kinds = Object.keys(inventory);
+  if (Object.keys(deltas).some((kind) => !Object.prototype.hasOwnProperty.call(inventory, kind))) {
+    return undefined;
+  }
+  return Object.freeze(
+    Object.fromEntries(kinds.map((kind) => [kind, deltas[kind] ?? 0])),
+  ) as Readonly<Record<string, number>>;
+}
+
+function applyInventoryDeltas(
+  inventory: Readonly<Record<string, number>>,
+  deltas: Readonly<Record<string, number>>,
+  direction: -1 | 1,
+): Readonly<Record<string, number>> | undefined {
+  const kinds = Object.keys(inventory);
+  if (
+    Object.keys(deltas).length !== kinds.length ||
+    kinds.some((kind) => !Object.prototype.hasOwnProperty.call(deltas, kind))
+  ) {
+    return undefined;
+  }
+  const complete = deltas;
+  const next = Object.fromEntries(
+    Object.entries(inventory).map(([kind, quantity]) => [
+      kind,
+      quantity + direction * (complete[kind] ?? 0),
+    ]),
+  );
+  if (!Object.values(next).every((quantity) => Number.isSafeInteger(quantity) && quantity >= 0)) {
+    return undefined;
+  }
+  return Object.freeze(next);
+}
+
+function hasPositiveInventoryDemand(deltas: Readonly<Record<string, number>>): boolean {
+  return Object.values(deltas).some((delta) => delta > 0);
+}
+
 function payloadDeckStates(event: EngineEvent): readonly DeckState[] | undefined {
   const value = event.payload.deckOrders;
   if (!Array.isArray(value)) return undefined;
@@ -417,18 +482,32 @@ function payloadString(event: EngineEvent, key: string): string | undefined {
 function payloadDemands(event: EngineEvent, key = "demands"): readonly ScarceImprovementDemand[] {
   const value = event.payload[key];
   if (!Array.isArray(value)) return [];
-  return value.filter((entry): entry is ScarceImprovementDemand => {
-    if (typeof entry !== "object" || entry === null) return false;
+  return value.flatMap((entry): readonly ScarceImprovementDemand[] => {
+    if (typeof entry !== "object" || entry === null) return [];
     const demand = entry as Record<string, unknown>;
-    return (
+    const inventoryDeltas = demand.inventoryDeltas;
+    if (
       typeof demand.seatId === "string" &&
       typeof demand.deedId === "string" &&
       Number.isSafeInteger(demand.fromLevel) &&
       Number.isSafeInteger(demand.toLevel) &&
-      typeof demand.inventoryKind === "string" &&
-      Number.isSafeInteger(demand.inventoryDelta) &&
       Number.isSafeInteger(demand.baseCost)
-    );
+    ) {
+      const parsed = parseInventoryDeltas(inventoryDeltas);
+      if (parsed !== undefined) {
+        return [
+          {
+            seatId: demand.seatId,
+            deedId: demand.deedId,
+            fromLevel: demand.fromLevel as number,
+            toLevel: demand.toLevel as number,
+            inventoryDeltas: parsed,
+            baseCost: demand.baseCost as number,
+          },
+        ];
+      }
+    }
+    return [];
   });
 }
 
@@ -1699,16 +1778,14 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
       const deedId = payloadSeatId(event, "deedId");
       const fromLevel = payloadNumber(event, "fromLevel");
       const toLevel = payloadNumber(event, "toLevel");
-      const inventoryKind = payloadSeatId(event, "inventoryKind");
-      const inventoryDelta = payloadNumber(event, "inventoryDelta");
+      const inventoryDeltas = payloadInventoryDeltas(event);
       const baseCost = payloadNumber(event, "baseCost");
       if (
         seatId === undefined ||
         deedId === undefined ||
         fromLevel === undefined ||
         toLevel === undefined ||
-        inventoryKind === undefined ||
-        inventoryDelta === undefined ||
+        inventoryDeltas === undefined ||
         baseCost === undefined
       ) {
         return state;
@@ -1721,7 +1798,7 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         ...state,
         scarceImprovementDemands: [
           ...existing,
-          { seatId, deedId, fromLevel, toLevel, inventoryKind, inventoryDelta, baseCost },
+          { seatId, deedId, fromLevel, toLevel, inventoryDeltas, baseCost },
         ],
       });
     }
@@ -1730,36 +1807,33 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
       const deedId = payloadSeatId(event, "deedId");
       const toLevel = payloadNumber(event, "toLevel");
       const amount = payloadNumber(event, "amount");
-      const inventoryKind = payloadSeatId(event, "inventoryKind");
-      const inventoryDelta = payloadNumber(event, "inventoryDelta");
+      const inventoryDeltas = payloadInventoryDeltas(event);
       if (
         seatId === undefined ||
         deedId === undefined ||
         toLevel === undefined ||
         amount === undefined ||
-        inventoryKind === undefined ||
-        inventoryDelta === undefined
+        inventoryDeltas === undefined
       ) {
         return state;
       }
       const seat = findSeat(state, seatId);
       const deed = state.deeds.find((candidate) => candidate.deedId === deedId);
-      const inventory = state.bank.improvementInventory[inventoryKind];
       const remainingDemands = payloadDemands(event, "remainingDemands");
       const nextBalance = seat === undefined ? undefined : seat.balance - amount;
       const nextBankCash = state.bank.cash + amount;
-      const nextInventory = inventory === undefined ? undefined : inventory - inventoryDelta;
+      const nextInventory =
+        inventoryDeltas === undefined
+          ? undefined
+          : applyInventoryDeltas(state.bank.improvementInventory, inventoryDeltas, -1);
       if (
         seat === undefined ||
         deed === undefined ||
-        inventory === undefined ||
         nextBalance === undefined ||
         !Number.isSafeInteger(nextBalance) ||
         nextBalance < 0 ||
         !Number.isSafeInteger(nextBankCash) ||
-        nextInventory === undefined ||
-        !Number.isSafeInteger(nextInventory) ||
-        nextInventory < 0
+        nextInventory === undefined
       ) {
         return state;
       }
@@ -1779,8 +1853,7 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
           ...state.bank,
           cash: nextBankCash,
           improvementInventory: {
-            ...state.bank.improvementInventory,
-            [inventoryKind]: nextInventory,
+            ...nextInventory,
           },
         },
       });
@@ -1793,8 +1866,7 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
       const seatId = payloadSeatId(event, "seatId");
       const toLevel = payloadNumber(event, "toLevel");
       const amount = payloadNumber(event, "amount");
-      const inventoryDelta = payloadNumber(event, "inventoryDelta");
-      const inventoryKind = payloadSeatId(event, "inventoryKind");
+      const inventoryDeltas = payloadInventoryDeltas(event);
       if (
         deedId === undefined ||
         seatId === undefined ||
@@ -1802,31 +1874,31 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         toLevel < 0 ||
         amount === undefined ||
         amount < 0 ||
-        inventoryDelta === undefined ||
-        inventoryKind === undefined
+        inventoryDeltas === undefined
       ) {
         return state;
       }
       const deed = state.deeds.find((candidate) => candidate.deedId === deedId);
       const seat = findSeat(state, seatId);
-      const inventory = state.bank.improvementInventory[inventoryKind];
       if (
         deed === undefined ||
         seat === undefined ||
-        inventory === undefined ||
-        !Number.isSafeInteger(inventory + inventoryDelta)
+        event.eventVersion < IMPROVEMENT_EVENT_VERSION
       ) {
         return state;
       }
       const buying = event.type === "ImprovementBought";
       const nextBalance = buying ? seat.balance - amount : seat.balance + amount;
       const nextBankCash = buying ? state.bank.cash + amount : state.bank.cash - amount;
-      const nextInventory = inventory + (buying ? -inventoryDelta : inventoryDelta);
+      const nextInventory = applyInventoryDeltas(
+        state.bank.improvementInventory,
+        inventoryDeltas,
+        buying ? -1 : 1,
+      );
       if (
         !Number.isSafeInteger(nextBalance) ||
         !Number.isSafeInteger(nextBankCash) ||
-        !Number.isSafeInteger(nextInventory) ||
-        nextInventory < 0
+        nextInventory === undefined
       ) {
         return state;
       }
@@ -1843,8 +1915,7 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
           ...state.bank,
           cash: nextBankCash,
           improvementInventory: {
-            ...state.bank.improvementInventory,
-            [inventoryKind]: nextInventory,
+            ...nextInventory,
           },
         },
       });
@@ -1980,6 +2051,7 @@ export type Resolution = Acceptance | Rejection;
 export interface LegalAction {
   readonly type: CommandType;
   readonly constraints?: Readonly<Record<string, number | string | boolean>>;
+  readonly inventoryDeltas?: Readonly<Record<string, number>>;
 }
 
 export interface ActionAvailability {
@@ -4212,7 +4284,6 @@ interface ImprovementContext {
   readonly deed: Deed;
   readonly deedState: DeedState;
   readonly districtDeedStates: readonly DeedState[];
-  readonly inventoryKind: string;
 }
 
 function improvementContext(
@@ -4248,8 +4319,7 @@ function improvementContext(
       "Every district deed must be present in the ledger.",
     );
   }
-  const inventoryKind = Object.keys(rules.content.economy.improvementInventory)[0];
-  if (inventoryKind === undefined) {
+  if (Object.keys(rules.content.economy.improvementInventory).length === 0) {
     return reject(
       "INVALID_PAYLOAD",
       "INVALID_IMPROVEMENT_INVENTORY",
@@ -4260,7 +4330,6 @@ function improvementContext(
     deed,
     deedState,
     districtDeedStates: districtDeedStates as readonly DeedState[],
-    inventoryKind,
   };
 }
 
@@ -4331,25 +4400,14 @@ function resolveBuyImprovement(
       "The deed has no valid improvement cost.",
     );
   }
-  const inventory = state.bank.improvementInventory[context.inventoryKind];
-  const inventoryDelta = rules.configuration.unlimitedImprovementInventory
-    ? 0
-    : (nextLevel.inventoryDeltas[context.inventoryKind] ?? 0);
-  if (
-    (!rules.configuration.unlimitedImprovementInventory && inventory === undefined) ||
-    !Number.isSafeInteger(inventoryDelta)
-  ) {
-    return reject(
-      "ILLEGAL_ACTION",
-      "IMPROVEMENT_INVENTORY_EXHAUSTED",
-      "The bank has no available improvement pieces for this level.",
-    );
-  }
-  const nextInventory = (inventory ?? 0) - inventoryDelta;
-  if (
-    !rules.configuration.unlimitedImprovementInventory &&
-    (!Number.isSafeInteger(nextInventory) || nextInventory < 0)
-  ) {
+  const inventoryDeltas = rules.configuration.unlimitedImprovementInventory
+    ? Object.fromEntries(Object.keys(state.bank.improvementInventory).map((kind) => [kind, 0]))
+    : completeInventoryDeltas(nextLevel.inventoryDeltas, state.bank.improvementInventory);
+  const nextInventory =
+    inventoryDeltas === undefined
+      ? undefined
+      : applyInventoryDeltas(state.bank.improvementInventory, inventoryDeltas, -1);
+  if (nextInventory === undefined) {
     return reject(
       "ILLEGAL_ACTION",
       "IMPROVEMENT_INVENTORY_EXHAUSTED",
@@ -4372,7 +4430,7 @@ function resolveBuyImprovement(
   }
   const event = freezeEvent({
     type: "ImprovementBought",
-    eventVersion: 1,
+    eventVersion: IMPROVEMENT_EVENT_VERSION,
     actorSeatId,
     payload: {
       deedId,
@@ -4380,8 +4438,7 @@ function resolveBuyImprovement(
       fromLevel: currentLevel,
       toLevel: nextLevel.level,
       amount: cost,
-      inventoryKind: context.inventoryKind,
-      inventoryDelta,
+      inventoryDeltas,
     },
   } satisfies EngineEvent);
   return { ok: true, state: freezeState(applyEvent(state, event)), events: Object.freeze([event]) };
@@ -4482,25 +4539,14 @@ function resolveSellImprovement(
     return reject("INVALID_PAYLOAD", "RESALE_OVERFLOW", "The improvement resale amount overflows.");
   }
   const amount = Math.floor((cost * ratio.numerator) / ratio.denominator);
-  const inventory = state.bank.improvementInventory[context.inventoryKind];
-  const inventoryDelta = rules.configuration.unlimitedImprovementInventory
-    ? 0
-    : (previousLevel.inventoryDeltas[context.inventoryKind] ?? 0);
-  if (
-    (!rules.configuration.unlimitedImprovementInventory && inventory === undefined) ||
-    !Number.isSafeInteger(inventoryDelta)
-  ) {
-    return reject(
-      "ILLEGAL_ACTION",
-      "IMPROVEMENT_INVENTORY_INVALID",
-      "The returned improvement pieces cannot fit in bank inventory.",
-    );
-  }
-  const nextInventory = (inventory ?? 0) + inventoryDelta;
-  if (
-    !rules.configuration.unlimitedImprovementInventory &&
-    (!Number.isSafeInteger(nextInventory) || nextInventory < 0)
-  ) {
+  const inventoryDeltas = rules.configuration.unlimitedImprovementInventory
+    ? Object.fromEntries(Object.keys(state.bank.improvementInventory).map((kind) => [kind, 0]))
+    : completeInventoryDeltas(previousLevel.inventoryDeltas, state.bank.improvementInventory);
+  const nextInventory =
+    inventoryDeltas === undefined
+      ? undefined
+      : applyInventoryDeltas(state.bank.improvementInventory, inventoryDeltas, 1);
+  if (nextInventory === undefined) {
     return reject(
       "ILLEGAL_ACTION",
       "IMPROVEMENT_INVENTORY_INVALID",
@@ -4519,7 +4565,7 @@ function resolveSellImprovement(
   }
   const event = freezeEvent({
     type: "ImprovementSold",
-    eventVersion: 1,
+    eventVersion: IMPROVEMENT_EVENT_VERSION,
     actorSeatId,
     payload: {
       deedId,
@@ -4527,8 +4573,7 @@ function resolveSellImprovement(
       fromLevel: currentLevel,
       toLevel: currentLevel - 1,
       amount,
-      inventoryKind: context.inventoryKind,
-      inventoryDelta,
+      inventoryDeltas,
     },
   } satisfies EngineEvent);
   return { ok: true, state: freezeState(applyEvent(state, event)), events: Object.freeze([event]) };
@@ -4590,20 +4635,18 @@ function scarceDemandContext(
       "The deed has no valid improvement cost.",
     );
   }
-  const inventory = state.bank.improvementInventory[context.inventoryKind];
-  const inventoryDelta = nextLevel.inventoryDeltas[context.inventoryKind];
-  if (
-    inventoryDelta === undefined ||
-    !Number.isSafeInteger(inventoryDelta) ||
-    inventoryDelta <= 0
-  ) {
+  const inventoryDeltas = completeInventoryDeltas(
+    nextLevel.inventoryDeltas,
+    state.bank.improvementInventory,
+  );
+  if (inventoryDeltas === undefined || !hasPositiveInventoryDemand(inventoryDeltas)) {
     return reject(
       "INVALID_PAYLOAD",
       "INVALID_SCARCE_INVENTORY_DELTA",
       "A scarce improvement demand must consume a positive inventory quantity.",
     );
   }
-  if (inventory === undefined || inventory < inventoryDelta) {
+  if (applyInventoryDeltas(state.bank.improvementInventory, inventoryDeltas, -1) === undefined) {
     return reject(
       "ILLEGAL_ACTION",
       "IMPROVEMENT_INVENTORY_EXHAUSTED",
@@ -4622,8 +4665,7 @@ function scarceDemandContext(
     deedId,
     fromLevel: currentLevel,
     toLevel: nextLevel.level,
-    inventoryKind: context.inventoryKind,
-    inventoryDelta,
+    inventoryDeltas,
     baseCost,
   };
 }
@@ -4638,8 +4680,7 @@ function validateStoredDemand(
   if (
     current.fromLevel !== demand.fromLevel ||
     current.toLevel !== demand.toLevel ||
-    current.inventoryKind !== demand.inventoryKind ||
-    current.inventoryDelta !== demand.inventoryDelta ||
+    JSON.stringify(current.inventoryDeltas) !== JSON.stringify(demand.inventoryDeltas) ||
     current.baseCost !== demand.baseCost
   ) {
     return reject(
@@ -4687,8 +4728,13 @@ function validateImprovementAuction(
       "Only seats with a declared improvement demand may bid.",
     );
   }
-  const inventory = state.bank.improvementInventory[auction.demands[0]?.inventoryKind ?? ""];
-  if (inventory === undefined || inventory <= 0) {
+  if (
+    auction.demands.every(
+      (demand) =>
+        applyInventoryDeltas(state.bank.improvementInventory, demand.inventoryDeltas, -1) ===
+        undefined,
+    )
+  ) {
     return reject(
       "ILLEGAL_ACTION",
       "IMPROVEMENT_INVENTORY_EXHAUSTED",
@@ -4819,14 +4865,15 @@ function resolveImprovementAuction(
     }
     const winningBid = nextAuction.highBid;
     const amountPaid = winningBid + winnerDemand.baseCost;
-    const inventory = state.bank.improvementInventory[winnerDemand.inventoryKind];
-    const nextInventory =
-      inventory === undefined ? undefined : inventory - winnerDemand.inventoryDelta;
+    const nextInventory = applyInventoryDeltas(
+      state.bank.improvementInventory,
+      winnerDemand.inventoryDeltas,
+      -1,
+    );
     if (
       !Number.isSafeInteger(amountPaid) ||
-      !Number.isSafeInteger(nextInventory) ||
       nextInventory === undefined ||
-      nextInventory < 0
+      !Number.isSafeInteger(amountPaid)
     ) {
       return reject(
         "INVALID_PAYLOAD",
@@ -4835,20 +4882,21 @@ function resolveImprovementAuction(
       );
     }
     const remainingDemands = auction.demands.filter((candidate) => candidate !== winnerDemand);
-    const remainingInventoryDemand = remainingDemands.reduce(
-      (total, candidate) => total + candidate.inventoryDelta,
-      0,
-    );
     const remainingDemandSeatCount = new Set(remainingDemands.map((candidate) => candidate.seatId))
       .size;
     const continues =
-      nextInventory > 0 &&
       remainingDemandSeatCount >= 2 &&
-      remainingInventoryDemand > nextInventory;
+      Object.keys(nextInventory).some((kind) => {
+        const requested = remainingDemands.reduce(
+          (total, candidate) => total + Math.max(0, candidate.inventoryDeltas[kind] ?? 0),
+          0,
+        );
+        return requested > (nextInventory[kind] ?? 0);
+      });
     events.push(
       freezeEvent({
         type: "ScarceImprovementAwarded",
-        eventVersion: 1,
+        eventVersion: IMPROVEMENT_EVENT_VERSION,
         actorSeatId,
         payload: {
           auctionKind: "improvement",
@@ -4859,8 +4907,7 @@ function resolveImprovementAuction(
           winningBid,
           baseCost: winnerDemand.baseCost,
           amount: amountPaid,
-          inventoryKind: winnerDemand.inventoryKind,
-          inventoryDelta: winnerDemand.inventoryDelta,
+          inventoryDeltas: winnerDemand.inventoryDeltas,
           remainingDemands: continues ? remainingDemands : [],
         },
       }),
@@ -4933,8 +4980,9 @@ function resolveScarceImprovementRequest(
     );
   }
   const demands = [...existing, demand];
-  const inventory = state.bank.improvementInventory[demand.inventoryKind];
-  if (inventory === undefined || inventory <= 0) {
+  if (
+    applyInventoryDeltas(state.bank.improvementInventory, demand.inventoryDeltas, -1) === undefined
+  ) {
     return reject(
       "ILLEGAL_ACTION",
       "IMPROVEMENT_INVENTORY_EXHAUSTED",
@@ -4943,7 +4991,7 @@ function resolveScarceImprovementRequest(
   }
   const requestEvent = freezeEvent({
     type: "ScarceImprovementRequested",
-    eventVersion: 1,
+    eventVersion: IMPROVEMENT_EVENT_VERSION,
     actorSeatId,
     payload: { ...demand },
   } satisfies EngineEvent);
@@ -4951,7 +4999,13 @@ function resolveScarceImprovementRequest(
   const demandSeatCount = new Set(demands.map((candidate) => candidate.seatId)).size;
   if (
     demandSeatCount >= 2 &&
-    demands.reduce((total, candidate) => total + candidate.inventoryDelta, 0) > inventory
+    Object.keys(state.bank.improvementInventory).some((kind) => {
+      const requested = demands.reduce(
+        (total, candidate) => total + Math.max(0, candidate.inventoryDeltas[kind] ?? 0),
+        0,
+      );
+      return requested > (state.bank.improvementInventory[kind] ?? 0);
+    })
   ) {
     const prioritySeatId = demands.find((candidate) =>
       state.seats.some((seat) => seat.seatId === candidate.seatId && seat.status === "active"),
@@ -5217,8 +5271,11 @@ function resolveDeclareBankruptcy(
     const level = deed?.improvementLevels?.find(
       (item) => item.level === candidate.improvementLevel,
     );
-    const inventoryKind = Object.keys(rules.content.economy.improvementInventory)[0];
-    if (deed?.improvementCost === undefined || level === undefined || inventoryKind === undefined) {
+    const inventoryDeltas =
+      level === undefined
+        ? undefined
+        : completeInventoryDeltas(level.inventoryDeltas, working.bank.improvementInventory);
+    if (deed?.improvementCost === undefined || inventoryDeltas === undefined) {
       return reject(
         "INVALID_PAYLOAD",
         "INVALID_BANKRUPTCY_LIQUIDATION_DATA",
@@ -5228,7 +5285,7 @@ function resolveDeclareBankruptcy(
     const amount = Math.floor((deed.improvementCost * ratio.numerator) / ratio.denominator);
     const sold = freezeEvent({
       type: "ImprovementSold",
-      eventVersion: 1,
+      eventVersion: IMPROVEMENT_EVENT_VERSION,
       actorSeatId,
       payload: {
         deedId: candidate.deedId,
@@ -5236,8 +5293,7 @@ function resolveDeclareBankruptcy(
         fromLevel: candidate.improvementLevel,
         toLevel: candidate.improvementLevel - 1,
         amount,
-        inventoryKind,
-        inventoryDelta: level.inventoryDeltas[inventoryKind] ?? 0,
+        inventoryDeltas,
         reason: "BANKRUPTCY_LIQUIDATION",
       },
     } satisfies EngineEvent);
@@ -6118,6 +6174,7 @@ export function resolve(state: GameState, command: ActorScopedCommand, rules: Ru
 type ActionCandidate = {
   readonly command: Command;
   readonly constraints?: Readonly<Record<string, number | string | boolean>>;
+  readonly inventoryDeltas?: Readonly<Record<string, number>>;
 };
 
 const availabilityReasons: Readonly<Record<string, string>> = {
@@ -6172,18 +6229,37 @@ function deedCandidate(
     | "SellImprovement"
     | "RequestScarceImprovement",
   deedId: string,
+  inventoryDeltas?: Readonly<Record<string, number>>,
 ): ActionCandidate {
-  return { command: { type, deedId }, constraints: { deedId } } as ActionCandidate;
+  return {
+    command: { type, deedId },
+    constraints: { deedId },
+    ...(inventoryDeltas === undefined ? {} : { inventoryDeltas }),
+  } as ActionCandidate;
 }
 
-function managementCandidates(state: GameState): readonly ActionCandidate[] {
-  return state.deeds.flatMap((deed) => [
-    deedCandidate("MortgageDeed", deed.deedId),
-    deedCandidate("RedeemMortgage", deed.deedId),
-    deedCandidate("BuyImprovement", deed.deedId),
-    deedCandidate("SellImprovement", deed.deedId),
-    deedCandidate("RequestScarceImprovement", deed.deedId),
-  ]);
+function managementCandidates(state: GameState, rules: RuleSet): readonly ActionCandidate[] {
+  return state.deeds.flatMap((deedState) => {
+    const deed = rules.content.deeds.find((candidate) => candidate.deedId === deedState.deedId);
+    const inventory = state.bank.improvementInventory;
+    const complete = (deltas: Readonly<Record<string, number>> | undefined) =>
+      deltas === undefined ? undefined : completeInventoryDeltas(deltas, inventory);
+    const buyDeltas = complete(
+      deed?.improvementLevels?.find((level) => level.level === deedState.improvementLevel + 1)
+        ?.inventoryDeltas,
+    );
+    const sellDeltas = complete(
+      deed?.improvementLevels?.find((level) => level.level === deedState.improvementLevel)
+        ?.inventoryDeltas,
+    );
+    return [
+      deedCandidate("MortgageDeed", deedState.deedId),
+      deedCandidate("RedeemMortgage", deedState.deedId),
+      deedCandidate("BuyImprovement", deedState.deedId, buyDeltas),
+      deedCandidate("SellImprovement", deedState.deedId, sellDeltas),
+      deedCandidate("RequestScarceImprovement", deedState.deedId, buyDeltas),
+    ];
+  });
 }
 
 function tradeCandidate(state: GameState, actorSeatId: SeatId): ActionCandidate | undefined {
@@ -6336,7 +6412,7 @@ function actionCandidates(
     }
     case "TurnStart":
     case "ResolveMove": {
-      const candidates = [...managementCandidates(state)];
+      const candidates = [...managementCandidates(state, rules)];
       const trade =
         state.pendingTrade === undefined ? tradeCandidate(state, actorSeatId) : undefined;
       if (trade !== undefined) candidates.push(trade);
@@ -6387,6 +6463,9 @@ export function legalActions(
               ...(candidate.constraints === undefined
                 ? {}
                 : { constraints: candidate.constraints }),
+              ...(candidate.inventoryDeltas === undefined
+                ? {}
+                : { inventoryDeltas: candidate.inventoryDeltas }),
             },
           ]
         : [];

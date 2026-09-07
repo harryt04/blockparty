@@ -132,8 +132,9 @@ current runtime shape until CO-009 lands.
 Classic House/Hotel transitions must carry complete integer maps for inventory
 changes. A replay either applies the full cash, deed-level, House, and Hotel
 transition or rejects it; it may not infer a first inventory kind from map
-iteration order. The additive state/event version is introduced by CO-010 and
-CO-011 while archived placeholder fixtures remain readable.
+iteration order. CO-011 emits improvement events at version 2 and runs new
+states at schema 2.0.0; archived 1.0.0 fixtures remain readable for the
+non-improvement replay seam.
 
 ### ENG-031 — Placeholder-game retirement
 

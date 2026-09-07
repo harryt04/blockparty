@@ -108,9 +108,10 @@ capabilities in request bodies, URLs, storage, logs, or analytics. The current
 server exposes the historical placeholder-era shape; CO-009 is responsible for
 the strict human/computer and piece-availability migration.
 
-`ENG-030` reserves an additive event/state version for complete House/Hotel
-inventory maps. Existing events remain replayable through their registered
-reader; a transition cannot partially update one inventory kind.
+`ENG-030` uses event version 2 and state schema 2.0.0 for complete
+House/Hotel inventory maps. Improvement replay rejects partial maps, while
+older snapshots remain readable through the supported state-schema reader; a
+transition cannot partially update one inventory kind.
 
 `ENG-031` defines the safe-boundary retirement protocol: one committed
 `CONTENT_RETIRED` no-contest event, capability revocation, retained read-only

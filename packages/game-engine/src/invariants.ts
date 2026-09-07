@@ -36,7 +36,7 @@ export function checkInvariants(state: GameState, rules?: RuleSet): readonly Inv
   const safeNonNegative = (value: number): boolean => Number.isSafeInteger(value) && value >= 0;
   const unique = (values: readonly string[]): boolean => new Set(values).size === values.length;
 
-  if (state.stateSchemaVersion !== "1.0.0") {
+  if (state.stateSchemaVersion !== "1.0.0" && state.stateSchemaVersion !== "2.0.0") {
     add("UNSUPPORTED_STATE_SCHEMA", `Unsupported state schema: ${state.stateSchemaVersion}`);
   }
   if (state.contentVersion.length === 0)
@@ -307,9 +307,9 @@ function inventoryTotals(state: GameState, rules: RuleSet): Readonly<Record<stri
     const deed = rules.content.deeds.find((candidate) => candidate.deedId === deedState.deedId);
     for (const level of deed?.improvementLevels ?? []) {
       if (level.level <= deedState.improvementLevel) {
-        const kind = Object.keys(rules.content.economy.improvementInventory)[0];
-        if (kind !== undefined)
+        for (const kind of Object.keys(rules.content.economy.improvementInventory)) {
           totals[kind] = (totals[kind] ?? 0) + (level.inventoryDeltas[kind] ?? 0);
+        }
       }
     }
   }

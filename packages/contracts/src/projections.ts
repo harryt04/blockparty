@@ -129,6 +129,8 @@ export const LegalAction = z
     constraints: z
       .record(z.string().max(32), z.union([z.number(), z.string(), z.boolean()]))
       .optional(),
+    /** Complete signed inventory movement for an improvement transition. */
+    inventoryDeltas: z.record(z.string().max(64), z.int()).optional(),
   })
   .strict();
 export type LegalAction = z.infer<typeof LegalAction>;

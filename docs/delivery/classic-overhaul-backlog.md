@@ -381,7 +381,7 @@ accidental collapse in coverage.
       error in `prettier.config.cjs`. Atomic engine event/state migration remains
       assigned to CO-011.
 
-- [ ] **CO-011 — Version engine events, state, and projections for piece maps**
+- [x] **CO-011 — Version engine events, state, and projections for piece maps**
       Blocked by: CO-010
       Requirements: ENG-030, RULE-014
       Read: engine event application/resolution, contracts projections, persistence
@@ -394,6 +394,12 @@ accidental collapse in coverage.
       changes or none; replay reconstructs the same inventory and deed levels.
       Proves: reducer/replay tests for both transition directions, rejection of
       partial inventory, and projection schema round trips.
+      Evidence: engine/state versions moved to `0.2.0`/`2.0.0`; improvement
+      buy, sell, scarce-demand, auction settlement, bankruptcy liquidation,
+      replay, invariants, and legal-action detail now carry complete signed
+      per-kind maps. `packages/game-engine/test/improvements.test.ts` proves
+      both-kind replay and rejects a partial map; the test was mutation-checked
+      by temporarily allowing partial application and observing failure.
 
 ## Phase C — Build and prove the classic ruleset
 

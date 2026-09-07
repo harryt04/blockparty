@@ -205,4 +205,43 @@ describe("A7 improvements", () => {
     });
     expect(improve(state, "d-sawhorse-lane", "SellImprovement")).toMatchObject({ ok: true });
   });
+
+  it("replays complete multi-kind transitions atomically and rejects partial maps", () => {
+    const content: ContentBundle = {
+      ...PLACEHOLDER_BUNDLE,
+      deeds: PLACEHOLDER_BUNDLE.deeds.map((deed) =>
+        deed.deedId === "d-sawhorse-lane"
+          ? {
+              ...deed,
+              improvementLevels: deed.improvementLevels?.map((level) =>
+                level.level === 1 ? { ...level, inventoryDeltas: { stall: 1, stage: 1 } } : level,
+              ),
+            }
+          : deed,
+      ),
+    };
+    const rules: RuleSet = { content, configuration: STANDARD_CONFIGURATION };
+    const before = districtState();
+    const bought = resolve(
+      before,
+      { actorSeatId: "seat-a", command: { type: "BuyImprovement", deedId: "d-sawhorse-lane" } },
+      rules,
+    );
+    expect(bought).toMatchObject({ ok: true });
+    if (!bought.ok) throw new Error("expected multi-kind purchase");
+    const event = bought.events[0];
+    expect(event).toMatchObject({
+      type: "ImprovementBought",
+      eventVersion: 2,
+      payload: { inventoryDeltas: { stall: 1, stage: 1 } },
+    });
+    expect(replay(before, bought.events, rules)).toEqual(bought.state);
+    expect(bought.state.bank.improvementInventory).toMatchObject({ stall: 31, stage: 11 });
+
+    const partial = {
+      ...event,
+      payload: { ...event.payload, inventoryDeltas: { stall: 1 } },
+    };
+    expect(replay(before, [partial], rules)).toEqual(before);
+  });
 });
