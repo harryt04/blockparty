@@ -195,7 +195,7 @@ accidental collapse in coverage.
       blocked by the pre-existing `prettier.config.cjs` ESLint `module`
       no-undef error.
 
-- [ ] **CO-003 — Author the complete magical-city content specification**
+- [?] **CO-003 — Author the complete magical-city content specification**
       Blocked by: CO-002
       Requirements: CONTENT-012–016, RULE-013, RULE-014
       Read: `docs/product/game-content.md`, updated rules/glossary,
@@ -213,6 +213,12 @@ accidental collapse in coverage.
       Proves: independent row/count reconciliation and human product-owner review.
       Completion mark: `[?]` until the product owner approves the final names and
       prose; numerical completeness may be agent-verified.
+      Evidence: `docs/product/game-content.md` now defines the 40-space route,
+      28 deeds, eight group sizes, six draw spaces, two fees, both 16-card decks,
+      economy constants, finite improvement inventory, and six pieces. Route and
+      ID reconciliation passed; formatting, typecheck, build, and 292 tests
+      passed. Full CI remains blocked by the pre-existing ESLint
+      `prettier.config.cjs` `module` no-undef error.
 
 - [ ] **CO-004 — Replace the brand and licensing posture**
       Blocked by: CO-003
