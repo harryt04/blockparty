@@ -8,6 +8,11 @@ One deployable Next.js App Router application backed by MongoDB.
 > document register and normative precedence. `AGENTS.md` carries the
 > cross-cutting invariants.
 
+The code is licensed under [AGPL-3.0-or-later](LICENSE). Original game content
+and assets use [CC BY-SA 4.0](CONTENT-LICENSE.md); third-party notices and the
+trademark policy are recorded in [NOTICE.md](NOTICE.md) and
+[TRADEMARKS.md](TRADEMARKS.md).
+
 ## Status
 
 The playable lobby, authoritative game engine, bot turns, persistence,

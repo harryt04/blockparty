@@ -310,7 +310,7 @@ accidental collapse in coverage.
 
 ## Phase B — Establish FOSS and versioned contract foundations
 
-- [ ] **CO-008 — Add the FOSS distribution documents and package metadata**
+- [x] **CO-008 — Add the FOSS distribution documents and package metadata**
       Blocked by: CO-007
       Requirements: PRD-NFR-011, LEGAL-011
       Read: updated legal/brand docs, all package manifests
@@ -323,6 +323,16 @@ accidental collapse in coverage.
       matches it.
       Proves: license-file presence/consistency test and dependency-license audit
       recorded in `NOTICE.md`.
+      Evidence: added the complete root `LICENSE`, `CONTENT-LICENSE.md`,
+      `NOTICE.md`, `CONTRIBUTING.md`, and `TRADEMARKS.md`; added AGPL SPDX and
+      repository metadata to all five workspace manifests; registered the new
+      documents and updated PRD-NFR-011/LEGAL-011 traceability. The license
+      consistency suite has three passing tests and was mutation-checked by
+      deliberately changing one manifest license and observing the expected
+      failure. `pnpm run format:check`, `pnpm run typecheck`, `pnpm build`, and
+      `pnpm test` pass with 295 tests passed and 2 skipped. `pnpm run ci` is
+      blocked at the pre-existing `prettier.config.cjs` ESLint `module`
+      `no-undef` error; its format and typecheck stages pass.
 
 - [ ] **CO-009 — Version the create, rematch, invite, and piece contracts**
       Blocked by: CO-008

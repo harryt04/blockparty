@@ -2,6 +2,12 @@
   "name": "@blockparty/contracts",
   "version": "0.0.0",
   "private": true,
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/harryt04/blockparty.git"
+  },
+  "homepage": "https://github.com/harryt04/blockparty#readme",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

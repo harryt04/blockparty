@@ -2,6 +2,15 @@
   "name": "blockparty",
   "private": true,
   "version": "0.0.0",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/harryt04/blockparty.git"
+  },
+  "homepage": "https://github.com/harryt04/blockparty#readme",
+  "bugs": {
+    "url": "https://github.com/harryt04/blockparty/issues"
+  },
   "packageManager": "pnpm@10.17.0",
   "engines": {
     "node": ">=22.0.0 <23"

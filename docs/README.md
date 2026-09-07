@@ -59,6 +59,10 @@ When documents disagree, use this order and correct the lower-level document:
 | -------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | Repository            | [Agent instructions](../AGENTS.md)                                        | Current repository operating contract and cross-cutting invariants                                    |
 | Repository            | [README](../README.md)                                                    | Current contributor/operator orientation and implementation status                                     |
+| Repository            | [Content license](../CONTENT-LICENSE.md)                                  | CC BY-SA 4.0 scope, attribution, and exclusions                                                       |
+| Repository            | [Contributing](../CONTRIBUTING.md)                                        | Contribution, provenance, and review requirements                                                     |
+| Repository            | [Notices](../NOTICE.md)                                                    | Dependency-license audit and asset/font notice inventory                                               |
+| Repository            | [Trademarks](../TRADEMARKS.md)                                            | Blockparty mark policy and clearance gate                                                             |
 | Delivery              | [PWA implementation notes](../apps/web/public/PWA-TODO.md)               | Current PWA cache/install behavior and remaining artwork release note                                  |
 | Historical            | [gnhf prompt 2](gnhf-prompt2.md)                                          | Historical autonomous instruction variant; not the active queue authority                            |
 | Normative             | [Documentation index](README.md)                                          | Current register and precedence index for every repository Markdown document                         |
