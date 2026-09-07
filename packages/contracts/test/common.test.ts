@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CapturedVersions, createDisplayNameSchema, DisplayName, Money } from "../src/common";
+import { Command } from "../src/commands";
 
 describe("wire primitives", () => {
   it("accepts integer money and rejects floating-point money", () => {
@@ -34,5 +35,25 @@ describe("wire primitives", () => {
 
     expect(schema.parse("  Friendly   House ")).toBe("Friendly House");
     expect(schema.safeParse("reserved house").success).toBe(false);
+  });
+
+  it("accepts production-shaped trade IDs across the command boundary", () => {
+    const tradeId =
+      "trade:8e44406b-f54d-4cb4-b33d-f9065de8943d:269:" +
+      "b1a2c3d4-e5f6-4789-abcd-0123456789ab:" +
+      "c1a2c3d4-e5f6-4789-abcd-0123456789ab";
+
+    expect(Command.parse({ type: "CancelTrade", tradeId })).toEqual({
+      type: "CancelTrade",
+      tradeId,
+    });
+    expect(Command.parse({ type: "AcceptTrade", tradeId })).toEqual({
+      type: "AcceptTrade",
+      tradeId,
+    });
+    expect(Command.parse({ type: "RejectTrade", tradeId })).toEqual({
+      type: "RejectTrade",
+      tradeId,
+    });
   });
 });

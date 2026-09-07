@@ -343,3 +343,16 @@ after yielding to the event loop instead of leaving the next bot at `AwaitRoll`.
 `apps/web/test/bot-turn.test.ts` covers the bot-only boundary, and live standard
 game evidence crossed the former 64-action limit with continued bot events and
 no browser errors. This extends PRD-FUN-011 and ENG-026.
+
+Iteration 26 makes the documented root `npm run dev` command inherit `.env` and
+`.env.local` before launching Next.js. It prefers a healthy configured MongoDB
+replica set and otherwise provisions an isolated loopback-only development
+replica set without changing production or direct Next.js startup behavior;
+`tools/run-dev.test.ts` covers database selection and fallback. The web process
+still supports page-only boot with no database when launched directly.
+`tools/live-agent-smoke.ts` creates a bot game, starts it, submits
+projection-derived commands, observes `BotDecisionExplained`, and resolves a
+trade cycle without exposing capabilities. The command-boundary regression in
+`packages/contracts/test/common.test.ts` aligns production-sized trade IDs with
+the existing 128-character pending-trade projection. This extends OPS-003,
+PRD-FUN-011, ENG-015, ENG-025, ENG-026, and PROTO-002 evidence.

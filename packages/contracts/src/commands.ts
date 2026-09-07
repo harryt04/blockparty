@@ -14,7 +14,10 @@ import { RulesConfiguration } from "./variants";
 const DeedId = z.string().min(1).max(64);
 const ChoiceId = z.string().min(1).max(64);
 const CardId = z.string().min(1).max(64);
-const TradeId = z.string().min(1).max(64);
+// Pending trade projections already allow 128 characters. Production trade
+// IDs include UUID game and seat IDs, so command validation must accept the
+// same authoritative identifier. See ENG-025.
+const TradeId = z.string().min(1).max(128);
 
 // --- Lobby and host commands ----------------------------------------------
 

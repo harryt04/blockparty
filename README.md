@@ -10,9 +10,9 @@ One deployable Next.js App Router application backed by MongoDB.
 
 ## Status
 
-Scaffolding. Every page and API route exists as a stub that returns placeholder
-data. No game rules, persistence, capabilities, or realtime fan-out are
-implemented yet.
+The playable lobby, authoritative game engine, bot turns, persistence,
+capability cookies, and realtime sync path are implemented. A configured
+MongoDB replica set is required to create and play live games.
 
 ## Prerequisites
 
@@ -24,25 +24,30 @@ implemented yet.
 ```bash
 pnpm install
 cp .env.example .env.local
-pnpm dev
+npm run dev
 ```
 
-The app runs at http://localhost:3000. **No MongoDB is required to boot.**
-Leave `MONGODB_URI` empty and every page still renders; `/api/health/ready`
-reports `degraded` instead of failing.
+The app runs at http://localhost:3000. The root `.env` or `.env.local` is loaded
+before Next.js starts. When its `MONGODB_URI` is absent or unreachable,
+`npm run dev` starts an isolated, loopback-only development replica set through
+the installed `mongod`; its data and log live under the operating system's
+temporary directory. A healthy configured replica set still takes precedence.
+Production, builds, and direct `pnpm dev` execution never start local database
+infrastructure.
 
 ## Commands
 
-| Command          | Purpose                                          |
-| ---------------- | ------------------------------------------------ |
-| `pnpm dev`       | Development server                               |
-| `pnpm build`     | Production build                                 |
-| `pnpm start`     | Serve the production build                       |
-| `pnpm typecheck` | Type-check all four packages                     |
-| `pnpm lint`      | ESLint, including the dependency-direction rules |
-| `pnpm test`      | Vitest workspace with coverage                   |
-| `pnpm format`    | Prettier                                         |
-| `pnpm run ci`    | Full local and pull-request regression gate      |
+| Command               | Purpose                                           |
+| --------------------- | ------------------------------------------------- |
+| `pnpm dev`            | Development server                                |
+| `pnpm build`          | Production build                                  |
+| `pnpm start`          | Serve the production build                        |
+| `npm run agent:smoke` | Exercise create/start/bot/trade through live HTTP |
+| `pnpm typecheck`      | Type-check all four packages                      |
+| `pnpm lint`           | ESLint, including the dependency-direction rules  |
+| `pnpm test`           | Vitest workspace with coverage                    |
+| `pnpm format`         | Prettier                                          |
+| `pnpm run ci`         | Full local and pull-request regression gate       |
 
 ## Layout
 

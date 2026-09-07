@@ -11,6 +11,11 @@ import "server-only";
  */
 import { z } from "zod";
 
+const OptionalNonEmptyString = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.string().min(1).optional(),
+);
+
 const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
@@ -18,10 +23,10 @@ const EnvSchema = z.object({
 
   // Transactions require a replica set. A standalone URI cannot serve the
   // command path. See ENG-015.
-  MONGODB_URI: z.string().min(1).optional(),
+  MONGODB_URI: OptionalNonEmptyString,
   MONGODB_DB: z.string().min(1).default("blockparty"),
 
-  COOKIE_SECRET: z.string().min(32).optional(),
+  COOKIE_SECRET: OptionalNonEmptyString,
 
   /** Comma-separated first-party origin allowlist. Never "*". SEC-003. */
   ALLOWED_ORIGINS: z.string().default("http://localhost:3000"),
@@ -32,7 +37,7 @@ const EnvSchema = z.object({
   PWA_CACHE_VERSION: z.string().default("1"),
 
   /** Unset disables the internal cleanup route entirely. */
-  INTERNAL_CLEANUP_SECRET: z.string().min(16).optional(),
+  INTERNAL_CLEANUP_SECRET: OptionalNonEmptyString,
 
   RATE_LIMIT_CREATE_PER_MINUTE: z.coerce.number().int().min(1).default(10),
   RATE_LIMIT_JOIN_PER_MINUTE: z.coerce.number().int().min(1).default(30),
@@ -42,15 +47,19 @@ const EnvSchema = z.object({
   RATE_LIMIT_INTERNAL_PER_MINUTE: z.coerce.number().int().min(1).default(10),
 });
 
-const parsed = EnvSchema.safeParse(process.env);
+export function parseServerEnv(source: NodeJS.ProcessEnv = process.env) {
+  const parsed = EnvSchema.safeParse(source);
 
-if (!parsed.success) {
-  // Names only. A value could be a secret, so it never reaches a log.
-  const fields = Object.keys(parsed.error.flatten().fieldErrors).join(", ");
-  throw new Error(`Invalid server configuration for: ${fields}`);
+  if (!parsed.success) {
+    // Names only. A value could be a secret, so it never reaches a log.
+    const fields = Object.keys(parsed.error.flatten().fieldErrors).join(", ");
+    throw new Error(`Invalid server configuration for: ${fields}`);
+  }
+
+  return parsed.data;
 }
 
-export const env = parsed.data;
+export const env = parseServerEnv();
 
 export const allowedOrigins: readonly string[] = env.ALLOWED_ORIGINS.split(",")
   .map((origin) => origin.trim())
