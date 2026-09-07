@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createRequestFromForm } from "@/components/entry/create-form-model";
+import { CREATE_PIECES } from "@/components/entry/create-form-model";
 import { LOBBY_VARIANT_COPY } from "./lobby-model";
 
 function csrfToken(): string | undefined {
@@ -104,16 +105,34 @@ export function RematchForm({ gameId }: { gameId: string }) {
             <Label htmlFor="rematch-name">Game name (optional)</Label>
             <Input id="rematch-name" name="name" maxLength={48} className="mt-1" />
           </div>
+          <div>
+            <Label htmlFor="rematch-host-name">Host pseudonym</Label>
+            <Input id="rematch-host-name" name="hostName" maxLength={24} className="mt-1" />
+          </div>
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-sm font-medium">Host piece</legend>
+            <div className="flex flex-wrap gap-2">
+              {CREATE_PIECES.map((piece) => (
+                <label
+                  key={piece.token.pieceId}
+                  className="flex min-h-11 items-center gap-2 rounded-(--radius-md) border border-line px-3"
+                >
+                  <input type="radio" name="hostToken" value={piece.token.pieceId} />
+                  {piece.label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Label htmlFor="rematch-seat-count">Total seats</Label>
+              <Label htmlFor="rematch-human-count">Human players</Label>
               <Input
-                id="rematch-seat-count"
-                name="seatCount"
+                id="rematch-human-count"
+                name="humanSeatCount"
                 type="number"
-                min={2}
+                min={1}
                 max={6}
-                defaultValue={4}
+                defaultValue={2}
                 className="tabular mt-1"
               />
             </div>

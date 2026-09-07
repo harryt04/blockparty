@@ -30,8 +30,10 @@ afterEach(() => {
 
 const createRequest = (seatCount: 2 | 4, botSeatCount: number) => ({
   name: "Saturday on the Sidewalk",
-  seatCount,
+  humanSeatCount: seatCount - botSeatCount,
   botSeatCount,
+  hostName: "Host",
+  hostToken: { colorIndex: 1, pieceId: "piece-lantern" as const, pattern: "solid" as const },
   preset: "standard" as const,
   configuration: {
     schemaVersion: "1.0.0" as const,
@@ -126,6 +128,15 @@ describe("invite admission and seat claims", () => {
     const { created, game, capabilities, auditLog, joinStore } = await fixture();
     const openSeat = game.seats.find((seat) => seat.kind === "open")!;
     const now = new Date("2026-09-03T16:00:00.000Z");
+    expect(
+      (await getInviteStatus(joinStore, created.lobby.invitePath!.slice("/join/".length)))
+        .availablePieces,
+    ).toEqual([
+      openSeat.token,
+      ...game.seats
+        .filter((seat) => seat.kind === "open" && seat.seatId !== openSeat.seatId)
+        .map((seat) => seat.token),
+    ]);
 
     const joined = await claimSeatInTransaction(
       joinStore,

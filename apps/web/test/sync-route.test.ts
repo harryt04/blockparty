@@ -32,8 +32,10 @@ async function fixture(eventSequences: readonly number[] = [1, 2]) {
     } as never,
     {} as never,
     CreateGameRequest.parse({
-      seatCount: 2,
+      humanSeatCount: 2,
       botSeatCount: 0,
+      hostName: "Host",
+      hostToken: { colorIndex: 1, pieceId: "piece-lantern", pattern: "solid" },
       preset: "standard",
       configuration: STANDARD_CONFIGURATION,
       acknowledged13Plus: true,

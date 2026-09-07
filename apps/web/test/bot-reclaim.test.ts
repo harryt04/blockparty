@@ -21,8 +21,10 @@ import {
 import type { ClientSession, Filter, UpdateFilter } from "mongodb";
 
 const request = CreateGameRequest.parse({
-  seatCount: 2,
+  humanSeatCount: 1,
   botSeatCount: 1,
+  hostName: "Host",
+  hostToken: { colorIndex: 1, pieceId: "piece-lantern", pattern: "solid" },
   preset: "standard",
   configuration: {
     schemaVersion: "1.0.0",

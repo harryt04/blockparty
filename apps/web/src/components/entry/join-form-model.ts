@@ -1,12 +1,12 @@
 import { DisplayName, JoinGameRequest, type SeatToken } from "@blockparty/contracts";
 
 export const JOIN_TOKENS = [
-  { token: { colorIndex: 1, shape: "barricade", pattern: "solid" }, label: "Barricade" },
-  { token: { colorIndex: 2, shape: "cooler", pattern: "stripe" }, label: "Cooler" },
-  { token: { colorIndex: 3, shape: "boombox", pattern: "dot" }, label: "Boombox" },
-  { token: { colorIndex: 4, shape: "hydrant", pattern: "cross" }, label: "Hydrant" },
-  { token: { colorIndex: 5, shape: "flyer", pattern: "chevron" }, label: "Flyer" },
-  { token: { colorIndex: 6, shape: "stoop", pattern: "grid" }, label: "Stoop" },
+  { token: { colorIndex: 1, pieceId: "piece-lantern", pattern: "solid" }, label: "Lantern" },
+  { token: { colorIndex: 2, pieceId: "piece-key", pattern: "stripe" }, label: "Key" },
+  { token: { colorIndex: 3, pieceId: "piece-crescent", pattern: "dot" }, label: "Crescent" },
+  { token: { colorIndex: 4, pieceId: "piece-tower", pattern: "cross" }, label: "Tower" },
+  { token: { colorIndex: 5, pieceId: "piece-fox", pattern: "chevron" }, label: "Fox" },
+  { token: { colorIndex: 6, pieceId: "piece-teapot", pattern: "grid" }, label: "Teapot" },
 ] satisfies readonly { token: SeatToken; label: string }[];
 
 export type JoinField = "name" | "token" | "acknowledged13Plus";
@@ -28,7 +28,7 @@ function fieldError(field: JoinField, fallback: string): string {
  */
 export function joinRequestFromForm(form: FormData): JoinFormResult {
   const nameResult = DisplayName.safeParse(String(form.get("name") ?? ""));
-  const token = JOIN_TOKENS.find((candidate) => candidate.token.shape === form.get("token"));
+  const token = JOIN_TOKENS.find((candidate) => candidate.token.pieceId === form.get("token"));
   const acknowledged13Plus = form.get("acknowledged13Plus") === "on";
   const errors: Partial<Record<JoinField, string>> = {};
 

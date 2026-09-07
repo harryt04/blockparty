@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createRequestFromForm, type CreateField } from "./create-form-model";
+import { CREATE_PIECES, createRequestFromForm, type CreateField } from "./create-form-model";
 
 const VARIANT_COPY: Record<(typeof VARIANT_KEYS)[number], { label: string; warning: string }> = {
   restSpaceJackpot: {
@@ -143,7 +143,9 @@ export function CreateGameForm() {
     }
     setErrors({});
     track("game_create_started", {
-      player_count_bucket: playerCountBucket(result.request.seatCount),
+      player_count_bucket: playerCountBucket(
+        result.request.humanSeatCount + result.request.botSeatCount,
+      ),
     });
     track("rule_configuration_saved", {
       preset: result.request.configuration.preset,
@@ -198,8 +200,7 @@ export function CreateGameForm() {
         <CardHeader>
           <CardTitle>Seats</CardTitle>
           <CardDescription>
-            Two to six seats. Fill any seat you do not need with a bot. At least one seat stays open
-            for a person.
+            Two to six seats. Human players include you; computer players fill the remaining seats.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -214,20 +215,47 @@ export function CreateGameForm() {
             />
             <FieldError field="name" errors={errors} />
           </div>
+          <div>
+            <Label htmlFor="host-name">Your pseudonym</Label>
+            <Input
+              id="host-name"
+              name="hostName"
+              maxLength={24}
+              autoComplete="off"
+              className="mt-1"
+              {...fieldProps("hostName", errors)}
+            />
+            <FieldError field="hostName" errors={errors} />
+          </div>
+          <fieldset className="flex flex-col gap-2" {...fieldProps("hostToken", errors)}>
+            <legend className="text-sm font-medium">Your piece</legend>
+            <div className="flex flex-wrap gap-2">
+              {CREATE_PIECES.map((piece) => (
+                <label
+                  key={piece.token.pieceId}
+                  className="flex min-h-11 items-center gap-2 rounded-(--radius-md) border border-line px-3"
+                >
+                  <input type="radio" name="hostToken" value={piece.token.pieceId} />
+                  {piece.label}
+                </label>
+              ))}
+            </div>
+            <FieldError field="hostToken" errors={errors} />
+          </fieldset>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Label htmlFor="seat-count">Total seats</Label>
+              <Label htmlFor="human-seats">Human players</Label>
               <Input
-                id="seat-count"
-                name="seatCount"
+                id="human-seats"
+                name="humanSeatCount"
                 type="number"
-                min={2}
+                min={1}
                 max={6}
-                defaultValue={4}
+                defaultValue={2}
                 className="tabular mt-1"
-                {...fieldProps("seatCount", errors)}
+                {...fieldProps("humanSeatCount", errors)}
               />
-              <FieldError field="seatCount" errors={errors} />
+              <FieldError field="humanSeatCount" errors={errors} />
             </div>
             <div>
               <Label htmlFor="bot-seats">Bot seats</Label>

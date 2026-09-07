@@ -30,17 +30,25 @@ export const CreateGameRequest = z
   .object({
     /** Optional, length-limited room name. Never a personal name. */
     name: z.string().trim().max(48).optional(),
-    seatCount: SeatCount,
+    /** Human count includes the host. */
+    humanSeatCount: z.int().min(1).max(6),
     /** Seats filled by the single MVP bot difficulty. */
     botSeatCount: z.int().min(0).max(5),
+    /** Required host identity and selected piece. */
+    hostName: DisplayName,
+    hostToken: SeatToken,
     preset: RulesPreset,
     configuration: RulesConfiguration,
     /** The 13+ notice must be acknowledged before creation. See SEC-005. */
     acknowledged13Plus: z.literal(true),
   })
   .strict()
-  .refine((value) => value.botSeatCount < value.seatCount, {
-    message: "At least one seat must stay open for a human",
+  .refine((value) => value.humanSeatCount + value.botSeatCount >= 2, {
+    message: "Choose at least two seats",
+    path: ["humanSeatCount"],
+  })
+  .refine((value) => value.humanSeatCount + value.botSeatCount <= 6, {
+    message: "Choose no more than six seats",
     path: ["botSeatCount"],
   })
   .refine((value) => value.preset === value.configuration.preset, {
@@ -73,6 +81,7 @@ export const InviteStatusResponse = z
     gameName: z.string().max(48).optional(),
     openSeatCount: z.int().min(0).max(6).optional(),
     seatCount: SeatCount.optional(),
+    availablePieces: z.array(SeatToken).max(6).optional(),
     configuration: RulesConfiguration.optional(),
   })
   .strict();

@@ -81,8 +81,10 @@ describe("invite Route Handlers", () => {
     } as unknown as CreationStore;
     const created = await createGameInTransaction(creationStore, {} as ClientSession, {
       name: "Saturday on the Sidewalk",
-      seatCount: 2,
+      humanSeatCount: 2,
       botSeatCount: 0,
+      hostName: "Host",
+      hostToken: { colorIndex: 1, pieceId: "piece-lantern", pattern: "solid" },
       preset: "standard",
       configuration: {
         schemaVersion: "1.0.0",

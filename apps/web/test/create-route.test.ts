@@ -12,8 +12,10 @@ import type { ClientSession } from "mongodb";
 import { COOKIE_NAMES, hashCapability } from "../src/server/auth/capabilities";
 
 const validBody = {
-  seatCount: 2,
+  humanSeatCount: 1,
   botSeatCount: 1,
+  hostName: "Host",
+  hostToken: { colorIndex: 1, pieceId: "piece-lantern", pattern: "solid" },
   preset: "standard",
   configuration: {
     schemaVersion: "1.0.0",

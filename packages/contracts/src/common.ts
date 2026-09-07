@@ -17,6 +17,17 @@ export type GameId = z.infer<typeof GameId>;
 export const SeatId = z.string().min(1).max(64);
 export type SeatId = z.infer<typeof SeatId>;
 
+/** Stable selectable piece IDs from the classic content bundle. */
+export const PieceId = z.enum([
+  "piece-lantern",
+  "piece-key",
+  "piece-crescent",
+  "piece-tower",
+  "piece-fox",
+  "piece-teapot",
+]);
+export type PieceId = z.infer<typeof PieceId>;
+
 export const CommandId = Uuid;
 export type CommandId = z.infer<typeof CommandId>;
 

@@ -59,8 +59,10 @@ function store(): {
 
 const request = CreateGameRequest.parse({
   name: "Saturday on the Sidewalk",
-  seatCount: 4,
+  humanSeatCount: 3,
   botSeatCount: 1,
+  hostName: "Host",
+  hostToken: { colorIndex: 1, pieceId: "piece-lantern", pattern: "solid" },
   preset: "standard",
   configuration: {
     schemaVersion: "1.0.0",
@@ -106,6 +108,8 @@ describe("game creation and capability issuance", () => {
       invitePath: expect.stringMatching(/^\/join\/[A-Za-z0-9_-]{32}$/),
       canStart: false,
     });
+    expect(game.seats[0]).toMatchObject({ name: "Host", token: request.hostToken });
+    expect(new Set(game.seats.map((seat) => seat.token.pieceId)).size).toBe(4);
     expect(LobbyProjection.safeParse(created.lobby).success).toBe(true);
     expect(game.contentHash).toMatch(/^[0-9a-f]{64}$/);
     expect(game.lobby).not.toHaveProperty("secretSeed");

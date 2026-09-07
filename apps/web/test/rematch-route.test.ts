@@ -25,8 +25,10 @@ import { POST } from "../src/app/api/games/[gameId]/rematch/route";
 const GAME_ID = "00000000-0000-4000-8000-000000000043";
 
 const requestBody = {
-  seatCount: 3,
+  humanSeatCount: 2,
   botSeatCount: 1,
+  hostName: "Rematch host",
+  hostToken: { colorIndex: 1, pieceId: "piece-lantern", pattern: "solid" },
   preset: "short-game",
   configuration: {
     schemaVersion: "1.0.0",
@@ -92,7 +94,7 @@ describe("POST /api/games/[gameId]/rematch", () => {
     expect(mocks.createGameInTransaction).toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
-      expect.objectContaining({ seatCount: 3, botSeatCount: 1, preset: "short-game" }),
+      expect.objectContaining({ humanSeatCount: 2, botSeatCount: 1, preset: "short-game" }),
       expect.any(Date),
       { production: false },
     );

@@ -1,13 +1,31 @@
 // Pure request mapping is kept separate from the client component for testing.
 import {
   CreateGameRequest,
+  DisplayName,
+  type SeatToken,
   SHORT_GAME_CONFIGURATION,
   STANDARD_CONFIGURATION,
   VARIANT_KEYS,
   type RulesConfiguration,
 } from "@blockparty/contracts";
 
-export type CreateField = "name" | "seatCount" | "botSeatCount" | "preset" | "acknowledged13Plus";
+export const CREATE_PIECES = [
+  { token: { colorIndex: 1, pieceId: "piece-lantern", pattern: "solid" }, label: "Lantern" },
+  { token: { colorIndex: 2, pieceId: "piece-key", pattern: "stripe" }, label: "Key" },
+  { token: { colorIndex: 3, pieceId: "piece-crescent", pattern: "dot" }, label: "Crescent" },
+  { token: { colorIndex: 4, pieceId: "piece-tower", pattern: "cross" }, label: "Tower" },
+  { token: { colorIndex: 5, pieceId: "piece-fox", pattern: "chevron" }, label: "Fox" },
+  { token: { colorIndex: 6, pieceId: "piece-teapot", pattern: "grid" }, label: "Teapot" },
+] satisfies readonly { token: SeatToken; label: string }[];
+
+export type CreateField =
+  | "name"
+  | "hostName"
+  | "hostToken"
+  | "humanSeatCount"
+  | "botSeatCount"
+  | "preset"
+  | "acknowledged13Plus";
 
 export type CreateFormResult =
   | { readonly ok: true; readonly request: CreateGameRequest }
@@ -51,20 +69,33 @@ function selectedConfiguration(form: FormData): RulesConfiguration | undefined {
 /** Convert the accessible HTML form into the strict API request shape. */
 export function createRequestFromForm(form: FormData): CreateFormResult {
   const name = textValue(form, "name").trim();
-  const seatCount = integerValue(form, "seatCount");
+  const hostName = DisplayName.safeParse(textValue(form, "hostName"));
+  const hostToken = CREATE_PIECES.find(
+    (candidate) => candidate.token.pieceId === form.get("hostToken"),
+  );
+  const humanSeatCount = integerValue(form, "humanSeatCount");
   const botSeatCount = integerValue(form, "botSeatCount");
   const preset = textValue(form, "preset");
   const configuration = selectedConfiguration(form);
   const errors: Partial<Record<CreateField, string>> = {};
 
   if (name.length > 48) errors.name = "Keep the game name to 48 characters or fewer.";
-  if (seatCount === undefined || seatCount < 2 || seatCount > 6) {
-    errors.seatCount = "Choose between 2 and 6 total seats.";
+  if (!hostName.success) {
+    errors.hostName = "Choose a pseudonym with 1–24 characters for this game.";
+  }
+  if (hostToken === undefined) {
+    errors.hostToken = "Choose a piece for your seat.";
+  }
+  if (humanSeatCount === undefined || humanSeatCount < 1 || humanSeatCount > 6) {
+    errors.humanSeatCount = "Choose between 1 and 6 human players.";
   }
   if (botSeatCount === undefined || botSeatCount < 0 || botSeatCount > 5) {
     errors.botSeatCount = "Choose between 0 and 5 bot seats.";
-  } else if (seatCount !== undefined && botSeatCount >= seatCount) {
-    errors.botSeatCount = "Leave at least one seat open for a person.";
+  } else if (
+    humanSeatCount !== undefined &&
+    (humanSeatCount + botSeatCount < 2 || humanSeatCount + botSeatCount > 6)
+  ) {
+    errors.botSeatCount = "Choose between 2 and 6 total players.";
   }
   if (preset !== "standard" && preset !== "short-game") {
     errors.preset = "Choose a rules preset.";
@@ -76,14 +107,22 @@ export function createRequestFromForm(form: FormData): CreateFormResult {
     errors.acknowledged13Plus = "Confirm that all players are aged 13 or over.";
   }
 
-  if (Object.keys(errors).length > 0 || seatCount === undefined || botSeatCount === undefined) {
+  if (
+    Object.keys(errors).length > 0 ||
+    humanSeatCount === undefined ||
+    botSeatCount === undefined ||
+    !hostName.success ||
+    hostToken === undefined
+  ) {
     return { ok: false, errors };
   }
 
   const parsed = CreateGameRequest.safeParse({
     ...(name.length > 0 ? { name } : {}),
-    seatCount,
+    humanSeatCount,
     botSeatCount,
+    hostName: hostName.data,
+    hostToken: hostToken.token,
     preset: configuration?.preset,
     configuration,
     acknowledged13Plus: true,

@@ -159,15 +159,28 @@ export interface CreatedGame {
   readonly capabilities: IssuedCreationCapabilities;
 }
 
-const SEAT_SHAPES = ["barricade", "cooler", "boombox", "hydrant", "flyer", "stoop"] as const;
+const SEAT_PIECES = [
+  "piece-lantern",
+  "piece-key",
+  "piece-crescent",
+  "piece-tower",
+  "piece-fox",
+  "piece-teapot",
+] as const;
 const SEAT_PATTERNS = ["solid", "stripe", "dot", "cross", "chevron", "grid"] as const;
 
 function seatToken(index: number): SeatToken {
   return {
     colorIndex: index + 1,
-    shape: SEAT_SHAPES[index]!,
+    pieceId: SEAT_PIECES[index]!,
     pattern: SEAT_PATTERNS[index]!,
   };
+}
+
+function selectedHostToken(request: CreateGameRequest): SeatToken {
+  const selected = SEAT_PIECES.findIndex((pieceId) => pieceId === request.hostToken.pieceId);
+  if (selected < 0) throw new Error("HOST_PIECE_UNSUPPORTED");
+  return seatToken(selected);
 }
 
 function createVersions(bundle: {
@@ -187,14 +200,19 @@ function createVersions(bundle: {
 function buildSeats(request: CreateGameRequest): { seats: GameSeatRecord[]; hostSeatId: SeatId } {
   const seats: GameSeatRecord[] = [];
   let hostSeatId: SeatId | undefined;
+  const hostToken = selectedHostToken(request);
+  const remainingTokens = SEAT_PIECES.map((_, index) => seatToken(index)).filter(
+    (token) => token.pieceId !== hostToken.pieceId,
+  );
+  const seatCount = request.humanSeatCount + request.botSeatCount;
 
-  for (let index = 0; index < request.seatCount; index += 1) {
+  for (let index = 0; index < seatCount; index += 1) {
     const seatId = randomUUID();
-    const token = seatToken(index);
+    const token = index === 0 ? hostToken : remainingTokens[index - 1]!;
     if (index === 0) {
       hostSeatId = seatId;
-      seats.push({ seatId, kind: "human", status: "active", name: "Host", token });
-    } else if (index <= request.botSeatCount) {
+      seats.push({ seatId, kind: "human", status: "active", name: request.hostName, token });
+    } else if (index < request.botSeatCount + 1) {
       seats.push({ seatId, kind: "bot", status: "active", name: `Bot ${index}`, token });
     } else {
       seats.push({ seatId, kind: "open", status: "active", token });
@@ -218,7 +236,7 @@ function projectLobby(
     gameId,
     status: "LOBBY",
     ...(request.name === undefined || request.name.length === 0 ? {} : { name: request.name }),
-    seatCount: request.seatCount,
+    seatCount: seats.length,
     seats: seats.map((seat) => ({
       seatId: seat.seatId,
       ...(seat.name === undefined ? {} : { name: seat.name }),
@@ -323,7 +341,7 @@ export async function createGameInTransaction(
     _id: gameId,
     status: "LOBBY",
     ...(request.name === undefined || request.name.length === 0 ? {} : { name: request.name }),
-    seatCount: request.seatCount,
+    seatCount: seats.length,
     seats,
     hostSeatId,
     configuration: request.configuration,

@@ -19,6 +19,7 @@ import {
   Money,
   NonNegativeMoney,
   Phase,
+  PieceId,
   SeatId,
   SeatKind,
   SeatStatus,
@@ -32,10 +33,10 @@ import { RulesConfiguration } from "./variants";
 /** Non-color-carrying identity for a seat. See DS-020 and DS-041. */
 export const SeatToken = z
   .object({
-    /** Stable index 1-6, mapped to a `player-N` color role by the UI. */
+    /** Stable index 1-6, mapped to a player color role by the UI. */
     colorIndex: z.int().min(1).max(6),
-    /** Distinct silhouette key. Color is never the only cue. */
-    shape: z.enum(["barricade", "cooler", "boombox", "hydrant", "flyer", "stoop"]),
+    /** Stable content piece identity. Color is never the only cue. */
+    pieceId: PieceId,
     /** Pattern key, for grayscale and forced-colors modes. */
     pattern: z.enum(["solid", "stripe", "dot", "cross", "chevron", "grid"]),
   })

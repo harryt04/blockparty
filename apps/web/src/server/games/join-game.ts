@@ -66,7 +66,7 @@ export interface JoinedGame {
 function sameToken(left: SeatToken, right: SeatToken): boolean {
   return (
     left.colorIndex === right.colorIndex &&
-    left.shape === right.shape &&
+    left.pieceId === right.pieceId &&
     left.pattern === right.pattern
   );
 }
@@ -167,6 +167,7 @@ export async function getInviteStatus(
     ...(game.name === undefined ? {} : { gameName: game.name }),
     openSeatCount,
     seatCount: game.seatCount,
+    availablePieces: game.seats.filter((seat) => seat.kind === "open").map((seat) => seat.token),
     configuration: game.configuration,
   };
 }

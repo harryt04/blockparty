@@ -4,7 +4,7 @@ import { joinRequestFromForm, JOIN_TOKENS } from "../src/components/entry/join-f
 function form(overrides: Record<string, string> = {}) {
   const value = new FormData();
   value.set("name", "  Ada   Lovelace  ");
-  value.set("token", JOIN_TOKENS[0]!.token.shape);
+  value.set("token", JOIN_TOKENS[0]!.token.pieceId);
   value.set("acknowledged13Plus", "on");
   for (const [key, entry] of Object.entries(overrides)) value.set(key, entry);
   return value;

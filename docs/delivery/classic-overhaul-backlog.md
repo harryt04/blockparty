@@ -334,7 +334,7 @@ accidental collapse in coverage.
       blocked at the pre-existing `prettier.config.cjs` ESLint `module`
       `no-undef` error; its format and typecheck stages pass.
 
-- [ ] **CO-009 — Version the create, rematch, invite, and piece contracts**
+- [x] **CO-009 — Version the create, rematch, invite, and piece contracts**
       Blocked by: CO-008
       Requirements: ENG-029, PRD-FUN-021, UX-041, UX-042, CONTENT-016
       Read: contracts API/projection schemas, create/join/rematch handlers, updated
@@ -349,6 +349,13 @@ accidental collapse in coverage.
       in secure cookies, and malformed/unknown fields are rejected.
       Proves: strict schema tables, route tests, simultaneous piece-claim test, and
       analytics payload review for capability/name leakage.
+      Evidence: CreateGameRequest and JoinGameRequest now use host-inclusive
+      humanSeatCount/botSeatCount fields, required hostName/hostToken, and strict
+      PieceId values; persisted total seats are derived server-side and invite
+      status returns only open piece records. Create, join, rematch, and focused
+      contract suites pass (300 tests pass, 2 skipped); the six-seat boundary test
+      was mutation-checked. Concurrent browser and accessibility evidence remains
+      assigned to CO-019–022.
 
 - [ ] **CO-010 — Introduce multi-kind improvement content contracts**
       Blocked by: CO-009

@@ -45,7 +45,7 @@ const snapshot = (overrides: Partial<GameSnapshotProjection> = {}): GameSnapshot
       name: "North Star",
       kind: "human",
       status: "active",
-      token: { colorIndex: 1, shape: "barricade", pattern: "solid" },
+      token: { colorIndex: 1, pieceId: "piece-lantern", pattern: "solid" },
       position: 1,
       balance: 150000,
       detained: false,

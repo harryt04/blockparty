@@ -93,8 +93,10 @@ async function restoredFixture(completed = false): Promise<{
     {} as ClientSession,
     {
       name: "Restore fixture",
-      seatCount: 2,
+      humanSeatCount: 1,
       botSeatCount: 1,
+      hostName: "Host",
+      hostToken: { colorIndex: 1, pieceId: "piece-lantern", pattern: "solid" },
       preset: "standard",
       configuration: STANDARD_CONFIGURATION,
       acknowledged13Plus: true,

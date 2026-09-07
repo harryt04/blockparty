@@ -55,7 +55,15 @@ function Unavailable() {
   );
 }
 
-function JoinForm({ inviteId, gameName }: { inviteId: string; gameName?: string }) {
+function JoinForm({
+  inviteId,
+  gameName,
+  availablePieces,
+}: {
+  inviteId: string;
+  gameName?: string;
+  availablePieces: InviteStatusResponse["availablePieces"];
+}) {
   const router = useRouter();
   const { track } = useAnalytics();
   const [hydrated, setHydrated] = useState(false);
@@ -167,12 +175,14 @@ function JoinForm({ inviteId, gameName }: { inviteId: string; gameName?: string 
               A token already claimed by someone else cannot be used.
             </p>
             <div className="flex flex-wrap gap-2">
-              {JOIN_TOKENS.map((token) => (
+              {JOIN_TOKENS.filter((candidate) =>
+                availablePieces?.some((piece) => piece.pieceId === candidate.token.pieceId),
+              ).map((token) => (
                 <label
-                  key={token.token.shape}
+                  key={token.token.pieceId}
                   className="flex min-h-11 items-center gap-2 rounded-(--radius-md) border border-line px-3"
                 >
-                  <input type="radio" name="token" value={token.token.shape} />
+                  <input type="radio" name="token" value={token.token.pieceId} />
                   {token.label}
                 </label>
               ))}
@@ -277,5 +287,11 @@ export function JoinGate({ inviteId }: { inviteId: string }) {
       </Alert>
     );
   }
-  return <JoinForm inviteId={inviteId} gameName={state.invite.gameName} />;
+  return (
+    <JoinForm
+      inviteId={inviteId}
+      gameName={state.invite.gameName}
+      availablePieces={state.invite.availablePieces}
+    />
+  );
 }

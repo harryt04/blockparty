@@ -8,7 +8,9 @@ import {
 function validForm(overrides: Record<string, string> = {}): FormData {
   const form = new FormData();
   form.set("name", "  Friday night  ");
-  form.set("seatCount", "4");
+  form.set("hostName", "Host");
+  form.set("hostToken", "piece-lantern");
+  form.set("humanSeatCount", "3");
   form.set("botSeatCount", "1");
   form.set("preset", "standard");
   form.set("acknowledged13Plus", "on");
@@ -24,8 +26,10 @@ describe("create form request mapping", () => {
       ok: true,
       request: {
         name: "Friday night",
-        seatCount: 4,
+        humanSeatCount: 3,
         botSeatCount: 1,
+        hostName: "Host",
+        hostToken: { colorIndex: 1, pieceId: "piece-lantern", pattern: "solid" },
         preset: "standard",
         configuration: {
           schemaVersion: "1.0.0",
@@ -71,8 +75,8 @@ describe("create form request mapping", () => {
     }
   });
 
-  it("reports seat, bot, and age-boundary errors before making a request", () => {
-    const result = createRequestFromForm(validForm({ seatCount: "1", botSeatCount: "2" }));
+  it("reports player, bot, and age-boundary errors before making a request", () => {
+    const result = createRequestFromForm(validForm({ humanSeatCount: "1", botSeatCount: "0" }));
     const missingAge = validForm();
     missingAge.delete("acknowledged13Plus");
     const missingAgeResult = createRequestFromForm(missingAge);
@@ -80,8 +84,7 @@ describe("create form request mapping", () => {
     expect(result).toEqual({
       ok: false,
       errors: {
-        seatCount: "Choose between 2 and 6 total seats.",
-        botSeatCount: "Leave at least one seat open for a person.",
+        botSeatCount: "Choose between 2 and 6 total players.",
       },
     });
     expect(missingAgeResult).toEqual({

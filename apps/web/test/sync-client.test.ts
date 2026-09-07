@@ -30,7 +30,7 @@ function snapshot(sequence: number, aggregateVersion = sequence): GameSnapshotPr
         name: "Host",
         kind: "human",
         status: "active",
-        token: { colorIndex: 1, shape: "barricade", pattern: "solid" },
+        token: { colorIndex: 1, pieceId: "piece-lantern", pattern: "solid" },
         isHost: true,
         connected: true,
         isSelf: true,

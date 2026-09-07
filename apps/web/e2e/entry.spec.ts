@@ -25,6 +25,7 @@ test.describe("entry actions remain reachable with first-visit notices", () => {
           status: "OPEN",
           openSeatCount: 1,
           seatCount: 2,
+          availablePieces: [{ colorIndex: 2, pieceId: "piece-key", pattern: "stripe" }],
           configuration: {
             schemaVersion: "1.0.0",
             preset: "standard",
