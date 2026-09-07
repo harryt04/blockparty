@@ -159,7 +159,10 @@ Record these during steps 5, 7, 8, and 9. This list is a starting point from ord
 
 1. **Crowded phrase.** Searchability scored 2 for a reason. Budget more time for steps 5 through 9 than a coined name would need, and capture dated evidence for each.
 2. **Do not begin brand production that is expensive to unwind.** Logo exploration is fine. Printed material, merchandise, and paid placement are not.
-3. **The name pulls toward a square grid.** “Block” invites a city-block board. That is the exact trade-dress hazard in [IP safety](../legal/ip-safety.md). The board must stay an irregular street route.
+3. **The name must not dictate the content voice.** “Block” is the product mark,
+   while the accepted board and rules baseline is presented through the original
+   magical-city content contract. Keep the name, world, and asset provenance
+   reviewable independently.
 
 ## Public naming rules
 

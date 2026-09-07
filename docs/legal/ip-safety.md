@@ -2,7 +2,7 @@
 
 > **Not legal advice.** This is an operational guide for the project, not a legal opinion. Intellectual-property rules, registrations, and risk vary by jurisdiction and facts. Retain qualified counsel for clearance, contributor agreements, release approval, disputes, and any public legal claims.
 
-Related documents: [Brand Strategy](../brand/brand-strategy.md) and [Naming](../brand/naming.md). The project’s intentional approach is **same broad mechanics, original expression**—not a synonym, pun, remake, or unofficial adaptation.
+Related documents: [Brand Strategy](../brand/brand-strategy.md) and [Naming](../brand/naming.md). The project’s intentional approach is **classic rules baseline, original magical-city expression**—not a synonym, pun, remake, or unofficial adaptation.
 
 ## Legal baseline and primary sources
 
@@ -17,7 +17,7 @@ These are United States starting points only. A globally reachable launch also r
 | ID        | Requirement                                                                                                                                                                                                                                                                                |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | LEGAL-001 | The raw prompt at `docs/mvp-prd-prompt.md` is superseded historical input, not implementation authority, and is excluded from any public release/documentation package unless counsel approves its inclusion.                                                                              |
-| LEGAL-002 | Production requirements, rules copy, topology, economic data, decks, art, and tests are independently authored with provenance; superficial synonym substitution is prohibited.                                                                                                            |
+| LEGAL-002 | The accepted classic rules, 40-space composition, and economy baseline may be implemented as product requirements; names, copy, decks, art, interface assets, and supporting records must be independently authored with provenance. Superficial synonym substitution is prohibited. |
 | LEGAL-003 | If counsel authorizes publisher-specific research, store a version-pinned citation, edition, retrieval date, access list, factual extraction record, independent author, and similarity-review disposition in restricted records. Never commit third-party scans to the public repository. |
 | LEGAL-004 | Counsel reviews the complete selection and arrangement of mechanics together with presentation, not merely isolated names or assets.                                                                                                                                                       |
 | LEGAL-005 | Name, logo, trade-dress, unfair-competition, patent/design-right, and launch-territory reviews are complete before public launch.                                                                                                                                                          |
@@ -26,19 +26,30 @@ These are United States starting points only. A globally reachable launch also r
 | LEGAL-008 | Public copy contains no affiliation implication, clone/remake/compatibility claim, hidden comparative keyword, or unapproved nominative reference.                                                                                                                                         |
 | LEGAL-009 | Complaints, demands, and uncertain materials trigger preservation and attorney escalation, not superficial renaming, deletion of evidence, or public argument.                                                                                                                             |
 | LEGAL-010 | Material changes to mechanics, name, visual presentation, territory, assets, licensing, or monetization reopen the attorney release gate.                                                                                                                                                  |
+| LEGAL-011 | Source code is distributed under AGPL-3.0-or-later; original game content and assets are distributed under CC BY-SA 4.0; third-party assets remain under their own compatible licenses with attribution and notices. |
 
-## Project rule: original expression, independently made
+## Project rule: classic baseline, independently made expression
 
-The team may implement general game concepts such as turn-taking, acquiring assets, improvements, recurring charges/income, negotiation, chance, and resource pressure. The team must independently author the expression that presents those concepts:
+The product may implement the accepted classic rules, 40-space table
+composition, economy, and improvement inventory. Those are product requirements,
+not permission to copy a source product's expression. The team must independently
+author and provenance the presentation that makes Blockparty its own:
 
-- Board geometry, space grouping/order, map/network presentation, visual hierarchy, and UI flows.
-- Product, feature, district, card, currency, token, and rule terminology.
-- Rules explanations, tutorials, help text, event text, marketing copy, and translations.
-- Art direction, illustrations, iconography, logos, type treatment, animations, token forms, cards, audio, and sounds.
-- Fictional places, characters, visual themes, pricing/economic values, probability/event data, and balancing tables.
-- Source code and technical architecture, except properly used third-party dependencies under their licenses.
+- Magical-city names, fictional places, characters, card titles, card wording,
+  tutorials, help text, marketing copy, and translations.
+- Illustrations, iconography, logos, type treatment, animations, piece forms,
+  cards, audio, and sounds.
+- Interface hierarchy, component styling, accessibility treatment, and public
+  product materials.
+- Content records, numerical validation, balancing/simulation evidence, and
+  contributor approvals.
 
-Do not reproduce proprietary rule text, board data, names, card copy, art, token designs, sounds, space order, or recognizable presentation. Do not use source materials as a template to “change enough”; start from an original design brief, independently authored requirements, simulations, and playtesting. Follow LEGAL-003 whenever counsel permits external comparison.
+Do not copy scans, extracted datasets, source-specific names, wording, art,
+audio, token designs, or interface assets. Do not make an affiliation,
+compatibility, clone, remake, or unofficial-version claim.
+Use the versioned product documents as the authority for the accepted baseline;
+keep any research references restricted and follow LEGAL-003 whenever counsel
+permits publisher-specific comparison.
 
 ## Trademark and trade-dress controls
 
@@ -54,7 +65,9 @@ This mark carries higher-than-usual risk for three reasons. Treat each as a stan
 
 1. **The phrase is crowded.** “Block party” is common English and is already used by an entertainment title, a software safety tool, and several crypto ventures. Searching will be noisy, and a clean result set is unlikely. Budget extra time for the web, app-store, package, and GitHub stages of the naming workflow, and capture dated evidence for each.
 2. **“Block” reads blockchain.** Never place the mark next to blockchain, web3, crypto, NFT, or token language, in any public surface: marketing copy, metadata, keywords, SEO, README text, package descriptions, social bios, or screenshots. Do not use “block” in currency, wallet, or ledger naming. This is a confusion control, not a style preference.
-3. **The name invites a square grid.** “Block” pulls the board toward a grid of city blocks, which is the exact hazard the next section describes. The board must remain a winding, irregular street route. A grid layout under this name is a **Red** finding, not a Yellow one.
+3. **The name does not replace the content review.** The accepted classic table
+   remains subject to the complete source-confusion and attorney review of the
+   product's names, copy, art, interface, and overall presentation.
 
 Until counsel clears the mark: no domain registration, no handle reservation, no package publication, and no production spend that a rename would waste. Logo exploration is permitted. Printed material, merchandise, and paid placement are not.
 
@@ -62,7 +75,12 @@ Because the mark is provisional, no design or content decision may depend on it.
 
 ### Trade dress and overall appearance
 
-Trade dress can concern the overall visual impression that identifies source. Avoid a board and product presentation that echoes a well-known game through the combination of layout, colored sequences, corner treatments, card formats, typography, token look, packaging, and advertising. A new title pasted onto a familiar-looking board is not sufficient. Under the Blockparty direction this applies with particular force to board geometry: street lengths, cluster sizes, and corner treatments must vary, and the route must read as a neighborhood map rather than a rectangle. Use the independently approved direction and source-confusion review in [Brand Strategy](../brand/brand-strategy.md).
+Trade dress can concern the overall visual impression that identifies source.
+The accepted 40-space perimeter table is a product requirement; it does not
+settle the source-confusion question. Review the complete combination of the
+original magical-city names, copy, colors, card treatment, typography, pieces,
+interface, packaging, and advertising. Use the independently approved direction
+and source-confusion review in [Brand Strategy](../brand/brand-strategy.md).
 
 ### References to others
 
@@ -74,7 +92,7 @@ Keep references to external games or brands only in private, access-controlled r
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Green**  | Independently commissioned district art; newly written tutorial; original token shapes; original map topology; documented original economic data; permissively licensed dependency used within terms.                                                                                                                                                                                                        | Keep provenance/license records; complete normal review before merge.                                                                                                                                                      |
 | **Yellow** | Generic/descriptive candidate name; the provisional mark placed adjacent to blockchain/web3 language; art asset with unclear source history; a board layout that begins to resemble a known product; AI output with incomplete prompt/input records; third-party font with uncertain web-embedding terms; a design inspired by genre screenshots.                                                            | Pause publication and production use. Obtain records, redesign for separation, conduct searches, and escalate to brand/IP owner or counsel.                                                                                |
-| **Red**    | Copied/paraphrased rules text; recreated board order/data/card copy; source-derived art or audio; title-adjacent puns/sound-alikes; a synonym of the category-defining mark used as a product name; a square-grid or perimeter board under the Blockparty name; public “clone/remake/unofficial version” claims; logo or board that implies affiliation; unlicensed asset; demand/takedown/cease-and-desist. | Stop use and distribution of affected material, preserve evidence, notify the project owner, and obtain attorney direction before any response or re-release. Do not “fix” by superficial recoloring or word substitution. |
+| **Red**    | Copied/paraphrased source text; source-derived board/card data or copy; source-derived art or audio; title-adjacent puns/sound-alikes; a synonym of the category-defining mark used as a product name; public “clone/remake/unofficial version” claims; logo or presentation that implies affiliation; unlicensed asset; demand/takedown/cease-and-desist. | Stop use and distribution of affected material, preserve evidence, notify the project owner, and obtain attorney direction before any response or re-release. Do not “fix” by superficial recoloring or word substitution. |
 
 ## Contributor asset provenance
 
@@ -102,14 +120,29 @@ Contributors must not upload extracted, scanned, transcribed, traced, or “redr
 
 ## License layers must remain separate
 
-One “open source” statement does not license every right. Maintain distinct, reviewed terms for:
+One “open source” statement does not license every right. Maintain distinct,
+reviewed terms for:
 
 1. **Code license** — source code and build scripts.
 2. **Content/assets license** — art, audio, copy, translations, and board data, which may need different permissions or attribution.
 3. **Trademark policy** — the project name/logo and rules for forks, endorsements, merchandise, and domain/handle use. A code license does not automatically grant trademark rights.
 4. **Contributor terms** — contributor license agreement or developer certificate/process that gives the project the rights it needs and preserves provenance.
 
-Do not select, combine, or describe these terms publicly as final without counsel and project-owner approval.
+For this transition, the intended split is:
+
+- **Code:** AGPL-3.0-or-later, including application and package source code,
+  build scripts, and configuration that is itself code.
+- **Original content/assets:** CC BY-SA 4.0, including magical-city copy,
+  board/content data, original card text, illustrations, and original piece
+  assets, subject to the provenance and attribution record.
+- **Third-party assets:** their own compatible license, with required notices
+  and attribution; they are not relicensed merely by being bundled here.
+- **Blockparty mark:** governed separately by the trademark policy and attorney
+  release gate; neither AGPL nor CC BY-SA grants mark rights.
+
+Do not publish the split as final until counsel and the project owner approve
+the license packet, but all new assets and code must be tracked against this
+intended treatment.
 
 ## Attorney release gate
 

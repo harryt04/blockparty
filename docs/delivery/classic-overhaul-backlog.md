@@ -220,7 +220,7 @@ accidental collapse in coverage.
       passed. Full CI remains blocked by the pre-existing ESLint
       `prettier.config.cjs` `module` no-undef error.
 
-- [ ] **CO-004 — Replace the brand and licensing posture**
+- [?] **CO-004 — Replace the brand and licensing posture**
       Blocked by: CO-003
       Requirements: PRD-NFR-011, CONTENT-014, CONTENT-016, LEGAL-011
       Read: `docs/brand/brand-strategy.md`, `docs/brand/naming.md`,
@@ -235,6 +235,11 @@ accidental collapse in coverage.
       perimeter geometry.
       Proves: stale-guardrail search and human owner review of positioning and
       licensing choices.
+      Evidence: brand strategy, naming, and IP-safety now establish the original
+      magical-city/classic-table posture, remove the obsolete irregular-route
+      prohibition, define the AGPL/CC BY-SA/third-party license split, and add
+      LEGAL-011 to traceability. Final public release remains gated on named
+      owner and attorney approval.
 
 - [ ] **CO-005 — Rewrite the UX specification around table setup and table play**
       Blocked by: CO-004
