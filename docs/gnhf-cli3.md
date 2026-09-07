@@ -1,4 +1,7 @@
-gnhf "Please run the game/application and attempt to create a new game and play with bots. Use the standard ruleset, happy-path. Play until you've encountered an issue that would prevent someone from being able to play the game as intended, or a bot makes a critical error which ruins the gameplay. Fix that issue or implement that feature. Add testing coverage if possible." \
+gnhf "/Users/harry/Documents/git/pantry-iq/docs/gnhf-ux-prompt.md" \
 --agent codex \
---max-iterations 30 \
+--stop-when "/Users/harry/Documents/git/blockparty/docs/delivery/classic-overhaul-backlog.md has everything checked off as implemented."
 --current-branch --push
+
+
+--max-iterations 30 \
