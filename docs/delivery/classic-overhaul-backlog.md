@@ -171,7 +171,7 @@ accidental collapse in coverage.
       passed with 292 tests (2 skipped). Repository CI remains blocked by the
       pre-existing `prettier.config.cjs` ESLint `module` no-undef error.
 
-- [ ] **CO-002 — Rewrite the canonical rules, variants, and glossary**
+- [x] **CO-002 — Rewrite the canonical rules, variants, and glossary**
       Blocked by: CO-001
       Requirements: RULE-013, RULE-014, VAR-001–014
       Read: `docs/product/rules.md`, `docs/product/rule-variants.md`,
@@ -188,6 +188,12 @@ accidental collapse in coverage.
       have explicit interactions with the standard rules.
       Proves: terminology lint/search plus a rules-to-parity review showing every
       feature row has a normative rule.
+      Evidence: canonical rules now define the standard phase loop, classic
+      property/economy edge cases, event-based replay, and House/Hotel inventory;
+      variants explicitly overlay only named rules; glossary terminology and
+      rules-to-parity searches pass. `pnpm run ci` reaches lint but remains
+      blocked by the pre-existing `prettier.config.cjs` ESLint `module`
+      no-undef error.
 
 - [ ] **CO-003 — Author the complete magical-city content specification**
       Blocked by: CO-002

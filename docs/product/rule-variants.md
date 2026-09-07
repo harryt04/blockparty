@@ -1,13 +1,13 @@
 # Rule variants and presets
 
 **Variants schema:** `1.0.0`  
-This specification overlays [canonical Rules](rules.md) and independently authored [game content](game-content.md) for games in [PRD](prd.md). A game captures one immutable resolved configuration at start. No setting may change after `LOBBY` exits, including by deployment defaults.
+This specification overlays [canonical Rules](rules.md) and independently authored [game content](game-content.md) for games in [PRD](prd.md). The `standard` preset is the canonical classic baseline; every toggle is false. A game captures one immutable resolved configuration at start. No setting may change after `LOBBY` exits, including by deployment defaults.
 
 ## Presets
 
 | Preset               | Defaults                                                                        | Intended effect / warning                                                                                                                                                        |
 | -------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `standard` (default) | All eight toggles false                                                         | Closest to canonical rules; still uses independently authored board data, not another game's data.                                                                               |
+| `standard` (default) | All eight toggles false                                                         | Canonical classic rules with versioned Blockparty board/content data.                                                                                                             |
 | `short-game`         | `startingAssetsDealt=true`; `relaxedEvenBuilding=true`; all other toggles false | Faster early ownership/development and materially different strategy. Expect a shorter but higher-variance game; do not describe it as an official commercial short-game format. |
 
 Selecting a preset writes its resolved values into the lobby. The host may then change individual toggles before start; the UI labels the configuration `custom` when it no longer equals a preset.
@@ -26,6 +26,11 @@ Selecting a preset writes its resolved values into the lobby. The host may then 
 | VAR-008 | `unlimitedImprovementInventory`     |   false | Ignore finite bank improvement inventory for purchases/sales.                                                                                       | Removes a strategic scarcity lever and may shorten endgame.                                       |
 
 ## Canonical configuration details and interactions
+
+The eight toggles below are the complete deviation surface. When a toggle is
+false, the corresponding rule in [Rules](rules.md) applies. When it is true,
+only the named rule is replaced; all other turn, payment, information,
+capability, determinism, and no-timer rules remain in force.
 
 1. **Jackpot funding.** When `restSpaceJackpot` is true, only board-data fees explicitly tagged `jackpotEligible` fund the pot (initially fee/tax spaces and bank penalties, not purchases, rent, mortgage charges, auction bids, or card payments unless the card is explicitly tagged). The pot begins at zero. Fees still go to bank when the toggle is false. If a player cannot pay an eligible fee, only the amount actually paid after debt resolution enters the pot. A bank-directed bankruptcy does not fabricate the unpaid balance.
 2. **Start payments.** `doubleStartOnExactLanding` applies only to a normal dice movement that finishes on Start. It does not apply to a forced movement, backward movement, Send to Detention, or starting the game on Start. It stacks with `bonusForMatchingOnes` when both trigger on the same roll.
