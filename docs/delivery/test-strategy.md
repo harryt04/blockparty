@@ -89,3 +89,29 @@ Pull requests run the same command. Release evidence adds production build and
 deployment smoke results, browser projects, manual accessibility records,
 security/privacy review, provenance and license inventory, operations drills,
 and the attorney gate where required.
+
+<a id="test-008-classic-content-and-engine-scenarios"></a>
+
+## TEST-008 — Classic content and engine scenarios
+
+The classic-overhaul content bundle requires immutable reconciliation fixtures
+for all 40 route spaces, 28 ownable deeds, eight Color Sets, four Transit
+Properties, two Utilities, two fee spaces, six draw spaces, both 16-card decks,
+the 32-House/12-Hotel bank, and the six pieces. Engine evidence adds fixed-seed
+scenarios for the Standard turn loop, acquisition/auction, rent, Detention,
+cards, debt, bankruptcy, improvement transitions, replay, and victory. These
+tests belong in `packages/game-content` and `packages/game-engine`; human
+review remains required for original names, copy, and provenance.
+
+<a id="test-009-responsive-visual-and-interaction-regression"></a>
+
+## TEST-009 — Responsive, visual, and interaction regression
+
+Classic table evidence requires deterministic browser scenarios in Chromium,
+Firefox, and WebKit with separate contexts where multiple seats participate.
+The matrix covers 320, 375, 768, and 1280 CSS pixels, page-overflow checks,
+semantic board-list equivalence, 44px targets, focus/zoom, reduced motion,
+forced colors, major decision phases, reconnect, completion, retirement, and
+rematch. Screenshots and browser results are evidence only when they use
+authoritative or explicitly marked test projections and contain no capabilities
+or private data.

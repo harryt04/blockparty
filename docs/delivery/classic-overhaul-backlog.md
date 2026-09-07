@@ -11,11 +11,11 @@ This backlog turns the accepted UI and rules realignment into narrow, sequential
 implementation tickets. Work exactly one ticket per session. Each ticket ends in
 a repository state that the next ticket can safely consume.
 
-The authority documents still describe the previous independently balanced,
-irregular-route direction. Tickets CO-001 through CO-007 intentionally rewrite
-that authority before gameplay implementation begins. During that transition,
-this backlog is the owner-approved source for the decisions listed below. After
-CO-007, normal precedence in `AGENTS.md` applies again.
+CO-001 through CO-007 reconcile the former independently balanced, irregular-
+route authority with the accepted classic direction before gameplay migration
+begins. During this transition, this backlog is the owner-approved source for
+the decisions listed below. After CO-007, normal precedence in `AGENTS.md`
+applies again.
 
 ## Locked decisions
 
@@ -285,7 +285,7 @@ accidental collapse in coverage.
       Full CI remains blocked by the pre-existing ESLint `prettier.config.cjs`
       `module` no-undef error.
 
-- [ ] **CO-007 — Reconcile engineering, delivery, index, and agent documentation**
+- [x] **CO-007 — Reconcile engineering, delivery, index, and agent documentation**
       Blocked by: CO-006
       Requirements: ENG-029–031, TEST-008–009 and all new product/design IDs
       Read: every Markdown file listed by `rg --files -g '*.md'`
@@ -300,6 +300,13 @@ accidental collapse in coverage.
       docs agree with the code and target docs agree with CO-001–006.
       Proves: link/anchor check, document-register completeness check, requirement
       uniqueness check, and searches for known stale phrases.
+      Evidence: engineering, protocol, security, test, operations, README, PWA,
+      gnhf, and agent documents now distinguish implemented foundation behavior
+      from staged classic migration; `docs/README.md` registers every Markdown
+      file and the new ENG-029–031/TEST-008–009 authority is linked in
+      `docs/traceability.md`. Markdown inventory, anchor, ID, and stale-claim
+      checks passed; the pre-existing `prettier.config.cjs` ESLint error remains
+      the only CI blocker.
 
 ## Phase B — Establish FOSS and versioned contract foundations
 

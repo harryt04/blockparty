@@ -2,7 +2,16 @@
 
 **Companion documents:** [architecture](architecture.md), [PRD](../product/prd.md), [glossary](../product/glossary.md), [game engine](game-engine.md), and [security/privacy/analytics](security-privacy-analytics.md).
 
-This document describes the HTTP and Server-Sent Events protocol implemented by the single Next.js App Router application. It replaces the earlier Socket.IO/PostgreSQL transport and persistence proposal. The application is authoritative; SSE is delivery, not authority.
+This document describes the HTTP and Server-Sent Events protocol implemented by
+the single Next.js App Router application. It replaces the earlier
+Socket.IO/PostgreSQL transport and persistence proposal. The application is
+authoritative; SSE is delivery, not authority.
+
+The authenticated HTTP/SSE path, MongoDB transaction boundary, and browser
+sync/recovery client are implemented. Classic contract versioning, multi-kind
+improvement events, and placeholder retirement remain staged changes in the
+active classic-overhaul queue; retained placeholder games keep their captured
+versions until the retirement workflow is implemented.
 
 ## PROTO-001: Transport and envelope
 
@@ -89,3 +98,22 @@ For an active game, set expiry to 30 days after its last authoritative gameplay 
 Take encrypted MongoDB backups at least daily and test restore at least quarterly: restore into an isolated replica set, run compatibility/index maintenance, verify row/document counts and sampled snapshot-plus-event replay/invariants, then destroy the test environment. Initial targets are RPO 24 hours without point-in-time recovery and RTO 4 hours; they are objectives, not zero-data-loss or high-availability promises.
 
 Initial deployment uses one Next.js application replica and one private MongoDB replica set. If multiple app replicas are later needed, each may consume MongoDB change streams and serve local SSE clients, but connection limits, cross-replica event delivery, rate limits, and recovery must be load-tested first. MongoDB remains the durable serialization layer. Redis is deferred and is not required for the initial design.
+
+<a id="eng-029031-classic-transition-protocol-boundaries"></a>
+
+## ENG-029–031: Classic transition protocol boundaries
+
+`ENG-029` versions the create/admission wire contract without putting
+capabilities in request bodies, URLs, storage, logs, or analytics. The current
+server exposes the historical placeholder-era shape; CO-009 is responsible for
+the strict human/computer and piece-availability migration.
+
+`ENG-030` reserves an additive event/state version for complete House/Hotel
+inventory maps. Existing events remain replayable through their registered
+reader; a transition cannot partially update one inventory kind.
+
+`ENG-031` defines the safe-boundary retirement protocol: one committed
+`CONTENT_RETIRED` no-contest event, capability revocation, retained read-only
+summary, and post-commit broadcast. CO-017 will add dry-run, execution,
+rollback, and retry evidence; no current cleanup operation silently retires a
+placeholder game.

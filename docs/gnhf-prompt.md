@@ -4,10 +4,7 @@ Before starting work, read `AGENTS.md`. It is the durable project context and
 operating contract for this repository. Do not rely on hidden memory from
 previous iterations — read the file.
 
-Then open `/Users/harry/Documents/git/blockparty/docs/delivery/classic-overhaul-backlog.md`. Read **Claim protocol**, **The rule
-that makes this loop terminate**, **What done means here**, and **Traps** in full
-before you touch a ticket. Those four sections outrank any instinct you have
-about how to improve this application.
+Then open `/Users/harry/Documents/git/blockparty/docs/delivery/classic-overhaul-backlog.md`. Read **Claim protocol**, **Locked decisions**, **Completion gate**, and **Traps** in full before you touch a ticket. Those sections outrank any instinct you have about how to improve this application.
 
 Do **not** load the rest of the documentation set. This repository holds twenty
 normative documents and they do not fit in one context window together. Each
@@ -16,10 +13,11 @@ another only when the work sends you there for something specific.
 
 ## Your role this session
 
-You are an implementation engineer working a closed queue. `docs/` is the
-implementation authority — it already decided the rules, the protocol, the
-vocabulary, and the accessibility contract. Your job is to make the code match
-it, prove it with a test, and tick one box.
+You are an implementation engineer working the active classic-overhaul queue.
+`docs/` is the implementation authority — it already decided the rules, the
+protocol, the vocabulary, and the accessibility contract. The earlier
+64-ticket queue is historical. Your job is to make the code match the current
+authority, prove it with a test, and tick one box.
 
 You are not a product designer this session. Do not invent behaviour a document
 already defines. When a document is wrong, fix the document in the same commit
@@ -30,15 +28,15 @@ as the code, and say so in the commit message.
 Work the loops in file order. Move to the next loop only when every ticket in the
 current one is `[x]`, `[!]`, or `[?]`.
 
-1. **Loop 0 — Foundation** (workspace, contracts, content bundle)
-2. **Loop A — Deterministic engine** (the pure reducer)
-3. **Loop B — Server and protocol** (authority, persistence, realtime)
-4. **Loop C — Web application** (the playable surface)
-5. **Loop D — Variants and bot**
-6. **Loop E — Accessibility and responsive behaviour**
-7. **Loop F — PWA, analytics, and operations**
+1. **Phase A — Reset implementation authority**
+2. **Phase B — Establish FOSS and versioned contracts**
+3. **Phase C — Build and prove the classic ruleset**
+4. **Phase D — Retire placeholder games and activate the new default**
+5. **Phase E — Rebuild creation, admission, and lobby**
+6. **Phase F — Rebuild the live table**
+7. **Phase G — Release evidence and documentation closure**
 
-Take the **first ticket in the active loop marked `[ ]` whose every blocker is
+Take the **first ticket in the active phase marked `[ ]` whose every blocker is
 already `[x]` or `[?]`**. One ticket per iteration.
 
 A ticket already marked `[~]` is yours to finish — a previous iteration claimed
@@ -101,13 +99,14 @@ find easier work.**
 Read the full **Traps** section in the backlog. These are the ones that most
 often survive a passing test suite:
 
-- **A display name in the wire layer is a defect.** `Address`, `Block`, `The
-Committee`, `Noise Complaint` are presentation only. The server sends
-  `district`; the component renders "Block". A display name in a command, event,
-  wire field, database column, content ID, analytics property, or test fixture is
-  wrong even when everything compiles.
-- **The board is a winding street route.** A square grid or a familiar perimeter
-  layout is a Red finding, not a style choice.
+- **A display name in the wire layer is a defect.** `Property`, `Color Set`, and
+  other player-facing labels are presentation only. The server sends canonical
+  IDs and types; the component renders the display layer. A display name in a
+  command, event, wire field, database column, content ID, analytics property,
+  or test fixture is wrong even when everything compiles.
+- **The classic board is a 40-space perimeter table.** The pre-overhaul winding
+  route is historical and must not be reintroduced into the classic bundle or
+  UI.
 - **There are no timers.** No turn, purchase, auction, trade, or debt timeout. A
   disconnected required actor pauses play. Connectivity never fabricates a pass, a
   bid, a trade response, or a bankruptcy. If you find yourself writing a timeout

@@ -274,6 +274,8 @@ list, players, decision, property hand, and history. The same legal actions
 and authoritative facts are available at 320, 375, 768, and 1280 px; only
 placement and inspection affordances change.
 
+<a id="ds-071--classic-table-material-and-color-roles"></a>
+
 ## DS-071 — Classic table material and color roles
 
 DS-071 fixes the cream/dark-ink table, the eight Color Set roles, the semantic
@@ -285,12 +287,16 @@ Elevation has two levels only: level 0 is a flat `surface` with a 1 px line;
 level 1 is a decision sheet or raised card with `0 4px 16px rgb(31 36 48 / 16%)`
 and a 1 px line. Never use elevation to indicate ownership or availability.
 
+<a id="ds-072--semantic-board-and-hand-grammar"></a>
+
 ## DS-072 — Semantic board and hand grammar
 
 DS-072 fixes the 40-cell anatomy, 11 × 11 perimeter geometry, cell reading
 order, equivalent board list, deed card fields, player-piece silhouettes,
 patterns, ownership/mortgage/action encodings, and grouped property hand. It
 maps to UX-044–046 and to the canonical IDs in the game-content contract.
+
+<a id="ds-073--responsive-table-action-and-evidence-matrix"></a>
 
 ## DS-073 — Responsive table, action, and evidence matrix
 

@@ -8,6 +8,11 @@ service reaches it only through `MONGODB_URI`. There is no application Docker
 Compose topology and no Redis service. Maintenance and cleanup run from the same
 web image as the application.
 
+The current deployment can read the placeholder content version for retained
+development games. The classic-overhaul activation sequence must first ship its
+reader and retirement-safe summary path, then make content 1.0.0 the new-game
+default; it must not rewrite or silently migrate started games.
+
 ## OPS-001 — Ownership and environments
 
 The operator owns development, staging, and production configuration; the
@@ -25,6 +30,8 @@ deployed MongoDB URI names a replica set and supports transactions and change
 streams. Scale beyond one web instance requires measured evidence that
 process-local SSE coordination is sufficient or a documented coordination
 change.
+
+<a id="ops-003--environment-and-secrets-inventory"></a>
 
 ## OPS-003 — Environment and secrets inventory
 

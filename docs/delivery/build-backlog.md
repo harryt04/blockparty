@@ -1,12 +1,14 @@
 # Build backlog
 
-**Status:** the closed, dependency-ordered work queue for autonomous agents
+**Status:** closed historical, dependency-ordered delivery ledger
 **Consumed by:** [gnhf prompt](../gnhf-prompt.md), driven by [gnhf CLI](../gnhf-cli.md)
 
-This file is the single source of truth for what an agent builds next. It turns
-the implementation plan into 64 tracer-bullet tickets. Each ticket cuts a narrow
-but complete path through the layers it touches, and each one is sized to fit in
-one fresh context window.
+This file records the 64-ticket foundation and MVP delivery history. It is not
+the active source of the next ticket: the accepted
+[classic overhaul backlog](classic-overhaul-backlog.md) now owns the transition
+to the classic 40-space Blockparty rules, content, contracts, and UI. Ticket
+notes below preserve the evidence and repository state recorded when this queue
+closed, including follow-up evidence that was unavailable at that time.
 
 `docs/` stays the implementation authority. This file says **which** requirement
 to implement and **when**. The linked document says **what** the requirement is.

@@ -1,5 +1,8 @@
 # PWA implementation notes
 
+**Status:** current implementation notes; app-shell caching and install/update
+behavior are implemented, while final icon artwork remains a release task.
+
 The manifest and original placeholder icons are served from `public/`. The
 service worker is generated at `/sw.js` so the server-side `PWA_CACHE_VERSION`
 controls the versioned cache name.

@@ -4,9 +4,11 @@
 iteration makes one small committed change toward the objective. This document
 holds the exact commands for this repository.
 
-The loop prompt is [gnhf-prompt.md](gnhf-prompt.md). The work queue is
-[build-backlog.md](delivery/build-backlog.md), whose claim protocol is the
-delivery policy this command implements.
+The loop prompt is [gnhf-prompt.md](gnhf-prompt.md). The active work queue is
+[classic-overhaul-backlog.md](delivery/classic-overhaul-backlog.md), whose claim
+protocol is the delivery policy this command implements. The former
+[build-backlog.md](delivery/build-backlog.md) is retained as a closed historical
+ledger.
 
 ## One-time setup
 
@@ -21,7 +23,7 @@ git checkout -b build/mvp && git push -u origin build/mvp
 ```bash
 gnhf "/Users/harry/Documents/git/blockparty/docs/gnhf-prompt.md" \
 --agent codex \
---stop-when 'docs/delivery/build-backlog.md has every ticket in Loops 0-F marked [x], [!], or [?]' \
+--stop-when 'docs/delivery/classic-overhaul-backlog.md has everything checked off as implemented.' \
 --current-branch --push \
 --max-iterations 40 \
 --max-tokens 5000000
@@ -41,10 +43,9 @@ each success. `master` stays clean. Review the whole run as one pull request.
 
 ## Run length
 
-64 tickets at one ticket per iteration needs roughly two runs at
-`--max-iterations 40`. gnhf resumes on the same branch, so a second invocation of
-the same command continues the existing history and iteration numbering. It does
-not start over.
+The classic-overhaul queue has one ticket per iteration. gnhf resumes on the
+same branch, so a second invocation of the same command continues the existing
+history and iteration numbering. It does not start over.
 
 ## While it runs
 

@@ -1,5 +1,10 @@
 # Security, Privacy, and Analytics
 
+**Status:** normative implementation baseline for the live foundation and the
+classic-overhaul transition. Capability separation and privacy controls are
+implemented; classic contract and placeholder-retirement changes must preserve
+these boundaries as they land.
+
 **Companion documents:** [PRD](../product/prd.md), [glossary](../product/glossary.md), [architecture](architecture.md), [game engine](game-engine.md), and [realtime and data](realtime-and-data.md). This is an engineering baseline, not legal advice; obtain applicable privacy/legal review before public release.
 
 ## SEC-001: Threat model
@@ -77,3 +82,14 @@ The service is for people age 13 and older. State this in terms/onboarding, do n
 - Token, invite URL, name, and form fixtures are absent from logs and masked from opted-in replay.
 - Consent-denied browser sessions make no PostHog capture/replay requests; withdrawal stops them.
 - Retention job and restored-backup drill meet the documented 30-day deletion and recovery expectations.
+
+## Classic-overhaul security boundary
+
+The classic creation/admission migration keeps invite admission, seat command,
+host, and reclaim capabilities distinct. The planned `ENG-029` contract may
+return only server-reported availability and safe projection data; it must not
+move a capability into a request body, URL, local storage, log, analytics event,
+or projection. The planned `ENG-031` retirement operation revokes gameplay
+capabilities in the same committed workflow that freezes the retired game,
+while its read-only summary remains subject to the existing projection and
+retention rules.

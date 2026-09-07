@@ -14,6 +14,12 @@ The playable lobby, authoritative game engine, bot turns, persistence,
 capability cookies, and realtime sync path are implemented. A configured
 MongoDB replica set is required to create and play live games.
 
+The active [classic overhaul queue](docs/delivery/classic-overhaul-backlog.md)
+is migrating the implemented foundation from the placeholder content bundle to
+Blockparty's classic 40-space magical-city bundle. Until that queue reaches its
+activation tickets, the placeholder reader remains available for development
+and retained-summary compatibility but is not the production classic default.
+
 ## Prerequisites
 
 - Node.js 22 (see `.nvmrc`)

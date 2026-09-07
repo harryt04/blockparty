@@ -1,6 +1,10 @@
 # Project Planning Index
 
-This directory is the implementation authority for the private browser-based property board game. The approved direction is broad mechanical completeness with independently authored expression and a mandatory legal release gate.
+This directory is the implementation authority for the private browser-based
+property board game. The approved direction is broad mechanical completeness
+with independently authored expression and a mandatory legal release gate. The
+classic overhaul queue is the active transition plan; the former 64-ticket
+build queue is a closed historical delivery ledger.
 
 ## Normative precedence
 
@@ -28,30 +32,53 @@ When documents disagree, use this order and correct the lower-level document:
 | Brand       | [Naming](brand/naming.md)                                                 | Settled-name decision record and naming history                                                       |
 | Legal       | [IP safety](legal/ip-safety.md)                                           | Operational guardrails and attorney release gate; not legal advice                                    |
 | Design      | [UX](design/ux-spec.md)                                                   | Responsive flows and accessibility behavior                                                           |
-| Design      | [Design system](design/design-system.md)                                  | Internal visual-system direction; final brand reconciliation required                                 |
+| Design      | [Design system](design/design-system.md)                                  | Normative classic-table visual system and responsive evidence contract                               |
 | Engineering | [Architecture](engineering/architecture.md)                               | Workspace, service, deployment, and ADR baseline                                                      |
 | Engineering | [Game engine](engineering/game-engine.md)                                 | Pure deterministic engine contract                                                                    |
 | Engineering | [Realtime and data](engineering/realtime-and-data.md)                     | Protocol, capabilities, persistence, reconnect, and retention                                         |
 | Engineering | [Security, privacy, analytics](engineering/security-privacy-analytics.md) | Threat model, PostHog policy, data minimization, and acceptance checks                                |
 | Delivery    | [Test strategy](delivery/test-strategy.md)                                | CI, scenario, browser, accessibility, soak, load, and release evidence                                |
 | Delivery    | [Accessibility checklist](delivery/accessibility-checklist.md)            | E6 automated run record and human assistive-technology release evidence                               |
+| Delivery    | [Deployment runbook](delivery/deployment-runbook.md)                      | Current Coolify deploy, migration, cleanup, shutdown, and rollback procedure                         |
+| Delivery    | [Backup and restore drill](delivery/backup-restore-drill.md)              | Current isolated MongoDB backup/restore procedure and evidence record                                |
+| Delivery    | [Load and performance](delivery/load-performance.md)                      | Current deployed-topology load budget and privacy-safe evidence procedure                             |
 | Delivery    | [Observability runbook](delivery/observability-runbook.md)                | F4 safe telemetry, alerts, and staging drill record                                                   |
-| Delivery    | [Build backlog](delivery/build-backlog.md)                                | Delivery plan: closed 64-ticket queue across Loops 0–F; one ticket per session                        |
-| Delivery    | [Classic overhaul backlog](delivery/classic-overhaul-backlog.md)          | Accepted sequential CO-* transition queue for the classic rules, magical-city content, and UI rebuild |
-| Delivery    | [gnhf prompt](gnhf-prompt.md)                                             | The per-iteration loop prompt for autonomous agents                                                   |
-| Delivery    | [gnhf CLI](gnhf-cli.md)                                                   | The exact gnhf commands, branch policy, and stop condition                                            |
+| Delivery    | [Build backlog](delivery/build-backlog.md)                                | Historical: closed 64-ticket delivery ledger across Loops 0–F                                      |
+| Delivery    | [Classic overhaul backlog](delivery/classic-overhaul-backlog.md)          | Active: accepted sequential CO-* queue for classic rules, content, contracts, and UI                |
+| Delivery    | [gnhf prompt](gnhf-prompt.md)                                             | Current per-iteration prompt for the active classic-overhaul queue                                    |
+| Delivery    | [gnhf CLI](gnhf-cli.md)                                                   | Current gnhf commands, branch policy, and classic-overhaul stop condition                             |
+| Historical  | [gnhf CLI 2](gnhf-cli2.md)                                                | Historical alternative live-smoke command; retained for run provenance                                |
+| Delivery    | [gnhf CLI 3](gnhf-cli3.md)                                                | Current shorthand invocation for the active classic-overhaul queue                                     |
 | Delivery    | [Operations](delivery/operations.md)                                      | Coolify deployment, observability, backup, recovery, and incidents                                    |
 | Historical  | [Original prompt](mvp-prd-prompt.md)                                      | Superseded input; never implementation authority; exclude from public package unless counsel approves |
+| Historical  | [Memory: player strip](../memory/2026-09-04-live-player-strip-axe.md)     | Dated debugging record; observations are historical and not current authority                         |
+| Historical  | [Memory: dev debug](../memory/2026-09-04-npm-run-dev-debug.md)            | Dated runtime investigation; observations are historical and not current authority                    |
+| Historical  | [Memory: playable run](../memory/2026-09-06-npm-run-dev-playable.md)      | Dated live-play investigation; observations are historical and not current authority                  |
+
+| Repository / support | Document                                                                  | Status / use                                                                                          |
+| -------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Repository            | [Agent instructions](../AGENTS.md)                                        | Current repository operating contract and cross-cutting invariants                                    |
+| Repository            | [README](../README.md)                                                    | Current contributor/operator orientation and implementation status                                     |
+| Delivery              | [PWA implementation notes](../apps/web/public/PWA-TODO.md)               | Current PWA cache/install behavior and remaining artwork release note                                  |
+| Historical            | [gnhf prompt 2](gnhf-prompt2.md)                                          | Historical autonomous instruction variant; not the active queue authority                            |
+| Normative             | [Documentation index](README.md)                                          | Current register and precedence index for every repository Markdown document                         |
+| Normative             | [Traceability](traceability.md)                                           | Current requirement ownership, evidence, and disposition register                                    |
 
 ## Implementation state
 
-The workspace exists: one deployable `apps/web` Next.js application and the
-three internal packages. Pages and Route Handlers are scaffolded and return
-placeholders. `AGENTS.md` carries the runnable commands and the enforced
-dependency-direction rules; the root `README.md` covers running and deploying.
+The workspace has one deployable `apps/web` Next.js application and the three
+internal packages. The authenticated create/join/lobby/game/summary flows,
+server-authoritative command path, bot dispatch, MongoDB persistence, SSE sync,
+PWA shell, consent-gated analytics, and operational tooling are implemented and
+covered by their recorded unit/integration/browser evidence. A local build can
+render pages without MongoDB, but live games require a healthy replica set.
 
-The [traceability](traceability.md) register records what is scaffolded and
-what each requirement still needs. A scaffold is never evidence.
+The active classic overhaul has completed its product, rules, content,
+branding, UX, and design-system authority reset. The runtime still reads the
+placeholder content bundle until later CO tickets version and activate the
+classic 1.0.0 bundle. The [traceability](traceability.md) register distinguishes
+implemented foundation evidence from planned classic migration and release
+evidence; a scaffold is never evidence.
 
 ## Settled MVP decisions
 

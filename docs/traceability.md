@@ -271,6 +271,16 @@ the later application-surface test harness.
 | LEGAL-001–010        | [IP safety](legal/ip-safety.md#legal-requirements)                                                            | project/content owners and counsel  | provenance/license/approval packet                                           | Loop 0, F    | Planned                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | LEGAL-011            | [IP safety](legal/ip-safety.md#legal-requirements)                                                            | project/content owners and counsel  | AGPL/CC BY-SA split, third-party notices, provenance, and attorney approval    | CO-004, CO-008, CO-032 | Planned                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
+## Classic-overhaul engineering and evidence additions
+
+| IDs | Source | Implementation owner | Required evidence | Loop | Status |
+| --- | --- | --- | --- | --- | --- |
+| ENG-029 | [Creation/admission contract version](engineering/architecture.md#classic-overhaul-engineering-boundaries) | contracts, web entry/lobby | strict schema, piece-conflict race, and capability-secrecy tests | CO-009, CO-019–022 | Planned; current runtime retains the placeholder-era create shape until the classic contract migration. |
+| ENG-030 | [Multi-kind improvement state and event version](engineering/game-engine.md#classic-overhaul-version-boundaries) | contracts, content, engine | complete House/Hotel delta maps, atomic transitions, and replay fixtures | CO-010–016 | Planned; current placeholder-era scalar transitions remain readable. |
+| ENG-031 | [Placeholder-game retirement](engineering/realtime-and-data.md#eng-029031-classic-transition-protocol-boundaries) | server, maintenance, projections | dry-run, idempotency, revocation, ordering, and read-only summary tests | CO-017–018, CO-029, CO-033 | Planned; retained placeholder games are not yet retired. |
+| TEST-008 | [Classic content and engine scenarios](delivery/test-strategy.md#test-008-classic-content-and-engine-scenarios) | content and engine test owners | immutable 40-space/count/economy fixtures and fixed-seed classic scenarios | CO-003, CO-012–016, CO-030 | Planned; authority and evidence contract added by CO-007. |
+| TEST-009 | [Responsive, visual, and interaction regression](delivery/test-strategy.md#test-009-responsive-visual-and-interaction-regression) | web/browser test owners | cross-browser multi-context journeys, visual matrix, overflow, focus, and AT evidence | CO-019–031 | Planned; authority and evidence contract added by CO-007. |
+
 ## Delivery controls
 
 | IDs          | Source                                     | Purpose                                                   | Completion evidence        | Loop      | Status                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
@@ -278,16 +288,20 @@ the later application-surface test harness.
 | TEST-001–007 | [Test strategy](delivery/test-strategy.md) | ownership, layers, CI, soak/load, release                 | linked CI/release evidence | Loop 0–F  | F6 adds the load percentile/privacy contract in `tools/load-harness.test.ts` and execution/report procedure in `docs/delivery/load-performance.md`; deployed load evidence remains pending                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | OPS-001–010  | [Operations](delivery/operations.md)       | topology, deploy, telemetry, retention, restore, capacity | runbook/drill reports      | Loop B, F | B1 implements OPS-002 topology/readiness and OPS-004 idempotent index maintenance; F3 adds the Coolify deployment, same-image maintenance/cleanup, shutdown, and rollback runbook in `docs/delivery/deployment-runbook.md`; F4 adds safe structured telemetry, alert definitions, and fire/recovery evidence in `apps/web/src/server/observability/telemetry.ts`, `apps/web/test/telemetry.test.ts`, and `docs/delivery/observability-runbook.md`; F5 adds the encrypted backup/restore procedure in `docs/delivery/backup-restore-drill.md` and the aggregate-only verifier command in `apps/web/src/server/backup/verify-restore.ts`; operator execution and sign-off remain pending |
 
-## Scaffold status
+## Implementation status
 
-Every initial ENG-003 page and Route Handler was scaffolded before product
-implementation; that verifies no product requirement. Ticket 0.1 added the
-root gate and one real test per project. Ticket 0.2 added the PR workflow and
-active `master` ruleset. B11 removed the final fabricated game/lobby/summary
-projections; subsequent screens must use authenticated sync-client state.
+The original ENG-003 pages and Route Handlers were scaffolded, but the
+foundation queue subsequently replaced the fabricated game/lobby/summary
+projections with authenticated sync-backed surfaces. The repository now has a
+working sync client, MongoDB transaction path, SSE delivery, Playwright browser
+harness, service worker, PWA install/update behavior, and consent-gated
+analytics; their evidence is linked above. The active classic-overhaul rows
+remain planned until the classic bundle, contracts, engine transitions, and UI
+are implemented.
 
-There is no service worker until F1 proves an app-shell-only cache, and no font
-files until licensed, provenanced self-hosted faces exist.
+No self-hosted font files are present because licensed, provenanced faces have
+not yet been approved. The PWA shell caches only versioned public/app-shell
+assets; game state, API, SSE, and capabilities remain uncached.
 
 Iteration 1 runtime evidence: `npm run dev` starts with the Node-only
 instrumentation boundary, and a local replica-set smoke flow created a game,

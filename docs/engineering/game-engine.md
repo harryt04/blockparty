@@ -115,3 +115,30 @@ Persist `stateSchemaVersion`, `contentVersion`, and engine semantic version in e
 - Golden: fixed seeds produce exact dice/deck/event fixtures.
 - Scenario: debt, multi-party trade stale acceptance, auction tie/pass, elimination, and final winner.
 - Compatibility: archived snapshot/journal migration and replay fixtures for every supported schema/content version.
+
+## Classic-overhaul version boundaries
+
+### ENG-029 — Creation and admission contract version
+
+The classic contract captures host identity and piece selection at creation,
+separates human and computer counts, and keeps admission availability
+authoritative. This is a contract migration concern, not a reducer shortcut;
+the server derives seats and authorizes capabilities while the engine receives
+only validated actor-scoped commands. The placeholder-era contract remains the
+current runtime shape until CO-009 lands.
+
+### ENG-030 — Multi-kind improvement state and event version
+
+Classic House/Hotel transitions must carry complete integer maps for inventory
+changes. A replay either applies the full cash, deed-level, House, and Hotel
+transition or rejects it; it may not infer a first inventory kind from map
+iteration order. The additive state/event version is introduced by CO-010 and
+CO-011 while archived placeholder fixtures remain readable.
+
+### ENG-031 — Placeholder-game retirement
+
+Retirement is a server transaction at a safe command boundary, never a reducer
+interpretation of old content. A committed `CONTENT_RETIRED` no-contest event
+freezes commands, revokes capabilities, and leaves the historical projection
+readable until normal completed-game expiry. CO-017 provides the implementation
+and idempotency evidence.

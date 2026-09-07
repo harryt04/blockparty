@@ -15,6 +15,8 @@ The browser renders an authorized projection. It never invents a player,
 balance, property, die result, card effect, legal action, or completion state.
 Only a server-accepted command changes the game.
 
+<a id="1-product-principles"></a>
+
 ## 1. Experience principles
 
 - **UX-001 — One shared table, many personal views.** The full table is the
@@ -62,6 +64,8 @@ authoritative event log, never inferred from animation.
 
 <a id="3-end-to-end-flows"></a>
 
+<a id="ux-041--one-page-table-composer"></a>
+
 ### UX-041 — One-page table composer
 
 The host completes creation without a multi-step wizard:
@@ -95,6 +99,8 @@ Error, empty, and recovery behavior:
   control unavailable. A retry is permitted only after a definitive failure;
   a timeout never implies that a table was not created.
 
+<a id="ux-042--join-and-piece-conflict-recovery"></a>
+
 ### UX-042 — Join and piece-conflict recovery
 
 The join gate first resolves the invite status. Invalid, expired, full, ended,
@@ -111,6 +117,8 @@ the authoritative availability, identify the unavailable piece, move focus to
 the new piece choices, and require another selection. Never displace an
 occupied Human or Computer seat. On success, issue the secure seat capability
 and focus the lobby heading with a textual joined announcement.
+
+<a id="ux-043--table-preview-lobby"></a>
 
 ### UX-043 — Table-preview lobby
 
@@ -136,6 +144,8 @@ connection, or version must be repaired.
 
 <a id="4-responsive-game-shell"></a>
 
+<a id="ux-044--desktop-classic-table-and-digital-hand"></a>
+
 ### UX-044 — Desktop classic table and digital hand
 
 At desktop widths, center the complete 40-space board as the visual anchor.
@@ -150,6 +160,8 @@ The board communicates each space's canonical identity, display name, type,
 group, owner, mortgage state, improvement level, and pieces. Property bands,
 piece shapes/patterns, labels, borders, and text repeat meaning so color is
 never required. The ordered board list remains available at every width.
+
+<a id="ux-045--phone-overview-focus-zoom-and-list-equivalence"></a>
 
 ### UX-045 — Phone overview, focus, zoom, and list equivalence
 
@@ -171,6 +183,8 @@ At 320–767 CSS px, use a safe-area-aware single-column shell:
 6. Make Board, Properties, Trade, and History navigation available without
    discarding an unresolved decision. The ordered board list exposes every fact
    and action conveyed by position or color.
+
+<a id="ux-046--one-decision-and-contextual-property-management"></a>
 
 ### UX-046 — One decision and contextual property management
 
@@ -197,6 +211,8 @@ an action is blocked. **Manage** opens Build, Sell, Mortgage, Redeem, and Trade
 actions derived from `legalActions` and `actionAvailability`; the client never
 turns a preview into confirmed state. Multi-step builds, sales, and trades stay
 atomic and return focus to the invoking deed or decision after acknowledgement.
+
+<a id="ux-047--auctions-trades-detention-debt-and-retired-summaries"></a>
 
 ### UX-047 — Auctions, trades, detention, debt, and retired summaries
 

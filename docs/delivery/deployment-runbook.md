@@ -1,9 +1,11 @@
 # Coolify deployment runbook
 
-This runbook is the operational evidence packet for F3. It describes the one
+This runbook is the operational evidence packet for F3 and the pre-classic
+activation foundation. It describes the one
 immutable `web` revision, the private MongoDB replica set, and the two
 maintenance invocations that use that same application image. It does not
-replace the required staging and release-owner approvals. See ENG-004 and
+replace the required staging and release-owner approvals. See ENG-004, ENG-027,
+ENG-031 and
 OPS-001–005, OPS-007.
 
 ## Service and environment

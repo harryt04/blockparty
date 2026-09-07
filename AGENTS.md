@@ -1,16 +1,24 @@
 ## Repository state
 
-The workspace and the application scaffolding exist. `apps/web` builds and runs
-with **no MongoDB configured**. Route Handlers from ENG-003 are present, while
-live game/lobby/summary screens require the authenticated sync client and must
-not fabricate state. No browser sync client or full playable surface is
-implemented until the remaining backlog tickets land.
+The workspace and the application are implemented through the completed
+historical delivery queue. `apps/web` builds and runs without MongoDB for page
+and health-route development, while `npm run dev` provisions an isolated local
+replica set when the configured database is absent or unreachable. The
+authenticated sync client, lobby, live game, summary, bot-turn, persistence,
+SSE, PWA, analytics, and operational paths are present and must not fabricate
+state. The current runtime still uses the placeholder content bundle; the
+active [classic overhaul queue](docs/delivery/classic-overhaul-backlog.md) must
+land the classic 1.0.0 bundle and its UI/contracts before that becomes the
+production default.
 
 `docs/` is the implementation authority. Read the relevant spec before you write code. Do not invent behavior that a document already defines.
 
 Implementation is unblocked. The project owner settled the name — **Blockparty** — and the brand documents are the current naming authority.
 
-The work queue is [build-backlog.md](docs/delivery/build-backlog.md): 64 dependency-ordered tickets across Loops 0–F. Take one ticket per session. Do not add a ticket to it.
+The historical 64-ticket [build backlog](docs/delivery/build-backlog.md) is
+closed. The active work queue is the dependency-ordered
+[classic overhaul backlog](docs/delivery/classic-overhaul-backlog.md). Take one
+ticket per session. Do not add a ticket to either queue.
 
 ## Normative precedence
 
@@ -107,7 +115,9 @@ This project implements familiar mechanics with independently authored expressio
 - Every creative or numerical asset needs a provenance record (creator, date, inputs, license, AI-tool record, review). Missing provenance blocks release.
 - **Blockparty** is the settled product name. Public release still requires the attorney gate and provenance/license packet.
 - Never place the mark next to blockchain, web3, crypto, NFT, or token language anywhere public.
-- The board is a winding, irregular neighborhood street route. A square grid or a familiar perimeter layout is a **Red** finding, not a style choice.
+- The classic overhaul board is a 40-space perimeter table. The pre-overhaul
+  winding-route requirement remains historical in the closed delivery ledger;
+  do not reintroduce it into classic content or UI implementation.
 - Public release is blocked on the attorney gate. Do not make clone, remake, compatibility, or affiliation claims.
 
 ## Working practice

@@ -11,6 +11,8 @@ city. It does not copy a board name, card title, card wording, illustration,
 token, or interface asset. Public release remains subject to the provenance and
 attorney gates in [IP safety](../legal/ip-safety.md).
 
+<a id="versioned-content-bundle"></a>
+
 ## Bundle identity and counts
 
 | Field | Value |

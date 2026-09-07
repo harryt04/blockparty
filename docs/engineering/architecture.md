@@ -6,7 +6,13 @@
 
 **Companion documents:** [PRD](../product/prd.md), [rules](../product/rules.md), [variants](../product/rule-variants.md), [game content](../product/game-content.md), [glossary](../product/glossary.md), [UX](../design/ux-spec.md), [game engine](game-engine.md), [realtime and data](realtime-and-data.md), [security, privacy, and analytics](security-privacy-analytics.md), [test strategy](../delivery/test-strategy.md), and [operations](../delivery/operations.md).
 
-This document records the final application shape for Blockparty. It supersedes the earlier proposal for a separately deployed Fastify/Socket.IO game server and PostgreSQL/Drizzle persistence layer. The product remains a private, browser-playable, original-property board game for two to six players. Product behavior and rules remain defined by the higher-precedence documents linked above.
+This document records the final application shape for Blockparty. It supersedes
+the earlier proposal for a separately deployed Fastify/Socket.IO game server and
+PostgreSQL/Drizzle persistence layer. The product remains a private,
+browser-playable, original-property board game for two to six players. Product
+behavior and rules remain defined by the higher-precedence documents linked
+above. The implementation foundation is live; the active classic overhaul
+still has to version and activate the 1.0.0 content/contracts described below.
 
 ## ENG-001: Architectural goals and constraints
 
@@ -211,3 +217,36 @@ The following are explicitly rejected for this final architecture:
 - [MongoDB Node.js driver transactions](https://www.mongodb.com/docs/drivers/node/current/fundamentals/transactions/) and [MongoDB change streams](https://www.mongodb.com/docs/manual/changeStreams/)
 - [Zod](https://zod.dev/), [Tailwind CSS](https://tailwindcss.com/docs), and [shadcn/ui](https://ui.shadcn.com/docs)
 - [Coolify documentation](https://coolify.io/docs/) for the installed deployment/proxy version
+
+## Classic-overhaul engineering boundaries
+
+### ENG-029 — Creation and admission contract version
+
+The classic-overhaul contract is a versioned compatibility boundary. Its target
+shape separates `humanSeatCount` (including the host) from `botSeatCount`, keeps
+the combined table between two and six seats, captures the host pseudonym and
+piece at creation, and returns server-reported open pieces for admission. The
+server derives total seats and issues capabilities only through secure cookies;
+unknown fields and stale piece claims are rejected without displacing an
+occupied seat. Until CO-009 lands, the running reader continues to accept the
+historical placeholder-era create shape and its captured versions; it must not
+be described as the classic 1.0.0 contract.
+
+### ENG-030 — Multi-kind improvement state and event version
+
+The classic ruleset versions improvement transitions as complete per-kind maps.
+Each accepted transition atomically records cash, deed level, and every House
+or Hotel inventory delta, and replay reconstructs the same maps. The current
+placeholder-era engine remains readable through its existing scalar transition
+shape until CO-010/CO-011 introduce the additive event/state version; no
+started game may be reinterpreted against the new default.
+
+### ENG-031 — Placeholder-game retirement workflow
+
+Placeholder games are retained as readable historical games and are not
+migrated in place. The target retirement workflow selects only non-terminal
+games with `contentVersion=0.0.0-placeholder`, appends a committed no-contest
+`CONTENT_RETIRED` transition, revokes gameplay capabilities, preserves a
+read-only summary, and is safe to repeat. CO-017 owns the transactional
+implementation; until then, the current maintenance path must not claim that
+retirement has occurred.
