@@ -6,7 +6,11 @@
  * surface; neither surface invents state beyond the authorized projection.
  */
 import type { BoardSpaceProjection, SeatProjection } from "@blockparty/contracts";
-import { DEED_CATEGORY_DISPLAY, SPACE_CATEGORY_DISPLAY } from "@/components/display-names";
+import {
+  DEED_CATEGORY_DISPLAY,
+  SPACE_CATEGORY_DISPLAY,
+  formatMoney,
+} from "@/components/display-names";
 import { cn } from "@/lib/utils";
 import { boardStopAccessibleLabel } from "./game-model";
 import { PlayerToken } from "./player-token";
@@ -149,12 +153,12 @@ export function BoardView({
             data-board-topology="perimeter-40"
           >
             <div
-              className="classic-board-center flex items-center justify-center border border-line bg-canvas p-3 text-center"
+              className="classic-board-center flex items-center justify-center border p-3 text-center"
               style={{ gridColumn: "2 / span 9", gridRow: "2 / span 9" }}
             >
               <div>
                 <p className="font-serif text-lg">Blockparty</p>
-                <p className="mt-1 text-xs text-muted-ink">40-space classic table</p>
+                <p className="classic-board-muted mt-1 text-xs">The city is yours to build</p>
               </div>
             </div>
 
@@ -177,7 +181,7 @@ export function BoardView({
                   key={space.spaceId}
                   type="button"
                   className={cn(
-                    "classic-board-cell min-w-0 overflow-hidden border border-line bg-surface-raised p-1 text-left text-ink",
+                    "classic-board-cell min-w-0 overflow-hidden border p-1 text-left",
                     "focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-focus",
                     selected && "classic-board-cell-selected",
                   )}
@@ -196,23 +200,24 @@ export function BoardView({
                 >
                   <span
                     className={cn(
-                      "classic-board-band block h-2 shrink-0 border-t-4",
+                      "classic-board-band block h-3 shrink-0 border-t-4",
                       bandClass(space),
                     )}
                   />
-                  <span className="mt-1 flex min-w-0 items-center justify-between gap-1 text-[0.6rem] leading-none text-muted-ink">
-                    <span className="tabular shrink-0">{space.routeIndex}</span>
-                    <span className="truncate">{space.spaceId}</span>
+                  <span className="classic-board-muted mt-1 flex min-w-0 items-center justify-between gap-1 text-[0.6rem] leading-none">
+                    <span className="tabular shrink-0">{space.routeIndex + 1}</span>
+                    <span className="truncate">{deedCategory?.label ?? category.label}</span>
                   </span>
                   <span className="classic-board-cell-name mt-1 line-clamp-2 font-semibold leading-tight">
                     {space.name}
                   </span>
-                  <span className="mt-1 block truncate text-[0.6rem] leading-tight text-muted-ink">
-                    {deedCategory?.label ?? category.label}
-                    {districtName === undefined ? "" : ` · ${districtName}`}
+                  <span className="classic-board-muted mt-1 block truncate text-[0.6rem] leading-tight">
+                    {space.price === undefined
+                      ? (districtName ?? category.label)
+                      : formatMoney(space.price, currencyLabel)}
                   </span>
-                  <span className="mt-1 flex min-w-0 items-center justify-between gap-1 text-[0.6rem] leading-tight">
-                    <span className="truncate">{state}</span>
+                  <span className="mt-auto flex min-w-0 items-center justify-between gap-1 pt-1 text-[0.6rem] leading-tight">
+                    <span className="truncate">{state === "Available" ? "" : state}</span>
                     <OccupantStack space={space} seats={seats} movement={movement} />
                   </span>
                 </button>
