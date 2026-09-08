@@ -338,6 +338,115 @@ test.describe("live multiplayer authority", () => {
         ).toBeVisible();
       }
 
+      let tradeProposer: (typeof players)[number] | undefined;
+      for (let step = 0; step < 36 && tradeProposer === undefined; step += 1) {
+        const states = await Promise.all(
+          players.map(async (player) => ({ player, bootstrap: await bootstrap(player.page) })),
+        );
+        tradeProposer = states.find(({ bootstrap: current }) =>
+          current.snapshot.legalActions.some((action) => action.type === "ProposeTrade"),
+        )?.player;
+        if (tradeProposer !== undefined) break;
+
+        const actor = states
+          .map((state) => ({
+            ...state,
+            action: supportedProgressionAction(state.bootstrap.snapshot.legalActions),
+          }))
+          .find(({ action }) => action !== undefined);
+        expect(actor, "a live seat should advertise the next trade setup action").toBeDefined();
+        if (actor === undefined) throw new Error("No live action was advertised before trade");
+        if (actor.action === undefined) throw new Error("Unsupported live trade setup action");
+        await issueCommand(
+          actor.player.page,
+          actor.bootstrap.aggregateVersion,
+          commandForLegalAction(actor.action),
+        );
+      }
+
+      expect(
+        tradeProposer,
+        "a live seat should advertise an authoritative trade proposal",
+      ).toBeDefined();
+      if (tradeProposer !== undefined) {
+        const proposerBefore = await bootstrap(tradeProposer.page);
+        const proposerSeat = proposerBefore.snapshot.seats.find((seat) => seat.isSelf);
+        const counterparty = players.find((player) => player !== tradeProposer);
+        expect(proposerSeat?.balance, "the proposer should have transferable Tabs").toBeGreaterThan(
+          100,
+        );
+        expect(counterparty).toBeDefined();
+        if (proposerSeat === undefined || counterparty === undefined) {
+          throw new Error("Trade seats were not present in the authoritative projection");
+        }
+        const counterpartySeat = proposerBefore.snapshot.seats.find(
+          (seat) => seat.seatId !== proposerSeat.seatId,
+        );
+        expect(counterpartySeat, "the trade counterparty should be active").toBeDefined();
+        if (counterpartySeat === undefined) throw new Error("Trade counterparty was not projected");
+        const proposerBalance = proposerSeat.balance ?? 0;
+        const counterpartyBalance = counterpartySeat.balance ?? 0;
+
+        await expect(
+          tradeProposer.page.getByRole("button", { name: "Propose a trade", exact: true }),
+        ).toBeVisible();
+        await tradeProposer.page
+          .getByRole("button", { name: "Propose a trade", exact: true })
+          .click();
+        await expect(tradeProposer.page.getByLabel("Compose trade")).toBeVisible();
+        await tradeProposer.page.getByLabel("Counterpart").selectOption(counterpartySeat.seatId);
+        await tradeProposer.page.getByLabel("You give (Tabs)").fill("100");
+        await tradeProposer.page.getByLabel("You request (Tabs)").fill("0");
+        await tradeProposer.page
+          .getByRole("button", { name: "Review what you give and receive" })
+          .click();
+        await expect(tradeProposer.page.getByLabel("Review trade")).toBeVisible();
+
+        const proposeResponsePromise = tradeProposer.page.waitForResponse(
+          (response) =>
+            response.url().endsWith(`/api/games/${created.gameId}/commands`) &&
+            response.request().method() === "POST",
+        );
+        await tradeProposer.page.getByRole("button", { name: "Propose this trade" }).click();
+        expect((await proposeResponsePromise).ok()).toBe(true);
+        await expect(
+          counterparty.page.getByRole("heading", { name: "Pending trade" }),
+        ).toBeVisible();
+        await expect(
+          counterparty.page.getByText(`${proposerSeat.name ?? "Proposer"} sent you an offer.`, {
+            exact: true,
+          }),
+        ).toBeVisible();
+
+        const acceptResponsePromise = counterparty.page.waitForResponse(
+          (response) =>
+            response.url().endsWith(`/api/games/${created.gameId}/commands`) &&
+            response.request().method() === "POST",
+        );
+        await counterparty.page.getByRole("button", { name: "Accept this trade" }).click();
+        expect((await acceptResponsePromise).ok()).toBe(true);
+        await expect(
+          counterparty.page.getByRole("heading", { name: "Pending trade" }),
+        ).toBeHidden();
+
+        await expect
+          .poll(async () => {
+            const state = await bootstrap(tradeProposer.page);
+            const seat = state.snapshot.seats.find((candidate) => candidate.isSelf);
+            return seat?.balance;
+          })
+          .toBe(proposerBalance - 100);
+        await expect
+          .poll(async () => {
+            const state = await bootstrap(counterparty.page);
+            const seat = state.snapshot.seats.find(
+              (candidate) => candidate.seatId === counterpartySeat.seatId,
+            );
+            return seat?.balance;
+          })
+          .toBe(counterpartyBalance + 100);
+      }
+
       await host.goto("/create", { waitUntil: "domcontentloaded" });
       await host.getByRole("textbox", { name: "Your pseudonym" }).fill("Auction Host");
       await host.getByRole("radio", { name: "Lantern" }).check();

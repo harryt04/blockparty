@@ -1131,6 +1131,14 @@ accidental collapse in coverage.
       mortgage action, and observes the committed Mortgaged Property hand
       state. The trade, detention, debt, completion, rematch, and WebKit
       live-server evidence remain open.
+      Iteration 86 adds the next live journey slice for a server-advertised
+      ProposeTrade action: one context composes and submits a present-value
+      cash offer, the named counterparty sees the pending trade and accepts it,
+      and both authorized projections assert the committed balance transfer.
+      Typecheck, formatting, and production build pass. The opt-in Chromium
+      live run started its local replica set but stalled before a product
+      assertion in this environment, so runtime trade evidence remains open
+      alongside the wider detention-through-rematch matrix.
 
 - [~] **CO-031 — Complete accessibility and mobile-style failure evidence** (Codex, iteration 79)
       Blocked by: CO-030
