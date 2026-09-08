@@ -997,6 +997,14 @@ test.describe("live multiplayer authority", () => {
           await expect(
             debt.page.getByRole("button", { name: "Mortgage an Address" }).first(),
           ).toBeVisible();
+          await expect(
+            debt.page.getByText("A legal liquidation action can still settle the debt.", {
+              exact: true,
+            }),
+          ).toBeVisible();
+          await expect(
+            debt.page.getByRole("button", { name: "Declare bankruptcy", exact: true }),
+          ).toHaveCount(0);
 
           await debt.page.setViewportSize({ width: 375, height: 900 });
           await assertNoHorizontalOverflow(host, "debt host mobile");

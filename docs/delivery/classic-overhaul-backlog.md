@@ -1186,6 +1186,12 @@ accidental collapse in coverage.
       AwaitDebt clears. Mutating that payment label makes the Chromium journey
       fail. Bankruptcy, terminal summary, rematch, Firefox/WebKit runtime, and
       broader screenshot coverage remain open.
+      Iteration 93 extends the same live Owed journey with the blocked-bankruptcy
+      guard: while an authoritative MortgageDeed remains available, the debtor
+      sees the server-provided liquidation explanation and no Declare bankruptcy
+      control at 375px and 1280px. The full confirmed-bankruptcy, terminal
+      summary, rematch, Firefox/WebKit runtime, and broader screenshot coverage
+      remain open.
 
 - [~] **CO-031 — Complete accessibility and mobile-style failure evidence** (Codex, iteration 79)
       Blocked by: CO-030
