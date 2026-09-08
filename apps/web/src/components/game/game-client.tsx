@@ -49,6 +49,7 @@ import {
 import { PlayerStrip } from "./player-strip";
 import { PropertyHand } from "./property-hand";
 import { MobileGameNav, type MobileGameSection } from "./mobile-game-nav";
+import { blockingDecisionKind } from "./action-bar-model";
 
 function GameLoading() {
   return (
@@ -89,6 +90,8 @@ export function GameClient({ gameId }: { gameId: string }) {
   const { state, retry } = useGameSync(gameId);
   const previousConnection = useRef(state.connection);
   const previousPhase = useRef(state.snapshot?.phase);
+  const previousBlockingDecision = useRef<ReturnType<typeof blockingDecisionKind>>(undefined);
+  const restoreDecisionFocus = useRef(false);
   const previousActiveSpaceId = useRef<string | undefined>(undefined);
   const commandSubmissionInFlight = useRef(false);
   const retryableCommand = useRef<RetryableCommand | undefined>(undefined);
@@ -106,6 +109,7 @@ export function GameClient({ gameId }: { gameId: string }) {
   const [mobileSection, setMobileSection] = useState<MobileGameSection>("board-section");
 
   const snapshot = state.snapshot;
+  const blockingDecision = snapshot === undefined ? undefined : blockingDecisionKind(snapshot);
   const spaces = useMemo(
     () => (snapshot === undefined ? [] : orderedBoard(snapshot.board)),
     [snapshot],
@@ -161,6 +165,29 @@ export function GameClient({ gameId }: { gameId: string }) {
     }
     previousPhase.current = snapshot?.phase;
   }, [snapshot, track]);
+
+  useEffect(() => {
+    if (previousBlockingDecision.current !== undefined && blockingDecision === undefined) {
+      restoreDecisionFocus.current = true;
+    }
+    previousBlockingDecision.current = blockingDecision;
+  }, [blockingDecision]);
+
+  useEffect(() => {
+    if (
+      !restoreDecisionFocus.current ||
+      blockingDecision !== undefined ||
+      state.connection !== "live" ||
+      snapshot?.paused === true ||
+      pendingAction !== undefined
+    ) {
+      return;
+    }
+    const target = document.getElementById("game-action-sheet-trigger");
+    if (!(target instanceof HTMLElement) || target.hasAttribute("disabled")) return;
+    restoreDecisionFocus.current = false;
+    target.focus();
+  }, [blockingDecision, pendingAction, snapshot?.paused, state.connection]);
 
   useEffect(() => {
     if (hasAuthoritativeActionResult(acknowledgedActionVersion, authoritativeSnapshotVersion)) {

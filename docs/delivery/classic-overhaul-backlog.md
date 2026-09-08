@@ -929,6 +929,11 @@ accidental collapse in coverage.
       Iteration 58 adds explicit keyboard-focus assertions for the auto-opened acquisition and auction sheets;
       Chromium, Firefox, and WebKit pass, and removing the modal's initial focus call fails both Chromium
       regressions. Broader disconnect and release evidence remain outstanding.
+      Iteration 59 restores focus to the action-sheet entry after an authoritative
+      detention, debt, or pending-trade decision closes. The cross-browser
+      regression covers all three dedicated surfaces and confirms focus returns
+      only after the confirmed snapshot is applied; broader disconnect and
+      release evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

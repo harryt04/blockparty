@@ -260,6 +260,7 @@ export function ActionBar({
 
       <Button
         ref={actionSheetTriggerRef}
+        id="game-action-sheet-trigger"
         variant="primary"
         className="w-full sm:w-auto"
         onClick={() => setOpen(true)}

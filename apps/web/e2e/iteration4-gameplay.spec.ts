@@ -1602,6 +1602,83 @@ test("pending trade focuses the offer and accepts only for its named counterpart
   });
 });
 
+test("closing a dedicated decision restores focus to the action entry", async ({ page }) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("TurnStart", 1, {
+      pendingTrade: {
+        tradeId: "trade-focus-close-1",
+        proposerSeatId: "seat-b",
+        counterpartySeatId: "seat-a",
+        offered: { cash: 2_000, deedIds: [], detentionReleaseCardIds: [] },
+        requested: { cash: 0, deedIds: [], detentionReleaseCardIds: [] },
+        proposerBalance: 153_000,
+        counterpartyBalance: 145_000,
+        aggregateVersion: 1,
+      },
+      legalActions: [{ type: "AcceptTrade", constraints: { tradeId: "trade-focus-close-1" } }],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const trigger = page.getByRole("button", { name: "Open action sheet" });
+  await expect(page.getByRole("heading", { name: "Pending trade" })).toBeFocused();
+  await page.getByRole("button", { name: "Accept this trade" }).click();
+  await expect.poll(() => commands.length).toBe(1);
+  await emitSnapshot(page, snapshot("TurnStart", 2));
+  await expect(trigger).toBeFocused();
+
+  await emitSnapshot(
+    page,
+    snapshot("AwaitChoice", 3, {
+      seats: snapshot("AwaitChoice", 3).seats.map((seat) =>
+        seat.seatId === "seat-a" ? { ...seat, detained: true, detentionTurnsRemaining: 2 } : seat,
+      ),
+      legalActions: [
+        {
+          type: "ChoosePendingOption",
+          constraints: { choiceId: "choice-focus-close", optionId: "attempt-roll" },
+        },
+      ],
+    }),
+  );
+  await expect(
+    page.getByRole("heading", { name: "Noise Complaint: choose your exit" }),
+  ).toBeFocused();
+  await page.getByRole("button", { name: "Attempt a matching roll" }).click();
+  await expect.poll(() => commands.length).toBe(2);
+  await emitSnapshot(page, snapshot("TurnStart", 4));
+  await expect(trigger).toBeFocused();
+
+  await emitSnapshot(
+    page,
+    snapshot("AwaitChoice", 5, {
+      obligation: {
+        debtorSeatId: "seat-a",
+        creditorSeatId: "seat-b",
+        amount: 200_000,
+        reasonCode: "RENT_DUE",
+        reason: "Rent is due to Side Street.",
+      },
+      legalActions: [{ type: "PayObligation" }],
+    }),
+  );
+  await expect(page.getByRole("heading", { name: "Owed: payment required" })).toBeFocused();
+  await page.getByRole("button", { name: "Pay what is Owed" }).click();
+  await expect.poll(() => commands.length).toBe(3);
+  await emitSnapshot(page, snapshot("TurnStart", 6));
+  await expect(trigger).toBeFocused();
+});
+
 test("paused pending trade keeps the offer visible without fabricating acceptance", async ({
   page,
 }) => {

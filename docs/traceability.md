@@ -590,3 +590,9 @@ UX-046, and UX-047. Chromium, Firefox, and WebKit confirm that the sheet's Close
 control receives focus; the Chromium mutation run fails both regressions when the
 modal's initial focus call is removed. Broader disconnect and live-release
 evidence remain assigned to CO-027 and CO-030–031.
+Iteration 59 adds authoritative close-transition focus evidence for UX-044,
+UX-046, and UX-047. When a detention, debt, or pending-trade decision is removed
+by a newer confirmed snapshot, `GameClient` restores focus to the action-sheet
+entry; `apps/web/e2e/iteration4-gameplay.spec.ts` covers all three surfaces in
+Chromium, Firefox, and WebKit. Broader disconnect and live-release evidence
+remain assigned to CO-027 and CO-030–031.
