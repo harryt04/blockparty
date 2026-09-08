@@ -1024,6 +1024,13 @@ accidental collapse in coverage.
       terminal `/sync` response, verifies the last confirmed table remains
       visible and read-only, and proves no command is emitted; broader live
       multiplayer, real replica-set, and release evidence remain outstanding.
+      Iteration 74 fixes the mobile connection pill to render the same
+      authoritative `Connected`, `Reconnecting`, `Resyncing`, `Connecting`, or
+      `Offline` state as the desktop status. A 375px Chromium regression proves
+      that transport loss is visibly and accessibly distinguished from the
+      connected state; mutation of the rendering back to the old collapsed
+      labels fails the test. Broader live multiplayer, real replica-set, and
+      release evidence remain outstanding.
 
 - [~] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

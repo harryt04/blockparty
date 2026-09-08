@@ -528,11 +528,7 @@ export function GameClient({ gameId }: { gameId: string }) {
             className="rounded-(--radius-pill) border border-line bg-surface px-2 py-1 text-xs font-medium"
             data-mobile-connection
           >
-            {state.connection === "live"
-              ? "Online"
-              : state.connection === "closed"
-                ? "Offline"
-                : "Connecting"}
+            {mobileConnectionLabel}
           </p>
         </div>
       </section>

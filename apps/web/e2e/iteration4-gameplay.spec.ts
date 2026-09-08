@@ -2281,6 +2281,25 @@ test("reconnect transitions announce once and stay quiet through transport churn
   await expect(page.getByText("Connected", { exact: true })).toBeVisible({ timeout: 5_000 });
 });
 
+test("mobile connection status distinguishes reconnecting from initial connecting", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 900 });
+  await mockLiveStream(page);
+  await mockGameApi(page);
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const mobileStatus = page.locator("[data-mobile-connection]");
+  await expect(mobileStatus).toHaveText("Connected");
+
+  await page.evaluate(() => {
+    (window as unknown as { __emitGameConnectionError?: () => void }).__emitGameConnectionError?.();
+  });
+
+  await expect(mobileStatus).toHaveText("Reconnecting");
+  await expect(mobileStatus).toHaveAttribute("aria-label", "Connection status: Reconnecting");
+});
+
 test("reconnect keeps the newer authoritative snapshot against a late stale frame", async ({
   page,
 }) => {

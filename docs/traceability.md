@@ -377,6 +377,13 @@ projection and disabling commands after a terminal `/sync` response. The
 Chromium regression in `apps/web/e2e/iteration4-gameplay.spec.ts` verifies the
 read-only state and zero command emission; broader multiplayer and release
 evidence remain planned.
+Iteration 74 fixes the mobile connection pill to render the same authoritative
+state label as the desktop status instead of collapsing every non-terminal
+state to `Connecting`. The 375px Chromium regression in
+`apps/web/e2e/iteration4-gameplay.spec.ts` verifies `Connected` and
+`Reconnecting` text plus the accessible label; mutation back to the collapsed
+rendering fails the test. Broader multiplayer and release evidence remain
+planned.
 
 No self-hosted font files are present because licensed, provenanced faces have
 not yet been approved. The PWA shell caches only versioned public/app-shell
