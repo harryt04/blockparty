@@ -59,7 +59,7 @@ test.describe("entry actions remain reachable with first-visit notices", () => {
     });
     await page.goto(`/join/${inviteId}`);
     await page.getByRole("textbox", { name: "Name for this game" }).fill("Second Player");
-    await page.getByRole("radio", { name: "Barricade" }).check();
+    await page.getByRole("radio", { name: "Key" }).check();
     await page
       .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
       .check();
@@ -74,6 +74,8 @@ test.describe("entry actions remain reachable with first-visit notices", () => {
 
   test("can submit the create form while analytics consent is pending", async ({ page }) => {
     await page.goto("/create");
+    await page.getByRole("textbox", { name: "Your pseudonym" }).fill("Host");
+    await page.getByRole("radio", { name: "Lantern" }).check();
     await page
       .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
       .check();
@@ -85,5 +87,64 @@ test.describe("entry actions remain reachable with first-visit notices", () => {
       page.getByRole("alert").filter({ hasText: "Lobby was not created" }),
     ).toBeVisible();
     await expect(page.getByRole("complementary", { name: "Analytics consent" })).toBeVisible();
+  });
+
+  test("sends only one create request while the first request is pending", async ({ page }) => {
+    let requestCount = 0;
+    await page.route("**/api/games", async (route) => {
+      requestCount += 1;
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      for (const field of ["capability", "seatCapability", "hostCapability", "reclaimClaim"]) {
+        expect(body).not.toHaveProperty(field);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      await route.fulfill({
+        status: 400,
+        json: {
+          protocolVersion: 1,
+          type: "game.error",
+          serverTime: "2026-09-07T16:00:00.000Z",
+          error: {
+            code: "INVALID_PAYLOAD",
+            message: "Test pending boundary response.",
+            retryable: false,
+          },
+        },
+      });
+    });
+    await page.goto("/create");
+    await page.getByRole("textbox", { name: "Your pseudonym" }).fill("Host");
+    await page.getByRole("radio", { name: "Lantern" }).check();
+    await page
+      .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
+      .check();
+
+    await page.getByRole("button", { name: "Create lobby" }).evaluate((button) => {
+      const submitButton = button as HTMLButtonElement;
+      submitButton.click();
+      submitButton.click();
+    });
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Test pending boundary response." }),
+    ).toBeVisible();
+    expect(requestCount).toBe(1);
+  });
+
+  test("keeps the rules summary collapsed and the composer within narrow viewports", async ({
+    page,
+  }) => {
+    for (const width of [375, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/create");
+      await expect(page.locator("main details")).not.toHaveAttribute("open", "");
+      await expect(page.locator("main summary")).toContainText("Standard · all house rules off");
+      const dimensions = await page.evaluate(() => ({
+        clientWidth: document.documentElement.clientWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      }));
+      expect(dimensions.scrollWidth, `${width}px create page overflow`).toBeLessThanOrEqual(
+        dimensions.clientWidth + 1,
+      );
+    }
   });
 });

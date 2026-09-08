@@ -9,7 +9,7 @@ import {
   type VariantKey,
 } from "@blockparty/contracts";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   enabledVariantCountBucket,
@@ -109,6 +109,7 @@ function FieldError({
 export function CreateGameForm() {
   const router = useRouter();
   const { track } = useAnalytics();
+  const submissionInFlight = useRef(false);
   const [hydrated, setHydrated] = useState(false);
   const [pending, setPending] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<CreateField, string>>>({});
@@ -143,6 +144,7 @@ export function CreateGameForm() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submissionInFlight.current) return;
     setApiError(undefined);
     const form = new FormData(event.currentTarget);
     form.set("humanSeatCount", String(humanSeatCount));
@@ -153,6 +155,7 @@ export function CreateGameForm() {
       return;
     }
     setErrors({});
+    submissionInFlight.current = true;
     track("game_create_started", {
       player_count_bucket: playerCountBucket(
         result.request.humanSeatCount + result.request.botSeatCount,
@@ -201,6 +204,7 @@ export function CreateGameForm() {
     } catch {
       setApiError("The lobby could not be created. Nothing was changed. Check your connection.");
     } finally {
+      submissionInFlight.current = false;
       setPending(false);
     }
   }
@@ -210,6 +214,17 @@ export function CreateGameForm() {
     humanSeatCount + botSeatCount < 2 || humanSeatCount + botSeatCount > 6
       ? "Choose between 2 and 6 total players."
       : undefined;
+  const selectedConfiguration = VARIANT_KEYS.every(
+    (key) =>
+      variants[key] ===
+      (preset === "standard" ? STANDARD_CONFIGURATION[key] : SHORT_GAME_CONFIGURATION[key]),
+  );
+  const enabledVariantCount = VARIANT_KEYS.filter((key) => variants[key]).length;
+  const rulesSummary = selectedConfiguration
+    ? preset === "standard"
+      ? "Standard · all house rules off"
+      : "Short game · two house rules on"
+    : `Custom · ${enabledVariantCount} house rule${enabledVariantCount === 1 ? "" : "s"} on`;
 
   return (
     <form className="flex flex-col gap-6" onSubmit={submit} noValidate>
@@ -290,68 +305,80 @@ export function CreateGameForm() {
       <Card>
         <CardHeader>
           <CardTitle>Rules</CardTitle>
-          <CardDescription>
-            Start from a preset, then change any of the eight options. Rules lock when the game
-            starts.
-          </CardDescription>
+          <CardDescription>Rules lock when the game starts.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <fieldset className="flex flex-col gap-2" {...fieldProps("preset", errors)}>
-            <legend className="text-sm font-medium">Preset</legend>
-            <label className="flex min-h-11 items-center gap-3">
-              <input
-                type="radio"
-                name="preset"
-                value="standard"
-                checked={preset === "standard"}
-                onChange={() => selectPreset("standard")}
-              />
-              <span>
-                Standard
-                <span className="block text-sm text-muted-ink">
-                  All eight options off. The closest to the canonical rules.
-                </span>
+          <details className="group rounded-(--radius-md) border border-line">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 font-medium [&::-webkit-details-marker]:hidden">
+              <span>{rulesSummary}</span>
+              <span aria-hidden="true" className="text-lg text-muted-ink group-open:rotate-180">
+                ↓
               </span>
-            </label>
-            <label className="flex min-h-11 items-center gap-3">
-              <input
-                type="radio"
-                name="preset"
-                value="short-game"
-                checked={preset === "short-game"}
-                onChange={() => selectPreset("short-game")}
-              />
-              <span>
-                Short game
-                <span className="block text-sm text-muted-ink">
-                  Deals Addresses at the start and relaxes even building. Shorter, but higher
-                  variance.
-                </span>
-              </span>
-            </label>
-            <FieldError field="preset" errors={errors} />
-          </fieldset>
+            </summary>
+            <div className="flex flex-col gap-4 border-t border-line p-3">
+              <p className="text-sm text-muted-ink">
+                Start from a preset, then change any of the eight options.
+              </p>
+              <fieldset className="flex flex-col gap-2" {...fieldProps("preset", errors)}>
+                <legend className="text-sm font-medium">Preset</legend>
+                <label className="flex min-h-11 items-center gap-3">
+                  <input
+                    type="radio"
+                    name="preset"
+                    value="standard"
+                    checked={preset === "standard"}
+                    onChange={() => selectPreset("standard")}
+                  />
+                  <span>
+                    Standard
+                    <span className="block text-sm text-muted-ink">
+                      All eight options off. The closest to the canonical rules.
+                    </span>
+                  </span>
+                </label>
+                <label className="flex min-h-11 items-center gap-3">
+                  <input
+                    type="radio"
+                    name="preset"
+                    value="short-game"
+                    checked={preset === "short-game"}
+                    onChange={() => selectPreset("short-game")}
+                  />
+                  <span>
+                    Short game
+                    <span className="block text-sm text-muted-ink">
+                      Deals Addresses at the start and relaxes even building. Shorter, but higher
+                      variance.
+                    </span>
+                  </span>
+                </label>
+                <FieldError field="preset" errors={errors} />
+              </fieldset>
 
-          <fieldset className="flex flex-col gap-3">
-            <legend className="text-sm font-medium">Options</legend>
-            {VARIANT_KEYS.map((key) => (
-              <label key={key} className="flex min-h-11 items-start gap-3">
-                <input
-                  type="checkbox"
-                  name={key}
-                  className="mt-1"
-                  checked={variants[key]}
-                  onChange={(event) =>
-                    setVariants((current) => ({ ...current, [key]: event.target.checked }))
-                  }
-                />
-                <span>
-                  {VARIANT_COPY[key].label}
-                  <span className="block text-sm text-muted-ink">{VARIANT_COPY[key].warning}</span>
-                </span>
-              </label>
-            ))}
-          </fieldset>
+              <fieldset className="flex flex-col gap-3">
+                <legend className="text-sm font-medium">Options</legend>
+                {VARIANT_KEYS.map((key) => (
+                  <label key={key} className="flex min-h-11 items-start gap-3">
+                    <input
+                      type="checkbox"
+                      name={key}
+                      className="mt-1"
+                      checked={variants[key]}
+                      onChange={(event) =>
+                        setVariants((current) => ({ ...current, [key]: event.target.checked }))
+                      }
+                    />
+                    <span>
+                      {VARIANT_COPY[key].label}
+                      <span className="block text-sm text-muted-ink">
+                        {VARIANT_COPY[key].warning}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
+            </div>
+          </details>
         </CardContent>
       </Card>
 

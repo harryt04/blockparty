@@ -104,9 +104,9 @@ Initial deployment uses one Next.js application replica and one private MongoDB 
 ## ENG-029–031: Classic transition protocol boundaries
 
 `ENG-029` versions the create/admission wire contract without putting
-capabilities in request bodies, URLs, storage, logs, or analytics. The current
-server exposes the historical placeholder-era shape; CO-009 is responsible for
-the strict human/computer and piece-availability migration.
+capabilities in request bodies, URLs, storage, logs, or analytics. CO-009
+provides the strict human/computer and piece-availability contract, and CO-020
+uses it from the one-page create surface with server-derived seat order.
 
 `ENG-030` uses event version 2 and state schema 2.0.0 for complete
 House/Hotel inventory maps. Improvement replay rejects partial maps, while

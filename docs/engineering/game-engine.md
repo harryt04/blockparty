@@ -124,8 +124,8 @@ The classic contract captures host identity and piece selection at creation,
 separates human and computer counts, and keeps admission availability
 authoritative. This is a contract migration concern, not a reducer shortcut;
 the server derives seats and authorizes capabilities while the engine receives
-only validated actor-scoped commands. The placeholder-era contract remains the
-current runtime shape until CO-009 lands.
+only validated actor-scoped commands. CO-009 provides the strict wire contract,
+and CO-020 completes the create-surface mapping and server seat derivation.
 
 ### ENG-030 — Multi-kind improvement state and event version
 

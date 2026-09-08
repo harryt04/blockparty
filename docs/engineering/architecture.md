@@ -228,9 +228,9 @@ the combined table between two and six seats, captures the host pseudonym and
 piece at creation, and returns server-reported open pieces for admission. The
 server derives total seats and issues capabilities only through secure cookies;
 unknown fields and stale piece claims are rejected without displacing an
-occupied seat. Until CO-009 lands, the running reader continues to accept the
-historical placeholder-era create shape and its captured versions; it must not
-be described as the classic 1.0.0 contract.
+occupied seat. CO-009 provides the strict create/admission shape, and the
+current create surface uses it with server-derived seat order; the historical
+placeholder reader remains limited to retained summaries.
 
 ### ENG-030 — Multi-kind improvement state and event version
 

@@ -597,7 +597,7 @@ accidental collapse in coverage.
       `no-undef` error; the full suite was stopped after the known long-running
       soak produced no output.
 
-- [ ] **CO-020 — Rebuild the one-page create flow**
+- [x] **CO-020 — Rebuild the one-page create flow**
       Blocked by: CO-019
       Requirements: PRD-FUN-021, UX-041, ENG-029
       Read: create form/model/route and updated UX/content copy
@@ -611,6 +611,16 @@ accidental collapse in coverage.
       analytics.
       Proves: model tables, route tests, rapid-double-submit test, accessibility
       test, and Playwright happy/error paths.
+      Evidence: strict model and route coverage pair with server seat-order
+      reconciliation for every valid 2–6 combination; rules are collapsed by
+      default with a concise Standard/Short game/Custom summary, and
+      submissions are guarded to one in-flight request. Chromium entry tests
+      cover valid/error, duplicate-submit, collapsed summary, and 375/1280px
+      no-overflow behavior. Formatting, typecheck, build, focused tests (32
+      passed), and entry browser tests (5 passed) pass. Full CI remains blocked
+      by the pre-existing `prettier.config.cjs` ESLint `module` `no-undef`
+      error; the full coverage suite again entered the known silent
+      long-running soak and was stopped.
 
 - [ ] **CO-021 — Rebuild join admission around available pieces**
       Blocked by: CO-020

@@ -215,10 +215,16 @@ function buildSeats(request: CreateGameRequest): { seats: GameSeatRecord[]; host
     if (index === 0) {
       hostSeatId = seatId;
       seats.push({ seatId, kind: "human", status: "active", name: request.hostName, token });
-    } else if (index < request.botSeatCount + 1) {
-      seats.push({ seatId, kind: "bot", status: "active", name: `Bot ${index}`, token });
-    } else {
+    } else if (index < request.humanSeatCount) {
       seats.push({ seatId, kind: "open", status: "active", token });
+    } else {
+      seats.push({
+        seatId,
+        kind: "bot",
+        status: "active",
+        name: `Bot ${index - request.humanSeatCount + 1}`,
+        token,
+      });
     }
   }
 

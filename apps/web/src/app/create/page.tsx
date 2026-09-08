@@ -1,5 +1,5 @@
 /**
- * `/create` - Create. See UX section 2 and UX-010, UX-012.
+ * `/create` - Create. See UX-041, PRD-FUN-021, and ENG-029.
  *
  * Game name (optional, length-limited), player count 2-6, bot seats, the
  * ruleset and variant selector, the privacy note, and Create lobby.

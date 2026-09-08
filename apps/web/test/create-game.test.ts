@@ -81,6 +81,28 @@ const request = CreateGameRequest.parse({
 });
 
 describe("game creation and capability issuance", () => {
+  it.each(
+    Array.from({ length: 6 }, (_, humanSeatCount) => humanSeatCount + 1).flatMap((humanSeatCount) =>
+      Array.from({ length: 6 - humanSeatCount + 1 }, (_, botSeatCount) => ({
+        humanSeatCount,
+        botSeatCount,
+      })).filter(({ humanSeatCount: humans, botSeatCount: bots }) => humans + bots >= 2),
+    ),
+  )("keeps the host, open Humans, and Computers in preview order (%o)", async (counts) => {
+    const { store: database, documents } = store();
+    await createGameInTransaction(
+      database,
+      {} as ClientSession,
+      CreateGameRequest.parse({ ...request, ...counts }),
+    );
+
+    expect(documents.games[0]!.seats.map((seat) => seat.kind)).toEqual([
+      "human",
+      ...Array.from({ length: counts.humanSeatCount - 1 }, () => "open"),
+      ...Array.from({ length: counts.botSeatCount }, () => "bot"),
+    ]);
+  });
+
   it("persists a complete lobby with captured versions, seed, expiry, and hash-only authorities", async () => {
     const createdAt = new Date("2026-09-03T15:00:00.000Z");
     const { store: database, documents } = store();
