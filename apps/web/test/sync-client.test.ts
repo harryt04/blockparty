@@ -315,6 +315,52 @@ describe("GameSyncClient", () => {
     }
   });
 
+  it("converges after transport loss and ignores a late stale snapshot", async () => {
+    vi.useFakeTimers();
+    try {
+      const sources: FakeEventSource[] = [];
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(response(bootstrapBody(snapshot(4))))
+        .mockResolvedValueOnce(response(snapshotEnvelope(snapshot(7))));
+      const client = new GameSyncClient({
+        gameId: GAME_ID,
+        fetchImpl,
+        eventSourceFactory: () => {
+          const source = new FakeEventSource();
+          sources.push(source);
+          return source;
+        },
+        onState: () => undefined,
+        backoffBaseMs: 10,
+        jitter: () => 0,
+      });
+
+      await client.start();
+      sources[0]!.open();
+      sources[0]!.error();
+      expect(client.currentState.connection).toBe("reconnecting");
+
+      await vi.advanceTimersByTimeAsync(8);
+      await vi.waitFor(() => expect(client.currentState.snapshot?.sequence).toBe(7));
+
+      expect(client.currentState.connection).toBe("live");
+      expect(client.currentState.lastSequence).toBe(7);
+      expect(client.currentState.aggregateVersion).toBe(7);
+      expect(sources).toHaveLength(2);
+
+      sources[1]!.open();
+      sources[1]!.emit(snapshotEnvelope(snapshot(6)));
+      expect(client.currentState.snapshot?.sequence).toBe(7);
+      expect(client.currentState.lastSequence).toBe(7);
+      expect(client.currentState.aggregateVersion).toBe(7);
+
+      client.close();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("reconnects after a retryable server shutdown frame", async () => {
     vi.useFakeTimers();
     try {

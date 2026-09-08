@@ -342,7 +342,12 @@ unrelated, malformed, and initial evidence produce no transition. Movement
 completion uses the same authoritative event sequence for a single live
 announcement. The reduced-motion regression passes in Chromium, Firefox, and
 WebKit, and the model mutation run fails when same-sequence evidence is
-admitted. Reconnect convergence and multi-context recovery remain planned.
+admitted. Iteration 67 adds `GameSyncClient` recovery evidence in
+`apps/web/test/sync-client.test.ts`: after transport loss, a newer authoritative
+snapshot advances both delivery cursors and reopens the stream, while a late
+older snapshot cannot regress the confirmed state. The focused regression is
+mutation-sensitive to the monotonic snapshot guards. Multi-context disconnect
+and reclaim evidence remain planned.
 
 No self-hosted font files are present because licensed, provenanced faces have
 not yet been approved. The PWA shell caches only versioned public/app-shell

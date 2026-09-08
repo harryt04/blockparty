@@ -986,6 +986,12 @@ accidental collapse in coverage.
       Chromium, Firefox, and WebKit. The movement model mutation run fails when
       same-sequence evidence is admitted. Reconnect convergence and
       multi-context recovery remain outstanding.
+      Iteration 67 adds a sync-client recovery regression: after transport loss,
+      the client applies the newer authoritative sequence and aggregate version,
+      reopens the stream, and ignores a late stale snapshot instead of regressing
+      the confirmed state. The focused test is mutation-sensitive to the
+      monotonic snapshot guards; multi-context disconnect/reclaim evidence
+      remains outstanding.
 
 - [~] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
