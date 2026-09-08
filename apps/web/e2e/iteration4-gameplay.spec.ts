@@ -298,6 +298,21 @@ test("a player can roll and acquire the current Address", async ({ page }) => {
   });
 });
 
+test("decision sheet returns focus after its command finishes", async ({ page }) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  await page.getByRole("button", { name: "Open action sheet" }).click();
+  await page.getByRole("button", { name: "Roll and advance" }).click();
+  await expect(page.getByText("Await Purchase · 2 players ·", { exact: false })).toBeVisible();
+
+  const trigger = page.getByRole("button", { name: "Open action sheet" });
+  await page.getByRole("button", { name: "Decline and open the auction" }).click();
+  await expect.poll(() => commands.length).toBe(2);
+  await expect(trigger).toBeFocused();
+});
+
 test("same-task activation submits a game command only once", async ({ page }) => {
   await mockLiveStream(page);
   const { commands } = await mockGameApi(page);

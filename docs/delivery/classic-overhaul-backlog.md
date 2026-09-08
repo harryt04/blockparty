@@ -795,6 +795,9 @@ accidental collapse in coverage.
       this ticket can be marked complete. Iteration 30 makes a retry after a
       lost response reuse the same request and command identity, with a passing
       Chromium regression and a mutation that fails when identity reuse is removed.
+      Iteration 31 defers action-sheet focus restoration until the trigger is
+      enabled after command completion, with a passing Chromium regression and a
+      mutation that fails when the restoration is removed.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

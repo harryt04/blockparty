@@ -216,6 +216,30 @@ export function ActionBar({
       ...decisionSnapshot.actionAvailability,
     ]);
   const autoOpenedKey = useRef<string | undefined>(undefined);
+  const actionSheetTriggerRef = useRef<HTMLButtonElement>(null);
+  const restoreTriggerAfterPending = useRef(false);
+
+  useEffect(() => {
+    if (
+      open ||
+      pending ||
+      disabled ||
+      !restoreTriggerAfterPending.current ||
+      actionSheetTriggerRef.current === null
+    ) {
+      return;
+    }
+    restoreTriggerAfterPending.current = false;
+    actionSheetTriggerRef.current.focus();
+  }, [disabled, open, pending]);
+
+  function closeActionSheet(): void {
+    // A command closes the sheet before its pending state clears. Defer the
+    // focus return until the trigger is focusable again; focusing a disabled
+    // button would leave keyboard users at the document body. See UX-046.
+    restoreTriggerAfterPending.current = true;
+    setOpen(false);
+  }
 
   useEffect(() => {
     if (autoOpen && autoOpenedKey.current !== decisionKey) {
@@ -239,6 +263,7 @@ export function ActionBar({
       ) : null}
 
       <Button
+        ref={actionSheetTriggerRef}
         variant="primary"
         className="w-full sm:w-auto"
         onClick={() => setOpen(true)}
@@ -254,7 +279,7 @@ export function ActionBar({
         id="game-action-sheet"
         titleId="game-action-sheet-title"
         dismissible={!(legalActions.length === 1 && legalActions[0]?.type === "DeclareBankruptcy")}
-        onClose={() => setOpen(false)}
+        onClose={closeActionSheet}
       >
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -270,7 +295,7 @@ export function ActionBar({
             </p>
           </div>
           {legalActions.length === 1 && legalActions[0]?.type === "DeclareBankruptcy" ? null : (
-            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
+            <Button variant="ghost" size="sm" onClick={closeActionSheet}>
               Close
             </Button>
           )}
@@ -288,7 +313,7 @@ export function ActionBar({
               disabled={disabled || pending}
               onAction={(action, amount) => {
                 submit(action, amount);
-                setOpen(false);
+                closeActionSheet();
               }}
             />
           </div>
