@@ -962,6 +962,12 @@ accidental collapse in coverage.
       disconnect and live-release evidence remain assigned to CO-027 and
       CO-030–031.
 
+      Iteration 64 adds committed-update grouping to the readable authoritative
+      event history. `event-feed-model.ts` orders events, groups only contiguous
+      events sharing an aggregate version, and preserves every journal sequence
+      in the nested event list. Focused model coverage passes; full reconnect,
+      motion, multi-context recovery, and release evidence remain outstanding.
+
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
       Requirements: UX-044–046, PRD-FUN-006, PRD-FUN-014

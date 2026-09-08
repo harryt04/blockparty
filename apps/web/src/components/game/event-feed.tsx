@@ -8,6 +8,7 @@
 import type { DomainEvent, SeatProjection } from "@blockparty/contracts";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatMoney } from "@/components/display-names";
+import { groupEvents } from "./event-feed-model";
 
 const EVENT_LABELS: Partial<Record<DomainEvent["type"], string>> = {
   GameStarted: "Game started",
@@ -84,6 +85,8 @@ export function EventFeed({
   currencyLabel?: string;
   defaultOpen?: boolean;
 }) {
+  const groups = groupEvents(events);
+
   return (
     <details
       open={defaultOpen}
@@ -99,11 +102,23 @@ export function EventFeed({
             description="Rolls, payments, and ownership changes appear here as the game runs."
           />
         ) : (
-          <ol className="flex flex-col gap-2">
-            {events.map((event) => (
-              <li key={`${event.gameId}-${event.sequence}`} className="text-sm">
-                <span className="tabular text-muted-ink">#{event.sequence}</span>{" "}
-                <span>{eventDescription(event, seats, seatNames, currencyLabel)}</span>
+          <ol className="flex flex-col gap-4">
+            {groups.map((group) => (
+              <li key={group.key} className="space-y-2">
+                <h3 className="text-xs font-medium uppercase tracking-wide text-muted-ink">
+                  Update {group.aggregateVersion}
+                </h3>
+                <ol
+                  className="flex flex-col gap-2 border-l border-line pl-3"
+                  aria-label={`Events in update ${group.aggregateVersion}`}
+                >
+                  {group.events.map((event) => (
+                    <li key={`${event.gameId}-${event.sequence}`} className="text-sm">
+                      <span className="tabular text-muted-ink">#{event.sequence}</span>{" "}
+                      <span>{eventDescription(event, seats, seatNames, currencyLabel)}</span>
+                    </li>
+                  ))}
+                </ol>
               </li>
             ))}
           </ol>
