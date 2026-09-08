@@ -1197,8 +1197,12 @@ accidental collapse in coverage.
       verifies both authenticated projections redirect to the read-only No
       result summary at desktop and phone widths, and creates a fresh rematch
       lobby with new participant choices. Mutating the terminal heading makes
-      the journey fail. Confirmed bankruptcy, Firefox/WebKit runtime, and the
-      remaining broader screenshot matrix remain open.
+      the journey fail. Iteration 97 enables the same terminal-summary/rematch
+      journey in Firefox; the focused live run passes with two authenticated
+      contexts, desktop/phone overflow checks, and a fresh rematch lobby.
+      WebKit reproduces the local live-server stall before product assertions,
+      so confirmed bankruptcy, WebKit runtime, and the remaining broader
+      screenshot matrix remain open.
 
 - [~] **CO-031 — Complete accessibility and mobile-style failure evidence** (Codex, iteration 79)
       Blocked by: CO-030

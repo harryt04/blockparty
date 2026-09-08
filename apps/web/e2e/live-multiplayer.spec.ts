@@ -1087,8 +1087,8 @@ test.describe("live multiplayer authority", () => {
   }) => {
     test.setTimeout(120_000);
     test.skip(
-      test.info().project.name !== "chromium",
-      "Terminal summary/rematch runtime is currently verified in Chromium; cross-browser live evidence remains open in CO-030.",
+      test.info().project.name === "webkit",
+      "The local live-server harness currently stalls in WebKit before reaching product assertions; keep this runtime slice enabled for Chromium and Firefox.",
     );
     const joinerContext = await browser.newContext({
       serviceWorkers: "block",
