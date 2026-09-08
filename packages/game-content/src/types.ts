@@ -52,7 +52,7 @@ export interface BoardSpace {
   /** The next stop along the route. */
   readonly next: SpaceId;
   /**
-   * Layout hint for the SVG route drawing, in an abstract unit grid.
+   * Presentation layout hint for the 11 × 11 perimeter board, in grid units.
    * Presentation only: the engine never reads it.
    */
   readonly layout: { readonly x: number; readonly y: number };

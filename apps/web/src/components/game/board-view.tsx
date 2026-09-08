@@ -1,103 +1,197 @@
 /**
- * The board. See DS-040 and UX-040.
+ * The semantic classic board. See UX-044–045 and DS-071–072.
  *
- * The SVG is decoration only. It is aria-hidden because BoardList carries
- * every stop fact and inspect action as ordered semantic DOM controls.
- *
- * The route is a winding, irregular neighborhood street. It is not a square
- * grid and not a familiar perimeter board. See the DS-001 grid guardrail.
+ * Every space is a real button in the 11 × 11 perimeter grid. The ordered
+ * BoardList remains available as the equivalent route-order inspection
+ * surface; neither surface invents state beyond the authorized projection.
  */
-import type { BoardSpaceProjection } from "@blockparty/contracts";
-import { SPACE_CATEGORY_DISPLAY } from "@/components/display-names";
+import type { BoardSpaceProjection, SeatProjection } from "@blockparty/contracts";
+import { DEED_CATEGORY_DISPLAY, SPACE_CATEGORY_DISPLAY } from "@/components/display-names";
 import { cn } from "@/lib/utils";
+import { boardStopAccessibleLabel } from "./game-model";
+import { PlayerToken } from "./player-token";
+import { boardCellCoordinates, type BoardCellCoordinates, type LayoutMap } from "./board-model";
 
-/** Abstract layout units from the content bundle, padded for stroke width. */
-function viewBoxFor(spaces: readonly BoardSpaceProjection[], layout: LayoutMap) {
-  const points = spaces.map((space) => layout[space.spaceId]).filter(Boolean);
-  const xs = points.map((point) => point!.x);
-  const ys = points.map((point) => point!.y);
-  const minX = Math.min(...xs, 0) - 1.5;
-  const minY = Math.min(...ys, 0) - 1.5;
-  const maxX = Math.max(...xs, 1) + 1.5;
-  const maxY = Math.max(...ys, 1) + 1.5;
-  return { minX, minY, width: maxX - minX, height: maxY - minY };
+const DISTRICT_BAND_CLASSES: Readonly<Record<string, string>> = {
+  "district-ash": "border-t-asset-district-ash",
+  "district-moonfen": "border-t-asset-district-moonfen",
+  "district-rosecoil": "border-t-asset-district-rosecoil",
+  "district-copperwake": "border-t-asset-district-copperwake",
+  "district-starling": "border-t-asset-district-starling",
+  "district-thornlight": "border-t-asset-district-thornlight",
+  "district-nightjar": "border-t-asset-district-nightjar",
+  "district-crown": "border-t-asset-district-crown",
+};
+
+const DEED_CATEGORY_BAND_CLASSES: Readonly<Record<string, string>> = {
+  transit: "border-t-asset-transit",
+  utility: "border-t-asset-utility",
+};
+
+function bandClass(space: BoardSpaceProjection): string {
+  if (space.districtId !== undefined) {
+    return DISTRICT_BAND_CLASSES[space.districtId] ?? "border-t-line";
+  }
+  return DEED_CATEGORY_BAND_CLASSES[space.deedCategory ?? ""] ?? "border-t-line";
 }
 
-export type LayoutMap = Record<string, { x: number; y: number } | undefined>;
+function sideFor({ x, y }: BoardCellCoordinates): "top" | "right" | "bottom" | "left" {
+  if (y === 0) return "top";
+  if (x === 10) return "right";
+  if (y === 10) return "bottom";
+  return "left";
+}
+
+function stateLabel(space: BoardSpaceProjection, seats: readonly SeatProjection[]): string {
+  const owner =
+    space.ownerSeatId === undefined
+      ? undefined
+      : seats.find((seat) => seat.seatId === space.ownerSeatId);
+  const ownership = owner === undefined ? "Available" : `Owned by ${owner.name ?? "a player"}`;
+  const mortgage = space.mortgaged === true ? " · Mortgaged" : "";
+  const improvement =
+    space.improvementLevel === undefined || space.improvementLevel === 0
+      ? ""
+      : space.improvementLevel === 5
+        ? " · Hotel"
+        : ` · House ${space.improvementLevel}`;
+  return `${ownership}${mortgage}${improvement}`;
+}
+
+function OccupantStack({
+  space,
+  seats,
+}: {
+  space: BoardSpaceProjection;
+  seats: readonly SeatProjection[];
+}) {
+  const occupants = space.occupantSeatIds
+    .map((seatId) => seats.find((seat) => seat.seatId === seatId))
+    .filter((seat): seat is SeatProjection => seat !== undefined);
+
+  if (occupants.length === 0) return null;
+
+  return (
+    <span className="flex min-w-0 -space-x-1 overflow-hidden" aria-hidden="true">
+      {occupants.map((seat) =>
+        seat.token === undefined ? (
+          <span
+            key={seat.seatId}
+            className="inline-flex size-5 shrink-0 items-center justify-center rounded-full border border-ink bg-surface text-[0.6rem] font-bold"
+          >
+            {(seat.name ?? "?").trim().charAt(0).toUpperCase() || "?"}
+          </span>
+        ) : (
+          <PlayerToken key={seat.seatId} token={seat.token} name={seat.name} />
+        ),
+      )}
+    </span>
+  );
+}
 
 export function BoardView({
   spaces,
   layout,
+  seats,
+  districtNames = {},
   selectedSpaceId,
+  currencyLabel = "Tabs",
+  onSelect,
   className,
 }: {
   spaces: readonly BoardSpaceProjection[];
   layout: LayoutMap;
+  seats: readonly SeatProjection[];
+  districtNames?: Readonly<Record<string, string>>;
   selectedSpaceId?: string;
+  currencyLabel?: string;
+  onSelect: (spaceId: string) => void;
   className?: string;
 }) {
-  const box = viewBoxFor(spaces, layout);
-  const path = spaces
-    .map((space) => layout[space.spaceId])
-    .filter((point): point is { x: number; y: number } => point !== undefined)
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
-    .join(" ");
-
   return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-(--radius-lg) border border-line bg-surface",
-        className,
-      )}
-    >
-      <svg
-        viewBox={`${box.minX} ${box.minY} ${box.width} ${box.height}`}
-        className="h-full w-full"
-        // Decorative: BoardList below is the accessible equivalent. DS-040.
-        aria-hidden="true"
-        focusable="false"
-      >
-        {/* Chalk-line hairline route, closed back to the start. */}
-        <path
-          d={`${path} Z`}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="0.35"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          className="text-line"
-        />
-        {spaces.map((space) => {
-          const point = layout[space.spaceId];
-          if (point === undefined) return null;
-          const selected = space.spaceId === selectedSpaceId;
-          return (
-            <g key={space.spaceId}>
-              <circle
-                cx={point.x}
-                cy={point.y}
-                r={selected ? 0.9 : 0.7}
-                className={cn(selected ? "fill-brand" : "fill-surface-raised", "stroke-ink")}
-                strokeWidth="0.12"
-              />
-              <text
-                x={point.x}
-                y={point.y + 0.22}
-                textAnchor="middle"
-                fontSize="0.7"
-                className={selected ? "fill-brand-ink" : "fill-ink"}
+    <div className={cn("flex min-h-0 flex-col overflow-hidden rounded-(--radius-md)", className)}>
+      <div className="classic-board-frame min-h-0 flex-1">
+        <div
+          className="classic-board-grid"
+          role="group"
+          aria-label="Classic 40-space board"
+          data-board-topology="perimeter-40"
+        >
+          <div
+            className="classic-board-center flex items-center justify-center border border-line bg-canvas p-3 text-center"
+            style={{ gridColumn: "2 / span 9", gridRow: "2 / span 9" }}
+          >
+            <div>
+              <p className="font-serif text-lg">Blockparty</p>
+              <p className="mt-1 text-xs text-muted-ink">40-space classic table</p>
+            </div>
+          </div>
+
+          {spaces.map((space) => {
+            const coordinates = boardCellCoordinates(space, layout, space.spaceId);
+            const side = sideFor(coordinates);
+            const selected = space.spaceId === selectedSpaceId;
+            const category = SPACE_CATEGORY_DISPLAY[space.category];
+            const deedCategory =
+              space.deedCategory === undefined
+                ? undefined
+                : DEED_CATEGORY_DISPLAY[space.deedCategory];
+            const districtName =
+              space.districtId === undefined ? undefined : districtNames[space.districtId];
+            const details = boardStopAccessibleLabel(space, seats, currencyLabel, districtNames);
+            const state = stateLabel(space, seats);
+
+            return (
+              <button
+                key={space.spaceId}
+                type="button"
+                className={cn(
+                  "classic-board-cell min-w-0 overflow-hidden border border-line bg-surface-raised p-1 text-left text-ink",
+                  "focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-focus",
+                  selected && "classic-board-cell-selected",
+                )}
+                style={{
+                  gridColumn: coordinates.x + 1,
+                  gridRow: coordinates.y + 1,
+                }}
+                data-board-side={side}
+                data-board-state={space.ownerSeatId === undefined ? "available" : "owned"}
+                aria-label={`Inspect ${details}`}
+                aria-pressed={selected}
+                aria-current={selected ? "location" : undefined}
+                aria-controls="active-space-detail"
+                title={details}
+                onClick={() => onSelect(space.spaceId)}
               >
-                {space.routeIndex}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-      <p className="border-t border-line px-3 py-2 text-xs text-muted-ink">
-        A winding neighbourhood street. Numbers are route stops.{" "}
-        {spaces.length > 0
-          ? `Stop ${spaces[0]?.routeIndex ?? 0} is ${SPACE_CATEGORY_DISPLAY[spaces[0]?.category ?? "start"].label}.`
-          : null}
+                <span
+                  className={cn(
+                    "classic-board-band block h-2 shrink-0 border-t-4",
+                    bandClass(space),
+                  )}
+                />
+                <span className="mt-1 flex min-w-0 items-center justify-between gap-1 text-[0.6rem] leading-none text-muted-ink">
+                  <span className="tabular shrink-0">{space.routeIndex}</span>
+                  <span className="truncate">{space.spaceId}</span>
+                </span>
+                <span className="classic-board-cell-name mt-1 line-clamp-2 font-semibold leading-tight">
+                  {space.name}
+                </span>
+                <span className="mt-1 block truncate text-[0.6rem] leading-tight text-muted-ink">
+                  {deedCategory?.label ?? category.label}
+                  {districtName === undefined ? "" : ` · ${districtName}`}
+                </span>
+                <span className="mt-1 flex min-w-0 items-center justify-between gap-1 text-[0.6rem] leading-tight">
+                  <span className="truncate">{state}</span>
+                  <OccupantStack space={space} seats={seats} />
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <p className="border-t border-line bg-surface px-3 py-2 text-xs text-muted-ink">
+        Select any perimeter space to inspect its canonical ID, Property details, ownership, and
+        pieces. The Board list below preserves the same facts in route order.
       </p>
     </div>
   );

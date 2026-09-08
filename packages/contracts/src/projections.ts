@@ -89,7 +89,7 @@ export type DeedCategory = z.infer<typeof DeedCategory>;
 export const BoardSpaceProjection = z
   .object({
     spaceId: z.string().min(1).max(64),
-    /** Position along the route. The route is winding, not a grid. DS-001. */
+    /** Position along the classic 40-space perimeter route. DS-072. */
     routeIndex: z.int().min(0),
     /** Original space name from the content bundle. */
     name: z.string().min(1).max(64),

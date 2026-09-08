@@ -24,8 +24,8 @@ export function orderedBoard(spaces: readonly BoardSpaceProjection[]): BoardSpac
 /**
  * Keep the complete board fact set in the inspect control name. `aria-label`
  * replaces descendant text for assistive technology, so omitting a visible
- * fact here would make the spatial board and its equivalent disagree. See
- * UX-040 and DS-040.
+ * fact here would make the visual board and its equivalent disagree. See
+ * UX-044–045 and DS-072.
  */
 export function boardStopAccessibleLabel(
   space: BoardSpaceProjection,
@@ -55,6 +55,8 @@ export function boardStopAccessibleLabel(
 
   return [
     `Stop ${space.routeIndex}`,
+    `Space ${space.spaceId}`,
+    space.deedId === undefined ? undefined : `Deed ${space.deedId}`,
     space.name,
     deedCategory?.label ?? category.label,
     districtName,

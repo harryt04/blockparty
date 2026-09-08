@@ -96,7 +96,7 @@ describe("game presentation model", () => {
     expect(hasAuthoritativeActionResult(undefined, 25)).toBe(false);
   });
 
-  it("keeps the winding board in route order and resolves the active stop", () => {
+  it("keeps the classic board in route order and resolves the active stop", () => {
     const value = snapshot();
     expect(orderedBoard(value.board).map((space) => space.routeIndex)).toEqual([0, 1]);
     expect(activeSpace(value)?.spaceId).toBe("s01");
@@ -123,7 +123,7 @@ describe("game presentation model", () => {
         "dist-north": "North Kerb",
       }),
     ).toBe(
-      "Stop 1, Sawhorse Lane, Block, North Kerb, Owned by North Star, Price 120 Tabs, Mortgaged, Improvement level 2, Here now: North Star",
+      "Stop 1, Space s01, Deed d-sawhorse-lane, Sawhorse Lane, Block, North Kerb, Owned by North Star, Price 120 Tabs, Mortgaged, Improvement level 2, Here now: North Star",
     );
   });
 

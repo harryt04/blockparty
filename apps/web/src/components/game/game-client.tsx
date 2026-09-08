@@ -372,13 +372,16 @@ export function GameClient({ gameId }: { gameId: string }) {
         >
           <Card>
             <CardHeader>
-              <CardTitle>Neighborhood route</CardTitle>
+              <CardTitle>Classic table</CardTitle>
             </CardHeader>
             <CardContent>
               <BoardView
                 spaces={spaces}
                 layout={boardLayout(snapshot)}
+                seats={snapshot.seats}
+                districtNames={districtMap}
                 selectedSpaceId={selectedSpace?.spaceId}
+                onSelect={setSelectedSpaceId}
                 className="game-board-viewport"
               />
             </CardContent>

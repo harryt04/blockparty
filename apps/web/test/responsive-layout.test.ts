@@ -18,6 +18,10 @@ const eventFeed = readFileSync(
   new URL("../src/components/game/event-feed.tsx", import.meta.url),
   "utf8",
 );
+const boardView = readFileSync(
+  new URL("../src/components/game/board-view.tsx", import.meta.url),
+  "utf8",
+);
 
 describe("responsive game shell contract", () => {
   it("defines the documented phone, tablet, desktop, and landscape modes", () => {
@@ -41,6 +45,15 @@ describe("responsive game shell contract", () => {
     expect(gameClient.indexOf('data-responsive-region="player-strip"')).toBeGreaterThan(
       gameClient.indexOf("<ActiveSpaceDetail"),
     );
+  });
+
+  it("keeps the visual board semantic and equivalent to the ordered list", () => {
+    expect(stylesheet).toContain("grid-template-columns: repeat(11, minmax(0, 1fr));");
+    expect(stylesheet).toContain("grid-template-rows: repeat(11, minmax(0, 1fr));");
+    expect(boardView).toContain('data-board-topology="perimeter-40"');
+    expect(boardView).toContain('aria-controls="active-space-detail"');
+    expect(boardView).toContain("onSelect(space.spaceId)");
+    expect(gameClient).toContain("districtNames={districtMap}");
   });
 
   it("keeps the action surface reachable on phones and in landscape", () => {

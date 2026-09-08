@@ -669,7 +669,7 @@ accidental collapse in coverage.
 
 ## Phase F — Rebuild the live table
 
-- [ ] **CO-023 — Implement the semantic 40-space board and deed grammar**
+- [x] **CO-023 — Implement the semantic 40-space board and deed grammar**
       Blocked by: CO-022
       Requirements: UX-044, UX-045, DS-071–072
       Read: board view/list, active-space model, design system, content layout
@@ -683,6 +683,17 @@ accidental collapse in coverage.
       list exposes every fact/action conveyed spatially or by color.
       Proves: topology rendering tests, keyboard/list equivalence tests, 2–6 token
       overlap cases, and cross-browser visual snapshots.
+      Evidence: `BoardView` now renders the production 40-space route as an
+      11 × 11 CSS perimeter grid with selectable semantic buttons, canonical
+      space/deed IDs, Color Set bands, ownership/mortgage/House/Hotel state,
+      and redundant stacked piece cues. Invalid presentation coordinates fall
+      back to route-derived perimeter cells in `board-model.ts`; `BoardList`
+      exposes the same IDs and route-order facts. `classic-board.test.ts`
+      reconciles all 40 unique perimeter coordinates, and
+      `responsive-layout.test.ts` checks the semantic grid/selection contract.
+      Typecheck, focused topology/model/layout tests (23 passed), and formatting
+      pass; full cross-browser visual and assistive-technology evidence remains
+      assigned to CO-030–031.
 
 - [ ] **CO-024 — Build the desktop classic-table workspace**
       Blocked by: CO-023

@@ -1,7 +1,7 @@
 /**
- * The non-spatial board list. See UX-040 and DS-040.
+ * The ordered board list. See UX-044–045 and DS-072.
  *
- * This is the accessible EQUIVALENT of the SVG board, not a fallback. Every
+ * This is the accessible EQUIVALENT of the visual board, not a fallback. Every
  * cell shows, in reading order: route index, category, space name, ownership,
  * economic indicator, and state badges. Ownership and status are text, so the
  * meaning survives with no color at all.
@@ -67,10 +67,15 @@ export function BoardList({
               onClick={() => onSelect(space.spaceId)}
             >
               <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                <span className="tabular text-sm text-muted-ink">Stop {space.routeIndex}</span>
+                <span className="tabular text-sm text-muted-ink">
+                  Stop {space.routeIndex} · {space.spaceId}
+                </span>
                 <span className="board-stop-name font-medium">{space.name}</span>
                 <Badge>{deedCategory?.label ?? category.label}</Badge>
                 {districtName === undefined ? null : <Badge variant="info">{districtName}</Badge>}
+                {space.deedId === undefined ? null : (
+                  <span className="tabular text-xs text-muted-ink">{space.deedId}</span>
+                )}
               </span>
 
               <span className="mt-1 block text-sm text-muted-ink">

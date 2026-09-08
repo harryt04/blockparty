@@ -67,6 +67,14 @@
   --color-asset-district-north: oklch(60% 0.12 30);
   --color-asset-district-east: oklch(60% 0.12 150);
   --color-asset-district-west: oklch(60% 0.12 265);
+  --color-asset-district-ash: oklch(60% 0.12 30);
+  --color-asset-district-moonfen: oklch(60% 0.12 150);
+  --color-asset-district-rosecoil: oklch(60% 0.12 265);
+  --color-asset-district-copperwake: oklch(62% 0.13 55);
+  --color-asset-district-starling: oklch(58% 0.11 135);
+  --color-asset-district-thornlight: oklch(58% 0.13 300);
+  --color-asset-district-nightjar: oklch(58% 0.12 250);
+  --color-asset-district-crown: oklch(58% 0.13 330);
   --color-asset-transit: oklch(58% 0.1 90);
   --color-asset-utility: oklch(58% 0.09 210);
 }
@@ -106,6 +114,14 @@
     --color-asset-district-north: oklch(72% 0.12 30);
     --color-asset-district-east: oklch(72% 0.12 150);
     --color-asset-district-west: oklch(72% 0.12 265);
+    --color-asset-district-ash: oklch(72% 0.12 30);
+    --color-asset-district-moonfen: oklch(72% 0.12 150);
+    --color-asset-district-rosecoil: oklch(72% 0.12 265);
+    --color-asset-district-copperwake: oklch(74% 0.13 55);
+    --color-asset-district-starling: oklch(70% 0.11 135);
+    --color-asset-district-thornlight: oklch(70% 0.13 300);
+    --color-asset-district-nightjar: oklch(70% 0.12 250);
+    --color-asset-district-crown: oklch(70% 0.13 330);
     --color-asset-transit: oklch(72% 0.1 90);
     --color-asset-utility: oklch(72% 0.09 210);
   }
@@ -195,6 +211,14 @@
     --color-asset-district-north: CanvasText;
     --color-asset-district-east: CanvasText;
     --color-asset-district-west: CanvasText;
+    --color-asset-district-ash: CanvasText;
+    --color-asset-district-moonfen: CanvasText;
+    --color-asset-district-rosecoil: CanvasText;
+    --color-asset-district-copperwake: CanvasText;
+    --color-asset-district-starling: CanvasText;
+    --color-asset-district-thornlight: CanvasText;
+    --color-asset-district-nightjar: CanvasText;
+    --color-asset-district-crown: CanvasText;
     --color-asset-transit: CanvasText;
     --color-asset-utility: CanvasText;
   }
@@ -298,6 +322,62 @@
  * so labels and action controls cannot create page-level horizontal scrolling.
  */
 @layer components {
+  /* DS-040: fixed 11 × 11 classic perimeter geometry. */
+  .classic-board-frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 0;
+    padding: 0.25rem;
+    background: var(--color-canvas);
+  }
+
+  .classic-board-grid {
+    display: grid;
+    width: min(100%, 42rem);
+    max-height: 100%;
+    aspect-ratio: 1;
+    grid-template-columns: repeat(11, minmax(0, 1fr));
+    grid-template-rows: repeat(11, minmax(0, 1fr));
+    gap: 1px;
+    overflow: hidden;
+    border: 2px solid var(--color-ink);
+    background: var(--color-line);
+    padding: 2px;
+  }
+
+  .classic-board-cell {
+    position: relative;
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    border-top-width: 4px;
+    background: var(--color-surface);
+    font-size: 0.75rem;
+    line-height: 1.1;
+  }
+
+  .classic-board-cell[data-board-side="right"],
+  .classic-board-cell[data-board-side="left"] {
+    padding: 0.25rem;
+  }
+
+  .classic-board-cell[data-board-state="owned"] {
+    box-shadow: inset 0 0 0 1px var(--color-ink);
+  }
+
+  .classic-board-cell-selected {
+    z-index: 2;
+    outline: 2px solid var(--color-selection);
+    outline-offset: -2px;
+    background: var(--color-selection);
+  }
+
+  .classic-board-center {
+    min-width: 0;
+  }
+
   .game-shell {
     --game-gutter: 1rem;
     width: 100%;
