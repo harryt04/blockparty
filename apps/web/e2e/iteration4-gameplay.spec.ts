@@ -181,6 +181,7 @@ async function mockGameApi(
   options: {
     readonly failFirstCommand?: boolean;
     readonly delayAuthoritativeResult?: boolean;
+    readonly failSync?: boolean;
     readonly syncSnapshot?: () => GameSnapshotProjectionType;
   } = {},
 ): Promise<{ commands: unknown[] }> {
@@ -190,6 +191,15 @@ async function mockGameApi(
   await page.route(`**/api/games/${GAME_ID}/**`, async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/bootstrap") || path.endsWith("/sync")) {
+      if (path.endsWith("/sync") && options.failSync === true) {
+        await route.fulfill({
+          status: 410,
+          json: {
+            error: { code: "CONTENT_RETIRED", message: "This game is no longer available." },
+          },
+        });
+        return;
+      }
       const projected =
         path.endsWith("/sync") && options.syncSnapshot !== undefined
           ? options.syncSnapshot()
@@ -2304,6 +2314,24 @@ test("reconnect keeps the newer authoritative snapshot against a late stale fram
   await expect(page.getByText("Turn Start · 2 players · sequence 1", { exact: true })).toHaveCount(
     0,
   );
+});
+
+test("terminal sync failure shows Offline and keeps the last confirmed table read-only", async ({
+  page,
+}) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page, { failSync: true });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("Connected", { exact: true })).toBeVisible();
+
+  await page.evaluate(() => {
+    (window as unknown as { __emitGameConnectionError?: () => void }).__emitGameConnectionError?.();
+  });
+
+  await expect(page.getByLabel("Connection status: Offline").first()).toBeVisible();
+  await expect(page.getByText("Showing the last confirmed state", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open action sheet" })).toBeDisabled();
+  expect(commands).toHaveLength(0);
 });
 
 test("separate browser contexts can replace and reclaim one disconnected seat", async ({

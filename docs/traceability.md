@@ -371,7 +371,12 @@ replacement, reclaim request, and host approval against an authoritative mock
 boundary. Chromium, Firefox, and WebKit pass at 375px and 1280px, and mutation
 of the reclaim authority makes the Chromium scenario fail. Real replica-set
 multiplayer and release-wide recovery evidence remain assigned to CO-028 and
-CO-030–031.
+CO-030–031. Iteration 73 aligns the terminal transport label with UX-046:
+the live table now renders `Offline` while retaining the last confirmed
+projection and disabling commands after a terminal `/sync` response. The
+Chromium regression in `apps/web/e2e/iteration4-gameplay.spec.ts` verifies the
+read-only state and zero command emission; broader multiplayer and release
+evidence remain planned.
 
 No self-hosted font files are present because licensed, provenanced faces have
 not yet been approved. The PWA shell caches only versioned public/app-shell

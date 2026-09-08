@@ -18,7 +18,7 @@ const STATES = {
     tone: "text-warning border-2 border-warning",
   },
   resyncing: { label: "Resyncing", icon: RefreshCw, tone: "text-warning border-2 border-warning" },
-  closed: { label: "Unavailable", icon: WifiOff, tone: "text-danger border-2 border-danger" },
+  closed: { label: "Offline", icon: WifiOff, tone: "text-danger border-2 border-danger" },
 } as const;
 
 export function ConnectionStatus({

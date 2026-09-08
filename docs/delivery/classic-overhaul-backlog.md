@@ -1019,6 +1019,11 @@ accidental collapse in coverage.
       projection, and no horizontal overflow at 375px and 1280px; mutation of
       reclaim authority fails the Chromium scenario. Broader live multiplayer,
       real replica-set, and release evidence remain outstanding.
+      Iteration 73 aligns the terminal sync state with UX-046 by rendering
+      `Offline` instead of `Unavailable`. A Chromium regression forces a
+      terminal `/sync` response, verifies the last confirmed table remains
+      visible and read-only, and proves no command is emitted; broader live
+      multiplayer, real replica-set, and release evidence remain outstanding.
 
 - [~] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

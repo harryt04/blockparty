@@ -301,7 +301,7 @@ export function GameClient({ gameId }: { gameId: string }) {
     state.connection === "live"
       ? "Connected"
       : state.connection === "closed"
-        ? "Unavailable"
+        ? "Offline"
         : state.connection === "reconnecting"
           ? "Reconnecting"
           : state.connection === "resyncing"
@@ -531,7 +531,7 @@ export function GameClient({ gameId }: { gameId: string }) {
             {state.connection === "live"
               ? "Online"
               : state.connection === "closed"
-                ? "Unavailable"
+                ? "Offline"
                 : "Connecting"}
           </p>
         </div>
