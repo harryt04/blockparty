@@ -337,6 +337,49 @@ test("acquisition decision exposes only its foreground choices", async ({ page }
   await expect(dialog.getByRole("button", { name: "Roll and advance" })).toHaveCount(0);
 });
 
+test("auction decision exposes only its foreground choices", async ({ page }) => {
+  await mockLiveStream(page);
+  await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitAuction", 1, {
+      prioritySeatId: "seat-a",
+      auction: {
+        deedId: "d-sawhorse-lane",
+        minimumNextBid: 4_001,
+        prioritySeatId: "seat-a",
+        passedSeatIds: [],
+      },
+      legalActions: [
+        {
+          type: "PlaceAuctionBid",
+          constraints: { minBid: 4_001, maxBid: 145_000 },
+        },
+        { type: "PassAuction" },
+        // A malformed projection must not let an unrelated primary action leak
+        // into the foreground decision surface.
+        { type: "RollDice" },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("Untimed Address auction");
+  await expect(dialog.getByLabel("Place bid")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Pass on this auction" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Roll and advance" })).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "Acquire this Address" })).toHaveCount(0);
+});
+
 test("decision sheet returns focus after its command finishes", async ({ page }) => {
   await mockLiveStream(page);
   const { commands } = await mockGameApi(page);

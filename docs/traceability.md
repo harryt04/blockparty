@@ -544,3 +544,9 @@ keeps Acquire/Decline visible while excluding an unrelated RollDice primary acti
 appears in the projection. The Chromium mutation run fails when the phase filter is bypassed;
 Chromium, Firefox, and WebKit pass with the filter restored. Broader disconnect, axe, and live-release
 evidence remain assigned to CO-027 and CO-030–031.
+Iteration 48 adds the matching auction foreground-surface regression in
+`apps/web/e2e/iteration4-gameplay.spec.ts`: an AwaitAuction card keeps bid/pass visible while
+excluding unrelated RollDice and acquisition actions even when they appear in the projection.
+The Chromium mutation run fails when the phase filter admits RollDice; the restored scenario passes
+in Chromium, Firefox, and WebKit. Broader disconnect, axe, and live-release evidence remain
+assigned to CO-027 and CO-030–031.

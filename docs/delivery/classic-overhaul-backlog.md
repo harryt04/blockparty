@@ -871,7 +871,11 @@ accidental collapse in coverage.
       card keeps Acquire/Decline visible while excluding an unrelated RollDice primary action even
       when it appears in the projection. The Chromium mutation run fails when the phase filter is
       bypassed; Chromium, Firefox, and WebKit pass with the filter restored.
-      broader disconnect, axe, and live-release evidence remain outstanding.
+      Iteration 48 adds the matching cross-browser auction foreground-surface regression: an
+      AwaitAuction card keeps bid/pass visible while excluding unrelated RollDice and acquisition
+      actions even when they appear in the projection. The Chromium mutation run fails when the
+      phase filter admits RollDice; the restored scenario passes in Chromium, Firefox, and WebKit.
+      Broader disconnect, axe, and live-release evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
