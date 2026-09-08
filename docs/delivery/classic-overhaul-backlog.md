@@ -863,6 +863,10 @@ accidental collapse in coverage.
       accepted response whose newer snapshot is delayed, retrying the still-visible offer reuses
       both request and command identity. Chromium, Firefox, and WebKit pass, and mutation of
       command identity reuse makes the regression fail;
+      Iteration 46 adds the complementary acknowledged pending-trade rejection retry regression:
+      after a rejection acknowledgement whose newer snapshot is delayed, retrying the still-visible
+      rejection reuses both request and command identity. The Chromium mutation run fails when
+      identity reuse is removed; the focused Chromium, Firefox, and WebKit run passes.
       broader disconnect, axe, and live-release evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**

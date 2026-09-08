@@ -534,3 +534,8 @@ without a newer authoritative snapshot, retrying the still-visible offer reuses 
 request and command identity. Chromium, Firefox, and WebKit pass, while mutation of command
 identity reuse makes the regression fail. Broader disconnect, axe, and live-release evidence
 remain assigned to CO-027 and CO-030–031.
+Iteration 46 adds the complementary acknowledged pending-trade rejection retry evidence: after a
+rejection acknowledgement arrives without a newer authoritative snapshot, retrying the still-visible
+rejection reuses the original request and command identity. The focused Chromium, Firefox, and
+WebKit run passes, and the Chromium mutation run fails when identity reuse is removed. Broader
+disconnect, axe, and live-release evidence remain assigned to CO-027 and CO-030–031.
