@@ -539,6 +539,77 @@ test("reconnected acquisition re-enables the authoritative choice", async ({ pag
   });
 });
 
+test("reconnected auction re-enables the authoritative bid", async ({ page }) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitAuction", 1, {
+      paused: true,
+      prioritySeatId: "seat-a",
+      seats: snapshot("AwaitAuction", 1).seats.map((seat) =>
+        seat.seatId === "seat-a" ? { ...seat, connected: false } : seat,
+      ),
+      auction: {
+        deedId: "d-sawhorse-lane",
+        minimumNextBid: 4_001,
+        prioritySeatId: "seat-a",
+        passedSeatIds: [],
+      },
+      legalActions: [
+        {
+          type: "PlaceAuctionBid",
+          constraints: { minBid: 4_001, maxBid: 145_000 },
+        },
+        { type: "PassAuction" },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const dialog = page.getByRole("dialog");
+  const bid = dialog.getByRole("button", { name: "Submit bid" });
+  await expect(bid).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Pass on this auction" })).toBeDisabled();
+  await expect(page.getByRole("note").filter({ hasText: "Play is paused" })).toBeVisible();
+
+  await emitSnapshot(
+    page,
+    snapshot("AwaitAuction", 2, {
+      prioritySeatId: "seat-a",
+      auction: {
+        deedId: "d-sawhorse-lane",
+        minimumNextBid: 4_001,
+        prioritySeatId: "seat-a",
+        passedSeatIds: [],
+      },
+      legalActions: [
+        {
+          type: "PlaceAuctionBid",
+          constraints: { minBid: 4_001, maxBid: 145_000 },
+        },
+        { type: "PassAuction" },
+      ],
+    }),
+  );
+
+  await expect(page.getByRole("note").filter({ hasText: "Play is paused" })).toHaveCount(0);
+  await expect(bid).toBeEnabled();
+  await bid.click();
+  await expect.poll(() => commands.length).toBe(1);
+  expect((commands[0] as { payload: unknown }).payload).toEqual({
+    type: "PlaceAuctionBid",
+    amount: 4_001,
+  });
+});
+
 test("detention decision focuses its heading and submits only an advertised route", async ({
   page,
 }) => {

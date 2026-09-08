@@ -826,6 +826,12 @@ accidental collapse in coverage.
       only the post-recovery AcquireDeed command is emitted. The scenario passes
       in Chromium, Firefox, and WebKit; the full disconnect matrix and release
       evidence remain outstanding.
+      Iteration 38 adds the matching auction recovery scenario: bid and pass
+      remain disabled while the priority seat is disconnected and the game is
+      paused, then the connected, unpaused snapshot re-enables bidding and only
+      one authoritative PlaceAuctionBid command is emitted. Chromium, Firefox,
+      and WebKit pass; the full disconnect matrix and release evidence remain
+      outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

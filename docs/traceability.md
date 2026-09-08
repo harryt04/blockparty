@@ -498,5 +498,8 @@ Iteration 37 adds CO-027 reconnect recovery evidence for UX-046. The acquisition
 decision remains disabled while its required actor is disconnected and the game
 is paused, then becomes enabled only after an authoritative connected, unpaused
 snapshot; the browser test verifies that exactly one `AcquireDeed` command is
-emitted after recovery. Chromium, Firefox, and WebKit pass; broader disconnect
+emitted after recovery. Iteration 38 adds the equivalent auction recovery path:
+bid and pass remain disabled while the priority seat is disconnected and the game
+is paused, then an authoritative connected, unpaused snapshot enables exactly one
+`PlaceAuctionBid` command. Chromium, Firefox, and WebKit pass; broader disconnect
 matrices, axe, and live-release evidence remain assigned to CO-027 and CO-030–031.
