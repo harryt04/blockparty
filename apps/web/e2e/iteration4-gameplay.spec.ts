@@ -681,6 +681,77 @@ test("reconnected pending trade re-enables the authoritative response", async ({
   });
 });
 
+test("reconnected pending trade enables exactly one authoritative rejection", async ({ page }) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("TurnStart", 1, {
+      paused: true,
+      seats: snapshot("TurnStart", 1).seats.map((seat) =>
+        seat.seatId === "seat-b" ? { ...seat, connected: false } : seat,
+      ),
+      pendingTrade: {
+        tradeId: "trade-reject-reconnect-1",
+        proposerSeatId: "seat-b",
+        counterpartySeatId: "seat-a",
+        offered: { cash: 2_000, deedIds: [], detentionReleaseCardIds: [] },
+        requested: { cash: 0, deedIds: [], detentionReleaseCardIds: [] },
+        proposerBalance: 153_000,
+        counterpartyBalance: 145_000,
+        aggregateVersion: 1,
+      },
+      legalActions: [
+        { type: "AcceptTrade", constraints: { tradeId: "trade-reject-reconnect-1" } },
+        { type: "RejectTrade", constraints: { tradeId: "trade-reject-reconnect-1" } },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const reject = page.getByRole("button", { name: "Reject this trade" });
+  await expect(reject).toBeDisabled();
+  await expect(page.getByRole("note").filter({ hasText: "Play is paused" })).toBeVisible();
+  expect(commands).toHaveLength(0);
+
+  await emitSnapshot(
+    page,
+    snapshot("TurnStart", 2, {
+      paused: false,
+      pendingTrade: {
+        tradeId: "trade-reject-reconnect-1",
+        proposerSeatId: "seat-b",
+        counterpartySeatId: "seat-a",
+        offered: { cash: 2_000, deedIds: [], detentionReleaseCardIds: [] },
+        requested: { cash: 0, deedIds: [], detentionReleaseCardIds: [] },
+        proposerBalance: 153_000,
+        counterpartyBalance: 145_000,
+        aggregateVersion: 2,
+      },
+      legalActions: [
+        { type: "AcceptTrade", constraints: { tradeId: "trade-reject-reconnect-1" } },
+        { type: "RejectTrade", constraints: { tradeId: "trade-reject-reconnect-1" } },
+      ],
+    }),
+  );
+
+  await expect(page.getByRole("note").filter({ hasText: "Play is paused" })).toHaveCount(0);
+  await expect(reject).toBeEnabled();
+  await reject.click();
+  await expect.poll(() => commands.length).toBe(1);
+  expect((commands[0] as { payload: unknown }).payload).toEqual({
+    type: "RejectTrade",
+    tradeId: "trade-reject-reconnect-1",
+  });
+});
+
 test("detention decision focuses its heading and submits only an advertised route", async ({
   page,
 }) => {

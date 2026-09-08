@@ -846,7 +846,11 @@ accidental collapse in coverage.
       play is paused, then an authoritative connected, unpaused snapshot enables exactly one
       DeclareBankruptcy command after explicit confirmation. The focused Chromium, Firefox, and
       WebKit scenario passes; the broader disconnect matrix and release evidence remain
-      outstanding.
+      outstanding. Iteration 42 adds the complementary pending-trade rejection recovery path:
+      rejection remains disabled while the proposer is disconnected and play is paused, then an
+      authoritative connected, unpaused snapshot enables exactly one `RejectTrade` command.
+      Chromium, Firefox, and WebKit cover the recovery path; the broader disconnect matrix and
+      release evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

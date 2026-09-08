@@ -514,3 +514,10 @@ disconnected and play is paused, then an authoritative connected, unpaused
 snapshot enables exactly one `ChoosePendingOption` command. The focused Chromium,
 Firefox, and WebKit scenario passes; debt recovery and the broader disconnect
 matrix remain assigned to CO-027 and CO-030–031.
+Iteration 41 adds debt recovery: the bankruptcy decision remains disabled while the debtor is
+disconnected and play is paused, then an authoritative connected, unpaused snapshot enables
+exactly one `DeclareBankruptcy` command after explicit confirmation. Iteration 42 adds the
+complementary pending-trade rejection recovery path: a disconnected proposer keeps `RejectTrade`
+disabled without emitting a command, and the first authoritative connected, unpaused snapshot
+enables exactly one rejection. The focused Chromium, Firefox, and WebKit scenarios pass; broader
+disconnect, axe, and live-release evidence remain assigned to CO-027 and CO-030–031.
