@@ -610,3 +610,11 @@ and no command is emitted. The regression in
 ActionBar connection gate is removed; restored Chromium, Firefox, and WebKit
 runs pass. Broader disconnect and live-release evidence remain assigned to
 CO-027 and CO-030–031.
+Iteration 62 adds the matching cross-browser transport-loss evidence for an
+already-open pending trade: the named offer and balance context remain visible
+while Accept and Reject are disabled when the sync client enters `reconnecting`,
+and no command is emitted. The regression in
+`apps/web/e2e/iteration4-gameplay.spec.ts` fails under mutation when the
+TradePanel connection gate is removed; restored Chromium, Firefox, and WebKit
+runs pass. Broader disconnect and live-release evidence remain assigned to
+CO-027 and CO-030–031.

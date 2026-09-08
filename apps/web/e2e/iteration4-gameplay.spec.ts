@@ -1140,6 +1140,58 @@ test("transport loss disables an open auction decision without submitting", asyn
   expect(commands).toHaveLength(0);
 });
 
+test("transport loss disables an open pending trade without responding", async ({ page }) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("TurnStart", 1, {
+      pendingTrade: {
+        tradeId: "trade-transport-loss-1",
+        proposerSeatId: "seat-b",
+        counterpartySeatId: "seat-a",
+        offered: { cash: 2_000, deedIds: [], detentionReleaseCardIds: [] },
+        requested: { cash: 0, deedIds: [], detentionReleaseCardIds: [] },
+        proposerBalance: 153_000,
+        counterpartyBalance: 145_000,
+        aggregateVersion: 1,
+      },
+      legalActions: [
+        { type: "AcceptTrade", constraints: { tradeId: "trade-transport-loss-1" } },
+        { type: "RejectTrade", constraints: { tradeId: "trade-transport-loss-1" } },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const accept = page.getByRole("button", { name: "Accept this trade" });
+  const reject = page.getByRole("button", { name: "Reject this trade" });
+  await expect(page.getByRole("heading", { name: "Pending trade" })).toBeVisible();
+  await expect(page.getByText("Side Street sent you an offer.")).toBeVisible();
+  await expect(page.getByText("20 Tabs", { exact: true })).toBeVisible();
+  await expect(accept).toBeEnabled();
+  await expect(reject).toBeEnabled();
+
+  await page.evaluate(() => {
+    (window as unknown as { __emitGameConnectionError?: () => void }).__emitGameConnectionError?.();
+  });
+
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Connection lost. Reconnecting" }),
+  ).toBeVisible();
+  await expect(accept).toBeDisabled();
+  await expect(reject).toBeDisabled();
+  await expect(page.getByText("Side Street sent you an offer.")).toBeVisible();
+  expect(commands).toHaveLength(0);
+});
+
 test("reconnected auction re-enables the authoritative bid", async ({ page }) => {
   await mockLiveStream(page);
   const { commands } = await mockGameApi(page);

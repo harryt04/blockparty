@@ -946,6 +946,13 @@ accidental collapse in coverage.
       when the ActionBar connection gate is removed; the restored Chromium,
       Firefox, and WebKit runs pass. Broader disconnect and live-release evidence
       remain assigned to CO-027 and CO-030–031.
+      Iteration 62 adds the matching cross-browser transport-loss regression for an
+      already-open pending trade: the named offer and balance context remain
+      visible while Accept and Reject are disabled as the sync client enters
+      `reconnecting`, and no command is emitted. The Chromium mutation run fails
+      when the TradePanel connection gate is removed; the restored Chromium,
+      Firefox, and WebKit runs pass. Broader disconnect and live-release evidence
+      remain assigned to CO-027 and CO-030–031.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
