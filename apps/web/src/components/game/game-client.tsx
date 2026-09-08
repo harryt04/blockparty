@@ -7,6 +7,7 @@ import {
   CommandAckEnvelope,
   ErrorEnvelope,
   type Command,
+  type GameSnapshotProjection,
   type LegalAction,
 } from "@blockparty/contracts";
 import { useGameSync } from "@/client/sync/use-game-sync";
@@ -46,6 +47,7 @@ import {
   selectedSpaceAfterActiveChange,
   turnLabel,
 } from "./game-model";
+import { confirmedMovement, type AuthoritativeMovement } from "./movement-model";
 import { PlayerStrip } from "./player-strip";
 import { PropertyHand } from "./property-hand";
 import { MobileGameNav, type MobileGameSection } from "./mobile-game-nav";
@@ -93,6 +95,7 @@ export function GameClient({ gameId }: { gameId: string }) {
   const previousBlockingDecision = useRef<ReturnType<typeof blockingDecisionKind>>(undefined);
   const restoreDecisionFocus = useRef(false);
   const previousActiveSpaceId = useRef<string | undefined>(undefined);
+  const previousMovementSnapshot = useRef<GameSnapshotProjection | undefined>(undefined);
   const commandSubmissionInFlight = useRef(false);
   const retryableCommand = useRef<RetryableCommand | undefined>(undefined);
   const acknowledgedCommandId = useRef<string | undefined>(undefined);
@@ -107,8 +110,22 @@ export function GameClient({ gameId }: { gameId: string }) {
   const [recoveryStatus, setRecoveryStatus] = useState<string>();
   const [boardZoom, setBoardZoom] = useState<1 | 1.25 | 1.5>(1);
   const [mobileSection, setMobileSection] = useState<MobileGameSection>("board-section");
+  const [movement, setMovement] = useState<AuthoritativeMovement>();
 
   const snapshot = state.snapshot;
+  useEffect(() => {
+    if (snapshot === undefined) return;
+    const previous = previousMovementSnapshot.current;
+    if (
+      previous?.sequence === snapshot.sequence &&
+      previous?.aggregateVersion === snapshot.aggregateVersion
+    ) {
+      return;
+    }
+    setMovement(confirmedMovement(previous, snapshot));
+    previousMovementSnapshot.current = snapshot;
+  }, [snapshot]);
+
   const blockingDecision = snapshot === undefined ? undefined : blockingDecisionKind(snapshot);
   const spaces = useMemo(
     () => (snapshot === undefined ? [] : orderedBoard(snapshot.board)),
@@ -605,6 +622,7 @@ export function GameClient({ gameId }: { gameId: string }) {
                 selectedSpaceId={selectedSpace?.spaceId}
                 onSelect={setSelectedSpaceId}
                 zoom={boardZoom}
+                movement={movement}
                 className="game-board-viewport"
               />
             </CardContent>

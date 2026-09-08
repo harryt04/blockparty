@@ -55,9 +55,10 @@ function announcement(
 
 /**
  * Converts only turn-critical authoritative events into announcements. The
- * event feed remains the complete readable history; routine movement,
- * payments, cards, and presence do not enter this allowlist. See UX-040 and
- * DS-070.
+ * event feed remains the complete readable history; routine payments, cards,
+ * and presence do not enter this allowlist. Movement completion is included
+ * because it is an authoritative outcome, not a decorative animation frame.
+ * See UX-040 and DS-070.
  */
 export function announcementForEvent(
   event: DomainEvent,
@@ -89,6 +90,16 @@ export function announcementForEvent(
       return announcement(
         event,
         `${actor} rolled ${first} and ${second}, total ${first + second}.`,
+        "polite",
+      );
+    }
+    case "TokenMoved": {
+      const toPosition = payloadNumber(event, "toPosition");
+      return announcement(
+        event,
+        toPosition === undefined
+          ? `${actor} finished moving.`
+          : `${actor} moved to Stop ${toPosition}.`,
         "polite",
       );
     }

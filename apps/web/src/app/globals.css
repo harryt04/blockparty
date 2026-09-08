@@ -308,6 +308,31 @@
   }
 }
 
+/* Only the confirmed destination token receives this transition. The board
+ * never interpolates an unconfirmed route or changes the authoritative state.
+ * DS-050. */
+@keyframes game-token-arrival {
+  from {
+    opacity: 0.35;
+    transform: translateY(-0.35rem) scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.game-token-arrival {
+  animation: game-token-arrival 220ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-token-arrival {
+    animation: none;
+  }
+}
+
 /*
  * Responsive game shell. The named modes are deliberately CSS-only so a
  * viewport change never changes authoritative game state:

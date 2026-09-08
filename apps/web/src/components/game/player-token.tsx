@@ -41,10 +41,12 @@ export function PlayerToken({
   token,
   name,
   className,
+  dataMovementSequence,
 }: {
   token: SeatToken;
   name?: string;
   className?: string;
+  dataMovementSequence?: number;
 }) {
   const initial = (name ?? "?").trim().charAt(0).toUpperCase() || "?";
   return (
@@ -56,6 +58,7 @@ export function PlayerToken({
       )}
       data-token-pattern={token.pattern}
       data-piece-id={token.pieceId}
+      data-movement-sequence={dataMovementSequence}
     >
       <svg
         viewBox="0 0 20 20"

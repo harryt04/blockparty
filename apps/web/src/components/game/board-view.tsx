@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { boardStopAccessibleLabel } from "./game-model";
 import { PlayerToken } from "./player-token";
 import { boardCellCoordinates, type BoardCellCoordinates, type LayoutMap } from "./board-model";
+import type { AuthoritativeMovement } from "./movement-model";
 
 const DISTRICT_BAND_CLASSES: Readonly<Record<string, string>> = {
   "district-ash": "border-t-asset-district-ash",
@@ -61,9 +62,11 @@ function stateLabel(space: BoardSpaceProjection, seats: readonly SeatProjection[
 function OccupantStack({
   space,
   seats,
+  movement,
 }: {
   space: BoardSpaceProjection;
   seats: readonly SeatProjection[];
+  movement?: AuthoritativeMovement;
 }) {
   const occupants = space.occupantSeatIds
     .map((seatId) => seats.find((seat) => seat.seatId === seatId))
@@ -82,7 +85,25 @@ function OccupantStack({
             {(seat.name ?? "?").trim().charAt(0).toUpperCase() || "?"}
           </span>
         ) : (
-          <PlayerToken key={seat.seatId} token={seat.token} name={seat.name} />
+          <PlayerToken
+            key={`${seat.seatId}-${
+              movement?.seatId === seat.seatId && movement.toPosition === space.routeIndex
+                ? movement.eventSequence
+                : "stable"
+            }`}
+            token={seat.token}
+            name={seat.name}
+            className={
+              movement?.seatId === seat.seatId && movement.toPosition === space.routeIndex
+                ? "game-token-arrival"
+                : undefined
+            }
+            dataMovementSequence={
+              movement?.seatId === seat.seatId && movement.toPosition === space.routeIndex
+                ? movement.eventSequence
+                : undefined
+            }
+          />
         ),
       )}
     </span>
@@ -98,6 +119,7 @@ export function BoardView({
   currencyLabel = "Tabs",
   onSelect,
   zoom = 1,
+  movement,
   className,
 }: {
   spaces: readonly BoardSpaceProjection[];
@@ -109,6 +131,7 @@ export function BoardView({
   onSelect: (spaceId: string) => void;
   /** Presentation-only zoom, scoped to the board viewport. See UX-045. */
   zoom?: 1 | 1.25 | 1.5;
+  movement?: AuthoritativeMovement;
   className?: string;
 }) {
   return (
@@ -190,7 +213,7 @@ export function BoardView({
                   </span>
                   <span className="mt-1 flex min-w-0 items-center justify-between gap-1 text-[0.6rem] leading-tight">
                     <span className="truncate">{state}</span>
-                    <OccupantStack space={space} seats={seats} />
+                    <OccupantStack space={space} seats={seats} movement={movement} />
                   </span>
                 </button>
               );

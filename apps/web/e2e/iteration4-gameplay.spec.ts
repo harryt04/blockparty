@@ -2066,6 +2066,45 @@ test("authoritative decision events produce one live announcement", async ({ pag
   await expect(announcement).toHaveCount(1);
 });
 
+test("confirmed movement appears at its authoritative destination without reduced-motion interpolation", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await mockLiveStream(page);
+  await mockGameApi(page);
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("Connected", { exact: true })).toBeVisible();
+
+  const current = snapshot("TurnStart", 1);
+  const moved = snapshot("AwaitPurchase", 2, {
+    seats: current.seats.map((seat) =>
+      seat.seatId === "seat-a" ? { ...seat, position: 4 } : seat,
+    ),
+    board: current.board.map((space) => ({
+      ...space,
+      occupantSeatIds: space.routeIndex === 4 ? ["seat-a"] : [],
+    })),
+    publicEvents: [
+      event(
+        "TokenMoved",
+        2,
+        { seatId: "seat-a", fromPosition: 1, toPosition: 4, movementType: "normalDice" },
+        "seat-a",
+      ),
+    ],
+  });
+  await emitSnapshot(page, moved);
+
+  const token = page.locator('[data-movement-sequence="2"]');
+  await expect(token).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: "North Star moved to Stop 4." }),
+  ).toBeVisible();
+  await expect
+    .poll(() => token.evaluate((element) => getComputedStyle(element).animationName))
+    .toBe("none");
+});
+
 test("reconnect transitions announce once and stay quiet through transport churn", async ({
   page,
 }) => {

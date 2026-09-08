@@ -334,6 +334,16 @@ de-duplication. The populated decision axe matrix remains green; release-wide
 visual, manual accessibility, and multi-context recovery evidence remains
 assigned to CO-028 and CO-030–031.
 
+Iteration 66 advances CO-028 for UX-044–046 and PRD-FUN-006/014. Confirmed
+movement is derived only from a newer authorized snapshot containing a valid
+`TokenMoved` event in `apps/web/src/components/game/movement-model.ts`; the
+board marks only that event's destination token, while same-sequence, stale,
+unrelated, malformed, and initial evidence produce no transition. Movement
+completion uses the same authoritative event sequence for a single live
+announcement. The reduced-motion regression passes in Chromium, Firefox, and
+WebKit, and the model mutation run fails when same-sequence evidence is
+admitted. Reconnect convergence and multi-context recovery remain planned.
+
 No self-hosted font files are present because licensed, provenanced faces have
 not yet been approved. The PWA shell caches only versioned public/app-shell
 assets; game state, API, SSE, and capabilities remain uncached.

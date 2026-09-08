@@ -977,8 +977,17 @@ accidental collapse in coverage.
       iterations 30, 31, 33, 36, 43–58, and 60–63 demonstrates that the
       protected guards fail when removed. Release-wide visual and multi-context
       recovery evidence remains assigned to CO-028 and CO-030–031.
+      Iteration 66 adds the authoritative movement slice in
+      `apps/web/src/components/game/movement-model.ts`: only a newer authorized
+      snapshot containing a valid `TokenMoved` event can mark a destination
+      token for the 220 ms transition; initial, stale, unrelated, and malformed
+      evidence is ignored. Movement completion is announced once from the same
+      event sequence, and the reduced-motion browser regression passes in
+      Chromium, Firefox, and WebKit. The movement model mutation run fails when
+      same-sequence evidence is admitted. Reconnect convergence and
+      multi-context recovery remain outstanding.
 
-- [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
+- [~] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
       Requirements: UX-044–046, PRD-FUN-006, PRD-FUN-014
       Read: sync client, live announcements, event feed, recovery panel

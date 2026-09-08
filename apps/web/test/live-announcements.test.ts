@@ -109,10 +109,13 @@ describe("live announcement model", () => {
     ).toMatchObject({ message: "Noah won the game.", priority: "assertive" });
   });
 
-  it("keeps routine feed events silent and announces a newly required decision once", () => {
+  it("announces confirmed movement while keeping routine feed events silent", () => {
     expect(
-      announcementForEvent(event("TokenMoved", 2, { from: 1, to: 4 }, "seat-a"), seats),
-    ).toBeUndefined();
+      announcementForEvent(
+        event("TokenMoved", 2, { fromPosition: 1, toPosition: 4 }, "seat-a"),
+        seats,
+      ),
+    ).toMatchObject({ message: "Maya moved to Stop 4.", priority: "polite" });
     expect(
       announcementForEvent(event("PlayerPaymentCollected", 3, { amount: 100 }, "seat-a"), seats),
     ).toBeUndefined();
