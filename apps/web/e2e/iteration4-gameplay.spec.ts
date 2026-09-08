@@ -1192,6 +1192,91 @@ test("transport loss disables an open pending trade without responding", async (
   expect(commands).toHaveLength(0);
 });
 
+test("transport loss disables an open detention decision without submitting", async ({ page }) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitChoice", 1, {
+      seats: snapshot("AwaitChoice", 1).seats.map((seat) =>
+        seat.seatId === "seat-a" ? { ...seat, detained: true, detentionTurnsRemaining: 2 } : seat,
+      ),
+      legalActions: [
+        {
+          type: "ChoosePendingOption",
+          constraints: { choiceId: "choice-transport-loss", optionId: "attempt-roll" },
+        },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const attempt = page.getByRole("button", { name: "Attempt a matching roll" });
+  await expect(
+    page.getByRole("heading", { name: "Noise Complaint: choose your exit" }),
+  ).toBeVisible();
+  await expect(attempt).toBeEnabled();
+
+  await page.evaluate(() => {
+    (window as unknown as { __emitGameConnectionError?: () => void }).__emitGameConnectionError?.();
+  });
+
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Connection lost. Reconnecting" }),
+  ).toBeVisible();
+  await expect(attempt).toBeDisabled();
+  await expect(page.getByText("2 of 3 failed matching attempts used.")).toBeVisible();
+  expect(commands).toHaveLength(0);
+});
+
+test("transport loss disables an open debt decision without submitting", async ({ page }) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitChoice", 1, {
+      obligation: {
+        debtorSeatId: "seat-a",
+        creditorSeatId: "seat-b",
+        amount: 200_000,
+        reasonCode: "RENT_DUE",
+        reason: "Rent is due to Side Street.",
+      },
+      legalActions: [{ type: "DeclareBankruptcy" }],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const bankruptcy = page.getByRole("button", { name: "Declare bankruptcy" });
+  await expect(page.getByRole("heading", { name: "Owed: payment required" })).toBeVisible();
+  await expect(bankruptcy).toBeEnabled();
+
+  await page.evaluate(() => {
+    (window as unknown as { __emitGameConnectionError?: () => void }).__emitGameConnectionError?.();
+  });
+
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Connection lost. Reconnecting" }),
+  ).toBeVisible();
+  await expect(bankruptcy).toBeDisabled();
+  await expect(page.getByText("Amount due").locator("..")).toContainText("2,000 Tabs");
+  expect(commands).toHaveLength(0);
+});
+
 test("reconnected auction re-enables the authoritative bid", async ({ page }) => {
   await mockLiveStream(page);
   const { commands } = await mockGameApi(page);

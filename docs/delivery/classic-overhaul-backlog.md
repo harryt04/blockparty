@@ -953,6 +953,14 @@ accidental collapse in coverage.
       when the TradePanel connection gate is removed; the restored Chromium,
       Firefox, and WebKit runs pass. Broader disconnect and live-release evidence
       remain assigned to CO-027 and CO-030–031.
+      Iteration 63 adds the matching cross-browser transport-loss regression for
+      already-open detention and debt decisions: the exit/payment context remains
+      visible while the advertised route or bankruptcy control is disabled when
+      the sync client enters `reconnecting`, and no command is emitted. The
+      Chromium mutation run fails when the DetentionDebtPanel connection gate is
+      removed; restored Chromium, Firefox, and WebKit runs pass. Broader
+      disconnect and live-release evidence remain assigned to CO-027 and
+      CO-030–031.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

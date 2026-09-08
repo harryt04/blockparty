@@ -618,3 +618,11 @@ and no command is emitted. The regression in
 TradePanel connection gate is removed; restored Chromium, Firefox, and WebKit
 runs pass. Broader disconnect and live-release evidence remain assigned to
 CO-027 and CO-030–031.
+Iteration 63 adds the matching cross-browser transport-loss evidence for
+already-open detention and debt decisions: the exit/payment context remains
+visible while the advertised route or bankruptcy control is disabled when the
+sync client enters `reconnecting`, and no command is emitted. The regressions
+in `apps/web/e2e/iteration4-gameplay.spec.ts` fail under mutation when the
+`DetentionDebtPanel` connection gate is removed; restored Chromium, Firefox, and
+WebKit runs pass. Broader disconnect and live-release evidence remain assigned
+to CO-027 and CO-030–031.
