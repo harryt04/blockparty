@@ -4,6 +4,7 @@ vi.mock("server-only", () => ({}));
 
 import type { ClientSession } from "mongodb";
 import { CreateGameRequest, LobbyProjection } from "@blockparty/contracts";
+import { CLASSIC_BUNDLE, canonicalHashBundle } from "@blockparty/game-content";
 import { jsonOk } from "../src/server/http/responses";
 import {
   createGameInTransaction,
@@ -112,6 +113,9 @@ describe("game creation and capability issuance", () => {
     expect(new Set(game.seats.map((seat) => seat.token.pieceId)).size).toBe(4);
     expect(LobbyProjection.safeParse(created.lobby).success).toBe(true);
     expect(game.contentHash).toMatch(/^[0-9a-f]{64}$/);
+    expect(game.contentVersion).toBe(CLASSIC_BUNDLE.contentVersion);
+    expect(game.stateSchemaVersion).toBe("2.0.0");
+    expect(game.contentHash).toBe(canonicalHashBundle(CLASSIC_BUNDLE));
     expect(game.lobby).not.toHaveProperty("secretSeed");
 
     const storedSecrets = JSON.stringify({

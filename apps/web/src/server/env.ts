@@ -10,6 +10,7 @@ import "server-only";
  * No secret is exposed through a NEXT_PUBLIC_ variable.
  */
 import { z } from "zod";
+import { DEFAULT_CONTENT_VERSION } from "@blockparty/game-content";
 
 const OptionalNonEmptyString = z.preprocess(
   (value) => (value === "" ? undefined : value),
@@ -33,7 +34,7 @@ const EnvSchema = z.object({
 
   PROTOCOL_VERSION: z.coerce.number().int().default(1),
   APP_VERSION: z.string().default("0.0.0"),
-  CONTENT_VERSION: z.string().default("0.0.0-placeholder"),
+  CONTENT_VERSION: z.string().default(DEFAULT_CONTENT_VERSION),
   PWA_CACHE_VERSION: z.string().default("1"),
 
   /** Unset disables the internal cleanup route entirely. */

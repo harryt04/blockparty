@@ -78,11 +78,11 @@ covered by their recorded unit/integration/browser evidence. A local build can
 render pages without MongoDB, but live games require a healthy replica set.
 
 The active classic overhaul has completed its product, rules, content,
-branding, UX, and design-system authority reset. The runtime still reads the
-placeholder content bundle until later CO tickets version and activate the
-classic 1.0.0 bundle. The [traceability](traceability.md) register distinguishes
-implemented foundation evidence from planned classic migration and release
-evidence; a scaffold is never evidence.
+branding, UX, design-system authority reset, and 1.0.0 content activation. New
+games use the validated classic bundle; the placeholder reader remains only for
+retained historical summaries. The [traceability](traceability.md) register
+distinguishes implemented foundation evidence from planned classic migration
+and release evidence; a scaffold is never evidence.
 
 ## Settled MVP decisions
 

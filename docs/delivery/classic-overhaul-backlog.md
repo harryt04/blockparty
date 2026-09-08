@@ -547,7 +547,7 @@ accidental collapse in coverage.
       and build; repository lint remains blocked by the pre-existing
       `prettier.config.cjs` `module` `no-undef` error.
 
-- [ ] **CO-018 — Switch configuration and deployment defaults to content 1.0.0**
+- [x] **CO-018 — Switch configuration and deployment defaults to content 1.0.0**
       Blocked by: CO-017
       Requirements: PRD-FUN-020, ENG-027, ENG-031
       Read: environment schema, bundle registry, deployment/operations docs
@@ -558,6 +558,16 @@ accidental collapse in coverage.
       retained placeholder summaries render; unsupported versions fail explicitly.
       Proves: creation/boot/config tests with and without `MONGODB_URI`, registry
       production-policy tests, and deployment dry run.
+      Evidence: `DEFAULT_CONTENT_VERSION`, `CONTENT_VERSION`, and `.env.example`
+      now default to classic `1.0.0`; creation captures the classic bundle hash
+      and state schema `2.0.0`; readiness validates the configured bundle while
+      remaining degraded without MongoDB; placeholder production rejection and
+      retained-summary reader coverage remain in the registry and retirement
+      suites. Targeted tests, all 45 web files (150 passed, 4 skipped),
+      contracts/content tests (55 passed), formatting, typecheck, and build
+      pass. Full CI still reaches the pre-existing `prettier.config.cjs`
+      `module` `no-undef` lint error; the 5,000-game engine soak was attempted
+      but stopped after prolonged CPU execution without output.
 
 ## Phase E — Rebuild creation, admission, and lobby
 

@@ -20,10 +20,9 @@ capability cookies, and realtime sync path are implemented. A configured
 MongoDB replica set is required to create and play live games.
 
 The active [classic overhaul queue](docs/delivery/classic-overhaul-backlog.md)
-is migrating the implemented foundation from the placeholder content bundle to
-Blockparty's classic 40-space magical-city bundle. Until that queue reaches its
-activation tickets, the placeholder reader remains available for development
-and retained-summary compatibility but is not the production classic default.
+has activated Blockparty's classic 40-space magical-city bundle for new games.
+The placeholder reader remains available only for retained historical summaries
+while its retirement workflow drains existing games.
 
 ## Prerequisites
 

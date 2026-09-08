@@ -1,7 +1,7 @@
 # Coolify deployment runbook
 
-This runbook is the operational evidence packet for F3 and the pre-classic
-activation foundation. It describes the one
+This runbook is the operational evidence packet for F3 and classic 1.0.0
+activation. It describes the one
 immutable `web` revision, the private MongoDB replica set, and the two
 maintenance invocations that use that same application image. It does not
 replace the required staging and release-owner approvals. See ENG-004, ENG-027,
@@ -44,8 +44,8 @@ HTTPS `NEXT_PUBLIC_APP_URL` and matching `ALLOWED_ORIGINS`.
 4. In staging, smoke create, join, start, one authoritative command, SSE
    reconnect, and cleanup before shifting production traffic.
 
-Before CO-018 activates the classic default, run the same image's staged
-placeholder migration against staging and review the aggregate result:
+Before shifting production traffic, run the same image's staged placeholder
+migration against staging and review the aggregate result:
 
 ```text
 pnpm --filter @blockparty/web db:retire-placeholders --dry-run
@@ -56,6 +56,19 @@ The execute command is idempotent and must be rerun after an interrupted batch;
 it changes only non-terminal `0.0.0-placeholder` games. Retired summaries stay
 readable through the summary route until their normal 30-day completed-game
 expiry.
+
+The released environment must set `CONTENT_VERSION=1.0.0`. The application
+validates that configured version against the immutable registry, refuses an
+unsupported version, and rejects placeholder creation when `NODE_ENV=production`.
+With no `MONGODB_URI`, `pnpm build` and page rendering still work and
+`/api/health/ready` reports degraded because the database is not configured;
+content validation remains part of the readiness response.
+
+The activation sequence is therefore: deploy the reader and classic bundle,
+run the retirement dry run, review its count, execute it, verify readiness,
+then smoke create/join/start/play/reconnect in staging before production
+traffic. Rollback keeps the classic reader available and never reverses
+durable retirement events.
 
 ## Scheduled cleanup
 

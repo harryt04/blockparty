@@ -9,9 +9,9 @@ authoritative; SSE is delivery, not authority.
 
 The authenticated HTTP/SSE path, MongoDB transaction boundary, browser
 sync/recovery client, and placeholder retirement workflow are implemented.
-Classic contract versioning and multi-kind improvement events are also live;
-retired placeholder games keep their captured versions and remain readable
-through the normal completed-game summary path.
+Classic contract versioning, multi-kind improvement events, and the 1.0.0
+new-game default are live; retired placeholder games keep their captured
+versions and remain readable through the normal completed-game summary path.
 
 ## PROTO-001: Transport and envelope
 

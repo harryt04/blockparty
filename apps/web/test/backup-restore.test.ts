@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import { DomainEvent, STANDARD_CONFIGURATION } from "@blockparty/contracts";
-import { canonicalHashBundle, getBundle, PLACEHOLDER_BUNDLE } from "@blockparty/game-content";
+import { canonicalHashBundle, CLASSIC_BUNDLE, getBundle } from "@blockparty/game-content";
 import { resolve } from "@blockparty/game-engine";
 import type { ClientSession } from "mongodb";
 import {
@@ -105,7 +105,7 @@ async function restoredFixture(completed = false): Promise<{
   );
   const game = data.games[0]!;
   const rules = {
-    content: getBundle(PLACEHOLDER_BUNDLE.contentVersion)!,
+    content: getBundle(CLASSIC_BUNDLE.contentVersion)!,
     configuration: game.configuration,
   };
   const result = resolve(

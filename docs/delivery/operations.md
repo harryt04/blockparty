@@ -8,10 +8,10 @@ service reaches it only through `MONGODB_URI`. There is no application Docker
 Compose topology and no Redis service. Maintenance and cleanup run from the same
 web image as the application.
 
-The current deployment can read the placeholder content version for retained
-development games. The classic-overhaul activation sequence must first ship its
-reader and retirement-safe summary path, then make content 1.0.0 the new-game
-default; it must not rewrite or silently migrate started games.
+The current deployment creates new games with content version 1.0.0. It keeps
+the placeholder reader for retained summaries while the staged retirement job
+ends existing placeholder games; activation never rewrites or silently
+migrates a started game.
 
 ## OPS-001 — Ownership and environments
 
@@ -41,7 +41,8 @@ change.
 - MongoDB: `MONGODB_URI`, `MONGODB_DB`;
 - capability cookies: `COOKIE_SECRET`;
 - request trust: `ALLOWED_ORIGINS`;
-- compatibility: `PROTOCOL_VERSION`, `APP_VERSION`, `CONTENT_VERSION`,
+- compatibility: `PROTOCOL_VERSION`, `APP_VERSION`, `CONTENT_VERSION` (default
+  `1.0.0`),
   `PWA_CACHE_VERSION`;
 - maintenance: `INTERNAL_CLEANUP_SECRET` (also authorizes the staged
   placeholder-retirement route);
@@ -90,7 +91,7 @@ transitions overdue active games to `EXPIRED` with an authoritative event, then
 deletes expired game data and all related capability hashes in bounded,
 idempotent batches. Presence, reads, and rejected commands do not extend expiry.
 
-Before the classic default is activated, an operator runs
+Before shifting production traffic to the classic default, an operator runs
 `pnpm --filter @blockparty/web db:retire-placeholders --dry-run`, reviews the
 candidate count, then runs the same command with `--execute`. The execute path
 also exists as `POST /api/internal/retire-placeholders` with a strict

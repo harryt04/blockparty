@@ -11,8 +11,8 @@ the earlier proposal for a separately deployed Fastify/Socket.IO game server and
 PostgreSQL/Drizzle persistence layer. The product remains a private,
 browser-playable, original-property board game for two to six players. Product
 behavior and rules remain defined by the higher-precedence documents linked
-above. The implementation foundation is live; the active classic overhaul
-still has to version and activate the 1.0.0 content/contracts described below.
+above. The implementation foundation and classic 1.0.0 content activation are
+live; retained placeholder games remain readable through their captured version.
 
 ## ENG-001: Architectural goals and constraints
 
@@ -249,4 +249,5 @@ games with `contentVersion=0.0.0-placeholder`, appends a committed no-contest
 `CONTENT_RETIRED` transition, revokes gameplay capabilities, preserves a
 read-only summary, and is safe to repeat. CO-017 implements that workflow with
 an operator-authenticated dry-run/execute route, a same-image CLI, and one
-transaction per candidate; the classic default remains blocked until CO-018.
+transaction per candidate; CO-018 activates the classic default only after this
+workflow's staged dry run and execution.

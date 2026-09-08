@@ -11,7 +11,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/server/http/guards", () => ({ checkRateLimit: mocks.checkRateLimit }));
 vi.mock("@/server/auth/session", () => ({ readGameCapability: mocks.readGameCapability }));
 vi.mock("@/server/db/client", () => ({ getDb: mocks.getDb }));
-vi.mock("@/server/env", () => ({ isProduction: false }));
+vi.mock("@/server/env", () => ({
+  env: { CONTENT_VERSION: "1.0.0" },
+  isProduction: false,
+}));
 
 import { CreateGameRequest, EventsEnvelope, STANDARD_CONFIGURATION } from "@blockparty/contracts";
 import { createGameInTransaction, type GameDocument } from "../src/server/games/create-game";

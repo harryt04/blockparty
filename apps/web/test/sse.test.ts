@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { canonicalHashBundle, PLACEHOLDER_BUNDLE } from "@blockparty/game-content";
+import { canonicalHashBundle, CLASSIC_BUNDLE } from "@blockparty/game-content";
 import { CreateGameRequest } from "@blockparty/contracts";
 import { createGameInTransaction, type GameDocument } from "../src/server/games/create-game";
 import {
@@ -183,7 +183,7 @@ describe("authenticated SSE delivery", () => {
     expect(JSON.stringify(firstProjection)).not.toContain("secretSeed");
     expect(JSON.stringify(firstProjection)).not.toContain("prng");
     expect(JSON.stringify(firstProjection)).not.toContain("contentHash");
-    expect(canonicalHashBundle(PLACEHOLDER_BUNDLE)).toBe(game.contentHash);
+    expect(canonicalHashBundle(CLASSIC_BUNDLE)).toBe(game.contentHash);
 
     firstUnsubscribe();
     secondUnsubscribe();

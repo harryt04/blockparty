@@ -16,6 +16,7 @@ describe("server environment parsing", () => {
     expect(parsed.MONGODB_URI).toBeUndefined();
     expect(parsed.COOKIE_SECRET).toBeUndefined();
     expect(parsed.INTERNAL_CLEANUP_SECRET).toBeUndefined();
+    expect(parsed.CONTENT_VERSION).toBe("1.0.0");
   });
 
   it("preserves a configured replica-set URI", () => {

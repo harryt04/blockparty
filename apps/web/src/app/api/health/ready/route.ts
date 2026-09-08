@@ -8,9 +8,9 @@
  * the app boots and serves every page with zero infrastructure.
  */
 import type { HealthReadyResponse } from "@blockparty/contracts";
-import { PLACEHOLDER_BUNDLE, validateBundle } from "@blockparty/game-content";
+import { getBundle, validateBundle } from "@blockparty/game-content";
 import { pingDatabase } from "@/server/db/client";
-import { isProduction } from "@/server/env";
+import { env, isProduction } from "@/server/env";
 import { jsonOk } from "@/server/http/responses";
 import { withRequestTelemetry } from "@/server/observability/telemetry";
 
@@ -23,7 +23,10 @@ export function GET(request: Request) {
 
 async function getReady() {
   const database = await pingDatabase();
-  const bundle = validateBundle(PLACEHOLDER_BUNDLE, { production: isProduction });
+  const configuredBundle = getBundle(env.CONTENT_VERSION, { production: isProduction });
+  const bundle = configuredBundle
+    ? validateBundle(configuredBundle, { production: isProduction })
+    : { valid: false };
 
   const status: HealthReadyResponse["status"] =
     database === "ok" && bundle.valid

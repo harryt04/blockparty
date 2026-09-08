@@ -14,7 +14,7 @@ import type {
   RulesConfiguration,
   SeatToken,
 } from "@blockparty/contracts";
-import { DEFAULT_CONTENT_VERSION, canonicalHashBundle, getBundle } from "@blockparty/game-content";
+import { canonicalHashBundle, getBundle } from "@blockparty/game-content";
 import {
   deriveInitialState,
   ENGINE_VERSION,
@@ -30,6 +30,7 @@ import {
   generateInviteId,
   hashCapability,
 } from "../auth/capabilities";
+import { env } from "../env";
 import type { CapturedVersions, GameId, GameStatus, SeatId } from "@blockparty/contracts";
 
 const RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -324,7 +325,7 @@ export async function createGameInTransaction(
   now = new Date(),
   options: { readonly production?: boolean } = {},
 ): Promise<CreatedGame> {
-  const bundle = getBundle(DEFAULT_CONTENT_VERSION, { production: options.production });
+  const bundle = getBundle(env.CONTENT_VERSION, { production: options.production });
   if (bundle === undefined) throw new Error("CONTENT_UNSUPPORTED");
 
   const gameId = randomUUID() as GameId;
