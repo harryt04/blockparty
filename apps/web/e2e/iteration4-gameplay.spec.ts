@@ -174,7 +174,10 @@ async function mockLiveStream(page: Page): Promise<void> {
 
 async function mockGameApi(
   page: Page,
-  options: { readonly failFirstCommand?: boolean } = {},
+  options: {
+    readonly failFirstCommand?: boolean;
+    readonly delayAuthoritativeResult?: boolean;
+  } = {},
 ): Promise<{ commands: unknown[] }> {
   let phase: GameSnapshotProjectionType["phase"] = "TurnStart";
   let sequence = 1;
@@ -213,6 +216,11 @@ async function mockGameApi(
       if (command.payload.type === "RollDice") {
         phase = "AwaitPurchase";
         sequence = 2;
+      } else if (options.delayAuthoritativeResult === true) {
+        // Model a committed command whose newer snapshot has not reached the
+        // client yet, so retry identity retention is exercised independently
+        // from the normal SSE delivery path.
+        sequence += 1;
       }
       await route.fulfill({
         json: {
@@ -352,6 +360,38 @@ test("a retry after a lost response reuses the command identity", async ({ page 
     requestId: (commands[0] as { requestId: string }).requestId,
   });
   await expect(page.getByText("Await Purchase · 2 players ·", { exact: false })).toBeVisible();
+});
+
+test("a retry before the authoritative result reuses the acknowledged command identity", async ({
+  page,
+}) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page, { delayAuthoritativeResult: true });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  await page.getByRole("button", { name: "Open action sheet" }).click();
+  await page.getByRole("button", { name: "Roll and advance" }).click();
+  await expect(page.getByText("Await Purchase · 2 players ·", { exact: false })).toBeVisible();
+
+  const acquire = page.getByRole("button", { name: "Acquire this Address" });
+  await acquire.click();
+  await expect.poll(() => commands.length).toBe(2);
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Action accepted. Waiting for the authoritative result." })
+      .first(),
+  ).toBeVisible();
+
+  // The mocked command acknowledgement arrives without a newer snapshot. Re-open
+  // the still-visible legal action and verify this retry remains idempotent.
+  await page.getByRole("button", { name: "Open action sheet" }).click();
+  await page.getByRole("button", { name: "Acquire this Address" }).click();
+  await expect.poll(() => commands.length).toBe(3);
+  expect(commands[2]).toMatchObject({
+    commandId: (commands[1] as { commandId: string }).commandId,
+    requestId: (commands[1] as { requestId: string }).requestId,
+  });
 });
 
 test("auction decision exposes context, bounds bids, and prevents duplicate submission", async ({

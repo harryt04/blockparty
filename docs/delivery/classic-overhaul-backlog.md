@@ -851,6 +851,9 @@ accidental collapse in coverage.
       authoritative connected, unpaused snapshot enables exactly one `RejectTrade` command.
       Chromium, Firefox, and WebKit cover the recovery path; the broader disconnect matrix and
       release evidence remain outstanding.
+      Iteration 43 adds a browser regression for retrying an acknowledged acquisition before its
+      authoritative snapshot arrives: the second activation reuses the original request and
+      command identity, preserving command idempotency while the legal action remains visible.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
