@@ -1164,6 +1164,12 @@ accidental collapse in coverage.
       when a payout creates currency, and invariant coverage rejects corrupted
       negative bank cash. Debt, bankruptcy, completion, rematch, Firefox/WebKit
       runtime, and broader screenshot coverage remain open.
+      Iteration 90 adds deterministic Chromium and Firefox screenshots for the
+      authoritative Noise Complaint decision at 375px and 1280px. The scoped
+      card baselines pass with the fixed live seed, and the required mutation
+      of the decision heading produces a visual-test failure. Debt, bankruptcy,
+      completion, rematch, Firefox/WebKit runtime, and broader screenshot
+      coverage remain open.
 
 - [~] **CO-031 — Complete accessibility and mobile-style failure evidence** (Codex, iteration 79)
       Blocked by: CO-030

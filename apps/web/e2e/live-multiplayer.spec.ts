@@ -679,6 +679,7 @@ test.describe("live multiplayer authority", () => {
     page: host,
   }) => {
     test.setTimeout(180_000);
+    const captureVisualBaseline = ["chromium", "firefox"].includes(test.info().project.name);
     const joinerContext = await browser.newContext({
       serviceWorkers: "block",
       viewport: { width: 375, height: 900 },
@@ -843,11 +844,30 @@ test.describe("live multiplayer authority", () => {
         await expect(
           detention.page.getByRole("button", { name: /matching roll|release fee|Use / }).first(),
         ).toBeVisible();
+        if (captureVisualBaseline) {
+          await detention.page.addStyleTag({
+            content: "nextjs-portal { display: none !important; }",
+          });
+          await expect(
+            detention.page.locator('[aria-labelledby="detention-decision-heading"]'),
+          ).toHaveScreenshot("live-detention-decision-375.png", {
+            animations: "disabled",
+            caret: "hide",
+          });
+        }
         await assertNoHorizontalOverflow(host, "detention host mobile");
         await assertNoHorizontalOverflow(joiner, "detention joiner mobile");
 
         await host.setViewportSize({ width: 1280, height: 900 });
         await joiner.setViewportSize({ width: 1280, height: 900 });
+        if (captureVisualBaseline) {
+          await expect(
+            detention.page.locator('[aria-labelledby="detention-decision-heading"]'),
+          ).toHaveScreenshot("live-detention-decision-1280.png", {
+            animations: "disabled",
+            caret: "hide",
+          });
+        }
         await assertNoHorizontalOverflow(host, "detention host desktop");
         await assertNoHorizontalOverflow(joiner, "detention joiner desktop");
 
