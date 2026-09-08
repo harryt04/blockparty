@@ -783,9 +783,13 @@ accidental collapse in coverage.
       auction controls to that phase, auto-opens the required actor's sheet once
       per authoritative decision key, and focuses newly arrived detention, debt,
       and pending-trade headings. Focused model tests, typecheck, formatting, and
-      production build pass; browser phase coverage, disconnect cases, duplicate
-      command checks, and live announcements remain outstanding before this
-      ticket can be marked complete.
+      production build pass. Iteration 28 adds a synchronous in-flight command
+      lock so same-task activations cannot duplicate an authoritative command,
+      with a Chromium regression in `apps/web/e2e/iteration4-gameplay.spec.ts`;
+      the five-test Chromium gameplay file passes. Browser coverage for every
+      blocking phase, disconnect cases, duplicate-command behavior beyond
+      same-task activation, live-announcement assertions, and full cross-browser
+      evidence remain outstanding before this ticket can be marked complete.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

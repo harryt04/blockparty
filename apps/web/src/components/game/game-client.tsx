@@ -83,6 +83,7 @@ export function GameClient({ gameId }: { gameId: string }) {
   const previousConnection = useRef(state.connection);
   const previousPhase = useRef(state.snapshot?.phase);
   const previousActiveSpaceId = useRef<string | undefined>(undefined);
+  const commandSubmissionInFlight = useRef(false);
   const authoritativeSnapshotVersion = state.snapshot?.aggregateVersion;
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>();
   const [pendingAction, setPendingAction] = useState<LegalAction>();
@@ -249,8 +250,18 @@ export function GameClient({ gameId }: { gameId: string }) {
   );
 
   async function submitCommand(payload: Command): Promise<boolean> {
-    if (snapshot === undefined || state.connection !== "live" || pendingAction !== undefined)
+    if (
+      snapshot === undefined ||
+      state.connection !== "live" ||
+      pendingAction !== undefined ||
+      commandSubmissionInFlight.current
+    )
       return false;
+    // React state updates do not synchronously change the event handler's
+    // closure. Keep a synchronous lock as well so two same-task activations
+    // cannot issue duplicate authoritative commands before the button
+    // rerenders disabled.
+    commandSubmissionInFlight.current = true;
     setPendingAction({ type: payload.type });
     setAcknowledgedActionVersion(undefined);
     setActionError(undefined);
@@ -311,6 +322,8 @@ export function GameClient({ gameId }: { gameId: string }) {
       setActionStatus(undefined);
       setPendingAction(undefined);
       return false;
+    } finally {
+      commandSubmissionInFlight.current = false;
     }
   }
 

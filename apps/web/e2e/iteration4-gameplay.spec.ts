@@ -121,17 +121,29 @@ function snapshot(phase: GameSnapshotProjectionType["phase"], sequence: number) 
 
 async function mockLiveStream(page: Page): Promise<void> {
   await page.addInitScript(() => {
+    const sources: FakeEventSource[] = [];
     class FakeEventSource extends EventTarget {
       onerror: ((event: Event) => void) | null = null;
       onopen: ((event: Event) => void) | null = null;
 
       constructor(readonly url: string) {
         super();
+        sources.push(this);
         setTimeout(() => this.onopen?.(new Event("open")), 0);
+      }
+
+      emit(type: string, data: unknown): void {
+        this.dispatchEvent(new MessageEvent(type, { data: JSON.stringify(data) }));
       }
 
       close(): void {}
     }
+    Object.defineProperty(window, "__emitGameEnvelope", {
+      value: (envelope: unknown) => {
+        for (const source of sources) source.emit("game.snapshot", envelope);
+      },
+      configurable: true,
+    });
     Object.defineProperty(window, "EventSource", { value: FakeEventSource });
   });
 }
@@ -184,6 +196,26 @@ async function mockGameApi(page: Page): Promise<{ commands: unknown[] }> {
           lastSequence: sequence,
         },
       });
+      if (command.payload.type === "RollDice") {
+        void page.evaluate(
+          (envelope) => {
+            (
+              window as unknown as {
+                __emitGameEnvelope?: (value: unknown) => void;
+              }
+            ).__emitGameEnvelope?.(envelope);
+          },
+          {
+            protocolVersion: 1,
+            type: "game.snapshot",
+            gameId: GAME_ID,
+            serverTime: "2026-09-03T15:00:00.000Z",
+            aggregateVersion: sequence,
+            sequence,
+            snapshot: snapshot(phase, sequence),
+          },
+        );
+      }
       return;
     }
     await route.fulfill({
@@ -203,9 +235,8 @@ test("a player can roll and acquire the current Address", async ({ page }) => {
   await page.getByRole("button", { name: "Open action sheet" }).click();
   await page.getByRole("button", { name: "Roll and advance" }).click();
   await expect.poll(() => commands.length).toBe(1);
-  await expect(page.getByText("Await Purchase", { exact: false })).toBeVisible();
+  await expect(page.getByText("Await Purchase · 2 players ·", { exact: false })).toBeVisible();
 
-  await page.getByRole("button", { name: "Open action sheet" }).click();
   await page.getByRole("button", { name: "Acquire this Address" }).click();
   await expect.poll(() => commands.length).toBe(2);
   expect((commands[0] as { payload: { type: string } }).payload.type).toBe("RollDice");
@@ -213,6 +244,24 @@ test("a player can roll and acquire the current Address", async ({ page }) => {
     type: "AcquireDeed",
     deedId: "d-sawhorse-lane",
   });
+});
+
+test("same-task activation submits a game command only once", async ({ page }) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const actionSheetButton = page.getByRole("button", { name: "Open action sheet" });
+  await actionSheetButton.click();
+  const rollButton = page.getByRole("button", { name: "Roll and advance" });
+  await rollButton.evaluate((element) => {
+    (element as HTMLButtonElement).click();
+    (element as HTMLButtonElement).click();
+  });
+
+  await expect.poll(() => commands.length).toBe(1);
+  await expect(page.getByText("Await Purchase · 2 players ·", { exact: false })).toBeVisible();
+  expect((commands[0] as { payload: { type: string } }).payload.type).toBe("RollDice");
 });
 
 test("desktop keeps the board anchor, player rail, hand, and decision reachable", async ({
