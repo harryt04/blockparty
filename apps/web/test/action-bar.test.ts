@@ -8,6 +8,7 @@ import {
   actionRenderKey,
   blockingDecisionKey,
   blockingDecisionKind,
+  isActionBarAction,
   isBlockingDecisionAction,
   shouldAutoOpenBlockingDecision,
 } from "../src/components/game/action-bar-model";
@@ -97,5 +98,21 @@ describe("action bar render keys", () => {
     expect(blockingDecisionKind(trade)).toBe("trade");
     expect(blockingDecisionKey(debt)).not.toBe(blockingDecisionKey(trade));
     expect(shouldAutoOpenBlockingDecision("trade", trade.legalActions)).toBe(false);
+  });
+
+  it.each(["detention", "debt", "trade"] as const)(
+    "keeps unrelated actions out of the generic sheet during %s",
+    (kind) => {
+      expect(isActionBarAction({ type: "RollDice" }, kind)).toBe(false);
+      expect(isActionBarAction({ type: "EndTurn" }, kind)).toBe(false);
+    },
+  );
+
+  it("keeps only acquisition and auction decisions in the generic sheet", () => {
+    expect(
+      isActionBarAction({ type: "AcquireDeed", constraints: { deedId: "d-1" } }, "acquisition"),
+    ).toBe(true);
+    expect(isActionBarAction({ type: "RollDice" }, "acquisition")).toBe(false);
+    expect(isActionBarAction({ type: "PlaceAuctionBid" }, "auction")).toBe(true);
   });
 });

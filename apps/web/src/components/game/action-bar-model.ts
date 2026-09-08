@@ -41,6 +41,21 @@ export function isBlockingDecisionAction(
   return BLOCKING_ACTIONS[kind].includes(action.type);
 }
 
+/**
+ * Keep the generic action sheet scoped to the decisions it owns. Detention,
+ * debt, and trade already have dedicated foreground panels, so their other
+ * server actions must not leak into this sheet as unrelated primary actions.
+ */
+export function isActionBarAction(
+  action: LegalAction | ActionAvailability,
+  kind: BlockingDecisionKind | undefined,
+): boolean {
+  if (kind === undefined) return true;
+  return kind === "acquisition" || kind === "auction"
+    ? isBlockingDecisionAction(action, kind)
+    : false;
+}
+
 /** A new acquisition or auction belongs in the foreground action sheet. */
 export function shouldAutoOpenBlockingDecision(
   kind: BlockingDecisionKind | undefined,

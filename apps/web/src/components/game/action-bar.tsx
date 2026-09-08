@@ -21,7 +21,7 @@ import { AcquisitionAuctionSummary } from "./acquisition-auction-summary";
 import {
   blockingDecisionKey,
   blockingDecisionKind,
-  isBlockingDecisionAction,
+  isActionBarAction,
   shouldAutoOpenBlockingDecision,
   actionRenderKey,
 } from "./action-bar-model";
@@ -59,9 +59,7 @@ function ActionOptions({
   const tradeActionTypes = new Set<LegalAction["type"]>(["ProposeTrade"]);
   const visibleLegalActions = legalActions.filter(
     (action) =>
-      (blockingKind === "acquisition" || blockingKind === "auction"
-        ? isBlockingDecisionAction(action, blockingKind)
-        : true) &&
+      isActionBarAction(action, blockingKind) &&
       !managementActionTypes.has(action.type) &&
       !tradeActionTypes.has(action.type) &&
       !(
@@ -76,9 +74,7 @@ function ActionOptions({
   );
   const visibleAvailability = actionAvailability.filter(
     (action) =>
-      (blockingKind === "acquisition" || blockingKind === "auction"
-        ? isBlockingDecisionAction(action, blockingKind)
-        : true) &&
+      isActionBarAction(action, blockingKind) &&
       !managementActionTypes.has(action.type) &&
       !tradeActionTypes.has(action.type) &&
       !(

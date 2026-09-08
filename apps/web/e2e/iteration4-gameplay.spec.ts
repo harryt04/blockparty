@@ -1406,6 +1406,45 @@ test("paused pending trade keeps the offer visible without fabricating acceptanc
   expect(commands).toHaveLength(0);
 });
 
+test("pending trade keeps unrelated turn actions out of the generic sheet", async ({ page }) => {
+  await mockLiveStream(page);
+  await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("TurnStart", 1, {
+      pendingTrade: {
+        tradeId: "trade-foreground-1",
+        proposerSeatId: "seat-b",
+        counterpartySeatId: "seat-a",
+        offered: { cash: 2_000, deedIds: [], detentionReleaseCardIds: [] },
+        requested: { cash: 0, deedIds: [], detentionReleaseCardIds: [] },
+        proposerBalance: 153_000,
+        counterpartyBalance: 145_000,
+        aggregateVersion: 1,
+      },
+      legalActions: [
+        { type: "AcceptTrade", constraints: { tradeId: "trade-foreground-1" } },
+        { type: "RejectTrade", constraints: { tradeId: "trade-foreground-1" } },
+        { type: "RollDice" },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  await expect(page.getByRole("heading", { name: "Pending trade" })).toBeVisible();
+  await page.getByRole("button", { name: "Open action sheet" }).click();
+  const dialog = page.getByRole("dialog", { name: "Your actions" });
+  await expect(dialog.getByText("No action is required from you right now.")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Roll and advance" })).toHaveCount(0);
+});
+
 test("authoritative decision events produce one live announcement", async ({ page }) => {
   await mockLiveStream(page);
   await mockGameApi(page);

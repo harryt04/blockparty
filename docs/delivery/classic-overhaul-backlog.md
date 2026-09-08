@@ -880,6 +880,11 @@ accidental collapse in coverage.
       existing sync path returns the UI to Connected. The matching model assertion is mutation-
       sensitive; focused Chromium, Firefox, and WebKit runs pass. Broader disconnect, axe, and
       live-release evidence remain outstanding.
+      Iteration 50 scopes the generic action sheet away from unrelated RollDice and other turn
+      actions whenever detention, debt, or a pending trade owns the foreground decision in its
+      dedicated panel. Model coverage and a Chromium regression prove the pending-trade sheet
+      stays empty of unrelated primary actions; mutation and broader disconnect, axe, and
+      live-release evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
