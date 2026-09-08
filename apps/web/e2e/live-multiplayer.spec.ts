@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { BootstrapResponse, type Command, type LegalAction } from "@blockparty/contracts";
+import { CLASSIC_BUNDLE } from "@blockparty/game-content";
+import { chooseBotAction, type BotPublicState } from "@blockparty/game-engine";
 
 function commandForLegalAction(action: LegalAction): Command {
   const constraints = action.constraints ?? {};
@@ -738,23 +740,87 @@ test.describe("live multiplayer authority", () => {
       expect(response.status).toBe(202);
     }
 
-    function nextProgressionAction(actions: readonly LegalAction[]): LegalAction | undefined {
-      const priority = [
-        "RollDice",
-        "EndTurn",
-        "DeclineAcquisition",
-        "PassAuction",
-        "PlaceAuctionBid",
-        "ChoosePendingOption",
-        "PayObligation",
-        "DeclareBankruptcy",
-      ] as const;
-      return priority.flatMap((type) => actions.filter((action) => action.type === type))[0];
+    function botCommand(state: BootstrapResponse): Command | undefined {
+      const snapshot = state.snapshot;
+      const actorSeatId =
+        snapshot.pendingTrade?.counterpartySeatId ??
+        (snapshot.phase === "AwaitAuction" || snapshot.phase === "ImprovementAuction"
+          ? snapshot.prioritySeatId
+          : snapshot.activeSeatId);
+      if (actorSeatId === undefined) return undefined;
+
+      const botState: BotPublicState = {
+        phase: snapshot.phase,
+        activeSeatId: snapshot.activeSeatId,
+        prioritySeatId: snapshot.prioritySeatId,
+        seats: snapshot.seats.map((seat) => ({
+          seatId: seat.seatId,
+          kind: seat.kind,
+          status: seat.status === "eliminated" ? "eliminated" : "active",
+          balance: seat.balance ?? 0,
+          position: seat.position ?? 0,
+          deedIds: seat.deedIds ?? [],
+          detained: seat.detained ?? false,
+          detentionTurnsRemaining: seat.detentionTurnsRemaining ?? 0,
+          detentionReleaseCardCount: seat.detentionReleaseCardCount ?? 0,
+        })),
+        deeds: snapshot.board.flatMap((space) =>
+          space.deedId === undefined
+            ? []
+            : [
+                {
+                  deedId: space.deedId,
+                  ...(space.ownerSeatId === undefined ? {} : { ownerSeatId: space.ownerSeatId }),
+                  mortgaged: space.mortgaged ?? false,
+                  improvementLevel: space.improvementLevel ?? 0,
+                },
+              ],
+        ),
+        bankCash: snapshot.bank?.cash ?? 0,
+        ...(snapshot.jackpot === undefined ? {} : { jackpot: snapshot.jackpot }),
+        ...(snapshot.auction === undefined
+          ? {}
+          : { pendingAuctionDeedId: snapshot.auction.deedId }),
+        ...(snapshot.pendingTrade === undefined
+          ? {}
+          : { pendingTradeId: snapshot.pendingTrade.tradeId }),
+        ...(snapshot.obligation === undefined
+          ? {}
+          : { obligationAmount: snapshot.obligation.amount }),
+        startingCash: CLASSIC_BUNDLE.economy.startingCash,
+        deedPrices: Object.fromEntries(
+          snapshot.board.flatMap((space) =>
+            space.deedId === undefined || space.price === undefined
+              ? []
+              : [[space.deedId, space.price]],
+          ),
+        ),
+        improvementCosts: Object.fromEntries(
+          CLASSIC_BUNDLE.deeds.flatMap((deed) =>
+            deed.improvementCost === undefined ? [] : [[deed.deedId, deed.improvementCost]],
+          ),
+        ),
+        deedDistrictIds: Object.fromEntries(
+          snapshot.board.flatMap((space) =>
+            space.deedId === undefined || space.districtId === undefined
+              ? []
+              : [[space.deedId, space.districtId]],
+          ),
+        ),
+      };
+      return chooseBotAction(
+        botState,
+        actorSeatId,
+        snapshot.legalActions,
+        (snapshot.publicEvents ?? []).flatMap((event) => {
+          if (event.type !== "DiceRolled" || !Array.isArray(event.payload.dice)) return [];
+          return event.payload.dice.filter((die): die is number => typeof die === "number");
+        }),
+      )?.command;
     }
 
     try {
       let detention: { page: Page; state: BootstrapResponse } | undefined;
-      let detentionGameId: string | undefined;
       await host.setViewportSize({ width: 375, height: 900 });
       await host.goto("/create", { waitUntil: "domcontentloaded" });
       await host.getByRole("button", { name: "Keep analytics off" }).click();
@@ -817,23 +883,13 @@ test.describe("live multiplayer authority", () => {
         if (detention !== undefined) break;
 
         const actor = states
-          .map(({ page, state }) => ({
-            page,
-            state,
-            action: nextProgressionAction(state.snapshot.legalActions),
-          }))
-          .find(({ action }) => action !== undefined);
+          .map(({ page, state }) => ({ page, state, command: botCommand(state) }))
+          .find(({ command }) => command !== undefined);
         expect(actor, "a live seat should advertise the next detention setup action").toBeDefined();
-        if (actor === undefined || actor.action === undefined)
+        if (actor === undefined || actor.command === undefined)
           throw new Error("No live action was advertised before detention");
-        await issueCommand(
-          actor.page,
-          created.gameId,
-          actor.state.aggregateVersion,
-          commandForLegalAction(actor.action),
-        );
+        await issueCommand(actor.page, created.gameId, actor.state.aggregateVersion, actor.command);
       }
-      if (detention !== undefined) detentionGameId = created.gameId;
 
       expect(detention, "a live player should eventually enter Detention").toBeDefined();
       if (detention !== undefined) {
@@ -881,16 +937,110 @@ test.describe("live multiplayer authority", () => {
         if (detentionAction !== undefined) {
           await issueCommand(
             detention.page,
-            detentionGameId as string,
+            created.gameId,
             detention.state.aggregateVersion,
             commandForLegalAction(detentionAction),
           );
           await expect
             .poll(async () => {
-              const state = await readBootstrap(detention.page, detentionGameId as string);
+              const state = await readBootstrap(detention.page, created.gameId);
               return state.snapshot.phase;
             })
             .not.toBe("AwaitChoice");
+        }
+
+        let debt: { page: Page; state: BootstrapResponse } | undefined;
+        for (let step = 0; step < 150 && debt === undefined; step += 1) {
+          const states = await Promise.all(
+            players.map(async (page) => ({
+              page,
+              state: await readBootstrap(page, created.gameId),
+            })),
+          );
+          debt = states.find(
+            ({ state }) =>
+              state.snapshot.phase === "AwaitDebt" && state.snapshot.legalActions.length > 0,
+          );
+          if (debt !== undefined) break;
+
+          const actor = states
+            .map(({ page, state }) => ({ page, state, command: botCommand(state) }))
+            .find(({ command }) => command !== undefined);
+          expect(actor, "a live seat should advertise the next debt setup action").toBeDefined();
+          if (actor === undefined || actor.command === undefined)
+            throw new Error("No live action was advertised before debt");
+          await issueCommand(
+            actor.page,
+            created.gameId,
+            actor.state.aggregateVersion,
+            actor.command,
+          );
+        }
+
+        expect(
+          debt,
+          "a live player should eventually enter an authoritative Owed state",
+        ).toBeDefined();
+        if (debt !== undefined) {
+          await expect(
+            debt.page.getByRole("heading", { name: "Owed: payment required" }),
+          ).toBeVisible();
+          await expect(debt.page.getByText("Amount due", { exact: true })).toBeVisible();
+          await expect(debt.page.getByText("Still needed", { exact: true })).toBeVisible();
+          await expect(
+            debt.page.getByRole("heading", { name: "Ways to raise the payment" }),
+          ).toBeVisible();
+          await expect(
+            debt.page.getByRole("button", { name: "Mortgage an Address" }).first(),
+          ).toBeVisible();
+
+          await debt.page.setViewportSize({ width: 375, height: 900 });
+          await assertNoHorizontalOverflow(host, "debt host mobile");
+          await assertNoHorizontalOverflow(joiner, "debt joiner mobile");
+          if (captureVisualBaseline) {
+            await debt.page.addStyleTag({
+              content: "nextjs-portal { display: none !important; }",
+            });
+            await expect(
+              debt.page.locator('[aria-labelledby="obligation-decision-heading"]'),
+            ).toHaveScreenshot("live-debt-decision-375.png", {
+              animations: "disabled",
+              caret: "hide",
+            });
+          }
+
+          await host.setViewportSize({ width: 1280, height: 900 });
+          await joiner.setViewportSize({ width: 1280, height: 900 });
+          await assertNoHorizontalOverflow(host, "debt host desktop");
+          await assertNoHorizontalOverflow(joiner, "debt joiner desktop");
+          if (captureVisualBaseline) {
+            await expect(
+              debt.page.locator('[aria-labelledby="obligation-decision-heading"]'),
+            ).toHaveScreenshot("live-debt-decision-1280.png", {
+              animations: "disabled",
+              caret: "hide",
+            });
+          }
+
+          const mortgageAction = debt.state.snapshot.legalActions.find(
+            (action) => action.type === "MortgageDeed",
+          );
+          expect(
+            mortgageAction,
+            "Owed should expose an authoritative liquidation action",
+          ).toBeDefined();
+          if (mortgageAction !== undefined) {
+            const mortgageResponsePromise = debt.page.waitForResponse(
+              (response) =>
+                response.url().endsWith(`/api/games/${created.gameId}/commands`) &&
+                response.request().method() === "POST",
+            );
+            await debt.page.getByRole("button", { name: "Mortgage an Address" }).first().click();
+            expect((await mortgageResponsePromise).ok()).toBe(true);
+            await expect
+              .poll(() => readBootstrap(debt!.page, created.gameId))
+              .toMatchObject({ snapshot: { phase: "AwaitDebt" } });
+          }
         }
       }
     } finally {

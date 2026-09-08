@@ -1170,6 +1170,15 @@ accidental collapse in coverage.
       of the decision heading produces a visual-test failure. Debt, bankruptcy,
       completion, rematch, Firefox/WebKit runtime, and broader screenshot
       coverage remain open.
+      Iteration 91 extends the same two-context live journey through a real
+      underfunded Owed state after an authoritative Noise Complaint release.
+      It asserts the payment context and liquidation guidance, checks page
+      overflow at 375px and 1280px, captures masked Chromium and Firefox debt
+      decision baselines, and submits an authoritative MortgageDeed while the
+      obligation remains active. Chromium passes and the heading mutation
+      fails; the Firefox run reached baseline capture but stalled before its
+      final command assertion, so debt runtime evidence remains open alongside
+      bankruptcy, completion, rematch, WebKit, and broader screenshot coverage.
 
 - [~] **CO-031 — Complete accessibility and mobile-style failure evidence** (Codex, iteration 79)
       Blocked by: CO-030
