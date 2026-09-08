@@ -1082,7 +1082,7 @@ accidental collapse in coverage.
 
 ## Phase G — Release evidence and documentation closure
 
-- [ ] **CO-030 — Add full multiplayer and visual-regression coverage**
+- [~] **CO-030 — Add full multiplayer and visual-regression coverage**
       Blocked by: CO-029
       Requirements: TEST-008, TEST-009
       Read: test strategy, Playwright configuration, all new UI requirements
@@ -1095,6 +1095,14 @@ accidental collapse in coverage.
       and no capability values.
       Proves: green cross-browser report, reviewed baselines, deliberate UI
       regression observed red, and restored green run.
+      Iteration 78 adds `apps/web/e2e/live-multiplayer.spec.ts`, an opt-in live
+      Playwright journey using separate host/joiner browser contexts against the
+      local MongoDB replica-set development server. Chromium and Firefox pass
+      create, concurrent join, lobby projection, start, authoritative roll, SSE
+      convergence, and 375/1280 overflow checks; the Chromium mutation of the
+      roll assertion fails as expected. WebKit stalls in this local live-server
+      run without reaching a product assertion; visual baselines and the wider
+      purchase-through-rematch matrix remain open.
 
 - [ ] **CO-031 — Complete accessibility and mobile-style failure evidence**
       Blocked by: CO-030

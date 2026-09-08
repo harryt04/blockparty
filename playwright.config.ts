@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const liveE2E = process.env.BLOCKPARTY_E2E_LIVE === "1";
+
 /**
  * Release accessibility matrix. The test suite owns browser-visible evidence;
  * the manual device/AT record lives in docs/delivery/accessibility-checklist.md.
@@ -12,15 +14,18 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? "line" : "list",
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3100",
+    baseURL:
+      process.env.PLAYWRIGHT_BASE_URL ??
+      (liveE2E ? "http://127.0.0.1:3000" : "http://127.0.0.1:3100"),
     trace: "on-first-retry",
   },
   webServer: {
     // Production output avoids the Next dev compiler's optional MongoDB
     // dependency warnings while testing the same artifact shipped to users.
-    command:
-      "BLOCKPARTY_LOCAL_HTTP_TEST=1 NEXT_PUBLIC_POSTHOG_KEY=phc_browser_test NEXT_PUBLIC_POSTHOG_HOST=http://127.0.0.1:3100 pnpm run build && BLOCKPARTY_LOCAL_HTTP_TEST=1 NEXT_PUBLIC_POSTHOG_KEY=phc_browser_test NEXT_PUBLIC_POSTHOG_HOST=http://127.0.0.1:3100 pnpm --filter @blockparty/web start --hostname 127.0.0.1 --port 3100",
-    url: "http://127.0.0.1:3100",
+    command: liveE2E
+      ? "NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000 ALLOWED_ORIGINS=http://127.0.0.1:3000 pnpm dev"
+      : "BLOCKPARTY_LOCAL_HTTP_TEST=1 NEXT_PUBLIC_POSTHOG_KEY=phc_browser_test NEXT_PUBLIC_POSTHOG_HOST=http://127.0.0.1:3100 pnpm run build && BLOCKPARTY_LOCAL_HTTP_TEST=1 NEXT_PUBLIC_POSTHOG_KEY=phc_browser_test NEXT_PUBLIC_POSTHOG_HOST=http://127.0.0.1:3100 pnpm --filter @blockparty/web start --hostname 127.0.0.1 --port 3100",
+    url: liveE2E ? "http://127.0.0.1:3000" : "http://127.0.0.1:3100",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
