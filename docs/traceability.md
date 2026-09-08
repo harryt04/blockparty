@@ -602,3 +602,11 @@ when the sync client enters `reconnecting`, and the browser emits no command;
 `apps/web/e2e/iteration4-gameplay.spec.ts` covers the client-side connection gate
 in Chromium, Firefox, and WebKit. Broader disconnect and live-release evidence
 remain assigned to CO-027 and CO-030–031.
+Iteration 61 adds the matching cross-browser transport-loss evidence for an
+already-open auction decision: the exact property, bid, pass, and bid amount
+controls remain visible but disabled when the sync client enters `reconnecting`,
+and no command is emitted. The regression in
+`apps/web/e2e/iteration4-gameplay.spec.ts` fails under mutation when the
+ActionBar connection gate is removed; restored Chromium, Firefox, and WebKit
+runs pass. Broader disconnect and live-release evidence remain assigned to
+CO-027 and CO-030–031.

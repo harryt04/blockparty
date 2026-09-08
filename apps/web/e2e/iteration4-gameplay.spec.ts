@@ -1087,6 +1087,59 @@ test("transport loss disables an open acquisition decision without submitting", 
   expect(commands).toHaveLength(0);
 });
 
+test("transport loss disables an open auction decision without submitting", async ({ page }) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitAuction", 1, {
+      prioritySeatId: "seat-a",
+      auction: {
+        deedId: "d-sawhorse-lane",
+        highBid: 4_000,
+        highBidderSeatId: "seat-b",
+        minimumNextBid: 4_001,
+        prioritySeatId: "seat-a",
+        passedSeatIds: [],
+      },
+      legalActions: [
+        {
+          type: "PlaceAuctionBid",
+          constraints: { minBid: 4_001, maxBid: 145_000 },
+        },
+        { type: "PassAuction" },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const dialog = page.getByRole("dialog");
+  const bid = dialog.getByRole("button", { name: "Submit bid" });
+  const pass = dialog.getByRole("button", { name: "Pass on this auction" });
+  await expect(dialog).toContainText("Sawhorse Lane");
+  await expect(bid).toBeVisible();
+  await expect(pass).toBeVisible();
+
+  await page.evaluate(() => {
+    (window as unknown as { __emitGameConnectionError?: () => void }).__emitGameConnectionError?.();
+  });
+
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Connection lost. Reconnecting" }),
+  ).toBeVisible();
+  await expect(bid).toBeDisabled();
+  await expect(pass).toBeDisabled();
+  await expect(dialog.getByRole("spinbutton")).toBeDisabled();
+  expect(commands).toHaveLength(0);
+});
+
 test("reconnected auction re-enables the authoritative bid", async ({ page }) => {
   await mockLiveStream(page);
   const { commands } = await mockGameApi(page);

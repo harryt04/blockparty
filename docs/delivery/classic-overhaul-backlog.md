@@ -939,6 +939,13 @@ accidental collapse in coverage.
       disabled as the sync client enters reconnecting, and no command is emitted.
       The test protects the client-side connection gate while broader disconnect
       and release evidence remain outstanding.
+      Iteration 61 adds the matching cross-browser transport-loss regression for an
+      already-open auction decision: the exact property, bid, pass, and bid amount
+      controls remain visible but all are disabled as the sync client enters
+      `reconnecting`, and no command is emitted. The Chromium mutation run fails
+      when the ActionBar connection gate is removed; the restored Chromium,
+      Firefox, and WebKit runs pass. Broader disconnect and live-release evidence
+      remain assigned to CO-027 and CO-030–031.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
