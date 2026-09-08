@@ -801,6 +801,10 @@ accidental collapse in coverage.
       Iteration 32 adds a paused pending-trade Chromium scenario: a disconnected
       proposer leaves the named offer and decision heading visible, disables
       acceptance/rejection, announces the pause, and produces no command.
+      Iteration 33 adds cross-browser paused-acquisition coverage: a disconnected
+      required actor keeps the exact Address price and balance context visible,
+      disables both acquisition continuations, and produces no command. Mutation
+      of the shared legal-action disabled prop fails this regression.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

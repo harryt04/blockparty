@@ -472,3 +472,11 @@ eleven-test file passes. Full disconnect matrices, duplicate-command behavior
 beyond same-task activation, cross-browser, axe, and retirement-summary evidence
 remain assigned to CO-027 and CO-029–031; the repository lint gate retains its
 known `prettier.config.cjs` `module` error.
+
+Iteration 33 advances CO-027 for UX-044–046 and RULE-013–014 with a paused
+acquisition scenario in `apps/web/e2e/iteration4-gameplay.spec.ts`. Chromium,
+Firefox, and WebKit verify that a disconnected required actor leaves the Address
+price, cash, and acquisition continuations visible while disabling both choices
+and submitting no command; mutation of the shared legal-action disabled prop
+fails the regression. Broader disconnect matrices, cross-browser state coverage,
+axe, and live-release evidence remain assigned to CO-027 and CO-030–031.
