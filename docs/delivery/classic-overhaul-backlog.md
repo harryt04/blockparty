@@ -920,6 +920,12 @@ accidental collapse in coverage.
       `DeclareBankruptcy` command. Chromium, Firefox, and WebKit pass; removing
       the shared synchronous submission lock makes both regressions emit two
       commands. Broader disconnect and release evidence remain outstanding.
+      Iteration 57 adds the complementary same-task pending-trade rejection
+      regression: two synchronous `RejectTrade` activations emit one command
+      for the authoritative trade ID. The Chromium mutation run emits two
+      commands when the shared synchronous submission lock is removed; the
+      restored Chromium, Firefox, and WebKit runs pass. Broader disconnect and
+      release evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

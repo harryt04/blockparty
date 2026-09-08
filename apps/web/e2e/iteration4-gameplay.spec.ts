@@ -490,6 +490,50 @@ test("same-task pending-trade acceptance submits a game command only once", asyn
   });
 });
 
+test("same-task pending-trade rejection submits a game command only once", async ({ page }) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("TurnStart", 1, {
+      pendingTrade: {
+        tradeId: "trade-reject-same-task-1",
+        proposerSeatId: "seat-b",
+        counterpartySeatId: "seat-a",
+        offered: { cash: 2_000, deedIds: [], detentionReleaseCardIds: [] },
+        requested: { cash: 0, deedIds: [], detentionReleaseCardIds: [] },
+        proposerBalance: 153_000,
+        counterpartyBalance: 145_000,
+        aggregateVersion: 1,
+      },
+      legalActions: [
+        { type: "AcceptTrade", constraints: { tradeId: "trade-reject-same-task-1" } },
+        { type: "RejectTrade", constraints: { tradeId: "trade-reject-same-task-1" } },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const reject = page.getByRole("button", { name: "Reject this trade" });
+  await reject.evaluate((element) => {
+    (element as HTMLButtonElement).click();
+    (element as HTMLButtonElement).click();
+  });
+
+  await expect.poll(() => commands.length).toBe(1);
+  expect((commands[0] as { payload: { type: string; tradeId: string } }).payload).toEqual({
+    type: "RejectTrade",
+    tradeId: "trade-reject-same-task-1",
+  });
+});
+
 test("same-task auction bidding submits a game command only once", async ({ page }) => {
   await mockLiveStream(page);
   const { commands } = await mockGameApi(page);

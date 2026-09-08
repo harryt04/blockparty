@@ -578,3 +578,9 @@ the shared synchronous submission lock makes both Chromium regressions emit two
 commands; Chromium, Firefox, and WebKit pass with the lock restored. This extends
 UX-044, UX-046, and UX-047 evidence; broader disconnect and live-release evidence
 remain assigned to CO-027 and CO-030–031.
+Iteration 57 adds the complementary cross-browser duplicate-command evidence for
+pending-trade rejection: two same-task `RejectTrade` activations emit one command
+for the authoritative trade ID. Removing the shared synchronous submission lock
+makes the Chromium regression emit two commands; Chromium, Firefox, and WebKit
+pass with the lock restored. Broader disconnect and live-release evidence remain
+assigned to CO-027 and CO-030–031.
