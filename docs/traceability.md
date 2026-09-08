@@ -480,3 +480,10 @@ price, cash, and acquisition continuations visible while disabling both choices
 and submitting no command; mutation of the shared legal-action disabled prop
 fails the regression. Broader disconnect matrices, cross-browser state coverage,
 axe, and live-release evidence remain assigned to CO-027 and CO-030–031.
+
+Iteration 34 extends the CO-027 UX-046–047 disconnect evidence to pending
+trades. The paused pending-trade scenario in
+`apps/web/e2e/iteration4-gameplay.spec.ts` passes in Chromium, Firefox, and
+WebKit, preserving the named offer and focused decision heading while disabling
+accept/reject and submitting no command. Broader disconnect matrices, axe, and
+live-release evidence remain assigned to CO-027 and CO-030–031.

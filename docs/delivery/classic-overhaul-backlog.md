@@ -805,6 +805,11 @@ accidental collapse in coverage.
       required actor keeps the exact Address price and balance context visible,
       disables both acquisition continuations, and produces no command. Mutation
       of the shared legal-action disabled prop fails this regression.
+      Iteration 34 verifies the paused pending-trade scenario in Chromium,
+      Firefox, and WebKit: a disconnected proposer leaves the named offer and
+      decision heading visible, disables acceptance and rejection, announces the
+      pause, and produces no command. The isolated three-project run passes;
+      broader disconnect matrices and release evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
