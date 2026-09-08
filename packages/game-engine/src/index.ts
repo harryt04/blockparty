@@ -12,8 +12,8 @@
  * events. The server assigns journal sequence and aggregate version after
  * resolution; the engine does not know they exist.
  *
- * Unimplemented commands retain their typed rejection while rules land ticket
- * by ticket behind these seams.
+ * Remaining unimplemented commands retain their typed rejection while rules
+ * land ticket by ticket behind these seams.
  */
 import type {
   ActorScopedCommand,
@@ -2002,6 +2002,26 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         pendingChoice: undefined,
         obligation: undefined,
       });
+    case "BotSeatAdded": {
+      const seatId = payloadSeatId(event, "seatId");
+      if (seatId === undefined) return state;
+      return freezeState({
+        ...state,
+        seats: state.seats.map((seat) =>
+          seat.seatId === seatId ? { ...seat, kind: "bot" as const } : seat,
+        ),
+      });
+    }
+    case "SeatOpened": {
+      const seatId = payloadSeatId(event, "seatId");
+      if (seatId === undefined) return state;
+      return freezeState({
+        ...state,
+        seats: state.seats.map((seat) =>
+          seat.seatId === seatId ? { ...seat, kind: "open" as const } : seat,
+        ),
+      });
+    }
     case "SeatReplacedWithBot": {
       const seatId = payloadSeatId(event, "seatId");
       if (seatId === undefined) return state;
@@ -2697,6 +2717,51 @@ function requireActiveActor(state: GameState, actorSeatId: SeatId): Rejection | 
     return reject("ILLEGAL_ACTION", "SEAT_NOT_ACTIVE", "Only an active seat may act.");
   }
   return undefined;
+}
+
+function resolveLobbySeatChange(
+  state: GameState,
+  actorSeatId: SeatId,
+  command: Extract<Command, { type: "AddBotSeat" | "RemoveSeat" }>,
+): Resolution {
+  const actorRejection = requireActiveActor(state, actorSeatId);
+  if (actorRejection !== undefined) return actorRejection;
+  if (state.phase !== "Lobby") {
+    return reject("PHASE_MISMATCH", "LOBBY_ONLY", "Seat changes are only available in the lobby.");
+  }
+
+  const target =
+    command.type === "AddBotSeat"
+      ? state.seats.find((seat) => seat.status === "active" && seat.kind === "open")
+      : findSeat(state, command.seatId);
+  if (target === undefined) {
+    return reject(
+      "ILLEGAL_ACTION",
+      command.type === "AddBotSeat" ? "NO_OPEN_SEAT" : "SEAT_NOT_FOUND",
+      command.type === "AddBotSeat"
+        ? "There is no open Human seat for a Computer."
+        : "That seat is not in the lobby.",
+    );
+  }
+  if (command.type === "RemoveSeat" && target.kind !== "bot") {
+    return reject(
+      "ILLEGAL_ACTION",
+      "COMPUTER_SEAT_REQUIRED",
+      "Only a Computer seat can be removed from the lobby.",
+    );
+  }
+
+  const event = freezeEvent({
+    type: command.type === "AddBotSeat" ? "BotSeatAdded" : "SeatOpened",
+    eventVersion: 1,
+    actorSeatId,
+    payload: { seatId: target.seatId },
+  } satisfies EngineEvent);
+  return {
+    ok: true,
+    state: freezeState(applyEvent(state, event)),
+    events: Object.freeze([event]),
+  };
 }
 
 function resolveStartGame(state: GameState, actorSeatId: SeatId, rules: RuleSet): Resolution {
@@ -6210,6 +6275,10 @@ function resolveTradeResponse(
 export function resolve(state: GameState, command: ActorScopedCommand, rules: RuleSet): Resolution {
   let result: Resolution;
   switch (command.command.type) {
+    case "AddBotSeat":
+    case "RemoveSeat":
+      result = resolveLobbySeatChange(state, command.actorSeatId, command.command);
+      break;
     case "StartGame":
       result = resolveStartGame(state, command.actorSeatId, rules);
       break;

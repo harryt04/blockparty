@@ -672,12 +672,54 @@ async function transact(
     { session, ordered: true },
   );
 
+  const lobbySeatCommand =
+    envelope.payload.type === "AddBotSeat" || envelope.payload.type === "RemoveSeat";
+  const nextSeats = lobbySeatCommand
+    ? game.seats.map((seat) => {
+        const nextKind = nextState.seats.find(
+          (candidate) => candidate.seatId === seat.seatId,
+        )?.kind;
+        if (nextKind === undefined || nextKind === seat.kind) return seat;
+        if (nextKind === "bot") {
+          const botNumber =
+            game.seats.filter((candidate) => candidate.kind === "bot").length +
+            (envelope.payload.type === "AddBotSeat" ? 1 : 0);
+          return { ...seat, kind: nextKind, name: `Bot ${botNumber}` };
+        }
+        return { ...seat, kind: nextKind };
+      })
+    : undefined;
+  const nextLobby: GameDocument["lobby"] | undefined =
+    nextSeats === undefined
+      ? undefined
+      : {
+          ...game.lobby,
+          seats: nextSeats.map((seat) => {
+            const previous = game.lobby.seats.find((candidate) => candidate.seatId === seat.seatId);
+            return {
+              seatId: seat.seatId,
+              ...(seat.name === undefined ? {} : { name: seat.name }),
+              kind: seat.kind,
+              status: "active",
+              token: seat.token,
+              isHost: seat.seatId === game.hostSeatId,
+              connected: seat.kind === "bot" || previous?.connected === true,
+              isSelf: seat.seatId === game.hostSeatId,
+            };
+          }),
+          canStart: nextSeats.every((seat) => seat.kind !== "open"),
+          ...(nextSeats.every((seat) => seat.kind !== "open")
+            ? { startBlockedReason: undefined }
+            : { startBlockedReason: "Every seat must be filled by a person or bot." }),
+        };
   const update: UpdateFilter<GameDocument> = {
     $set: {
       snapshot: nextState,
       status: gameStatus(nextState, game.status),
       aggregateVersion: nextVersion,
       lastSequence: nextSequence,
+      ...(nextSeats === undefined ? {} : { seats: nextSeats }),
+      ...(nextLobby === undefined ? {} : { lobby: nextLobby }),
       ...(rulesConfiguredEvent === undefined ? {} : { rulesConfigured: true }),
       lastAuthoritativeActionAt: now,
       expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),

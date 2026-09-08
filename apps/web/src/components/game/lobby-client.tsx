@@ -6,7 +6,7 @@ import {
   type RulesConfiguration,
   type VariantKey,
 } from "@blockparty/contracts";
-import { Check, Clipboard, Share2, Users } from "lucide-react";
+import { Check, Clipboard, Share2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -19,14 +19,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlayerToken } from "@/components/game/player-token";
 import { useGameSync } from "@/client/sync/use-game-sync";
+import { LobbyPreview } from "./lobby-preview";
 import {
   configurationValues,
   inviteUrl,
   LOBBY_VARIANT_COPY,
   lobbyIsReady,
   presetConfiguration,
+  startCondition,
 } from "./lobby-model";
 
 function lobbyUrl(gameId: string): string {
@@ -63,6 +64,7 @@ export function LobbyClient({ gameId }: { gameId: string }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "shared">("idle");
   const [commandPending, setCommandPending] = useState(false);
   const [commandError, setCommandError] = useState<string>();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [draftConfiguration, setDraftConfiguration] = useState<RulesConfiguration>();
   const activeGameRef = useRef(false);
   const startRequestedRef = useRef(false);
@@ -243,8 +245,52 @@ export function LobbyClient({ gameId }: { gameId: string }) {
       });
       await loadLobby();
       retry();
+      setSettingsOpen(false);
     } catch {
       setCommandError("The rules could not be saved. Check your connection and try again.");
+    } finally {
+      setCommandPending(false);
+    }
+  }
+
+  async function changeSeats(
+    payload: { type: "AddBotSeat" } | { type: "RemoveSeat"; seatId: string },
+  ) {
+    if (lobby === undefined || state.snapshot === undefined || !lobby.viewerIsHost) return;
+    setCommandPending(true);
+    setCommandError(undefined);
+    try {
+      const csrf = csrfToken();
+      const response = await fetch(commandUrl(gameId), {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          "content-type": "application/json",
+          ...(csrf === undefined ? {} : { "x-csrf-token": csrf }),
+        },
+        body: JSON.stringify({
+          protocolVersion: 1,
+          type: "game.command",
+          requestId: crypto.randomUUID(),
+          gameId,
+          commandId: crypto.randomUUID(),
+          expectedVersion: state.snapshot.aggregateVersion,
+          payload,
+        }),
+      });
+      const body: unknown = await response.json();
+      if (!response.ok) {
+        const parsed = ErrorEnvelope.safeParse(body);
+        setCommandError(
+          parsed.success ? parsed.data.error.message : "The seats could not be changed.",
+        );
+        return;
+      }
+      await loadLobby();
+      retry();
+    } catch {
+      setCommandError("The seats could not be changed. Check your connection and try again.");
     } finally {
       setCommandPending(false);
     }
@@ -295,44 +341,7 @@ export function LobbyClient({ gameId }: { gameId: string }) {
         </Badge>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users aria-hidden="true" /> Seats
-            </CardTitle>
-            <CardDescription>
-              Each seat keeps its token and presence as players join.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {lobby.seats.map((seat) => (
-                <li key={seat.seatId} className="rounded-(--radius-md) border border-line p-3">
-                  <div className="flex items-center gap-2">
-                    {seat.token === undefined ? null : (
-                      <PlayerToken token={seat.token} name={seat.name} />
-                    )}
-                    <span className="font-medium">{seat.name ?? "Open seat"}</span>
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    <Badge>
-                      {seat.kind === "open" ? "Open" : seat.kind === "bot" ? "Bot" : "Guest"}
-                    </Badge>
-                    {seat.isHost ? <Badge variant="brand">Host</Badge> : null}
-                    {seat.connected ? (
-                      <Badge variant="success">Connected</Badge>
-                    ) : (
-                      <Badge variant="warning">Waiting</Badge>
-                    )}
-                    {seat.isSelf ? <Badge variant="info">You</Badge> : null}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <Card>
           <CardHeader>
             <CardTitle>Invite players</CardTitle>
@@ -371,74 +380,98 @@ export function LobbyClient({ gameId }: { gameId: string }) {
         </Card>
       </div>
 
+      <LobbyPreview
+        commandPending={commandPending}
+        lobby={lobby}
+        onAddComputer={() => void changeSeats({ type: "AddBotSeat" })}
+        onRemoveComputer={(seatId) => void changeSeats({ type: "RemoveSeat", seatId })}
+      />
+
       <Card>
-        <CardHeader>
-          <CardTitle>Game settings</CardTitle>
-          <CardDescription>
-            {lobby.viewerIsHost
-              ? "The host selects the rules before starting. Rules become read-only once play begins."
-              : "Only the host can change rules. You can review the selected options here."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <fieldset disabled={!lobby.viewerIsHost || commandPending}>
-            <legend className="text-sm font-medium">Preset</legend>
-            <div className="mt-2 flex flex-wrap gap-4">
-              {(["standard", "short-game"] as const).map((preset) => (
-                <label key={preset} className="flex min-h-11 items-center gap-2">
-                  <input
-                    type="radio"
-                    name="lobby-preset"
-                    checked={configuration.preset === preset}
-                    onChange={() => setDraftConfiguration(presetConfiguration(preset))}
-                  />
-                  {preset === "short-game" ? "Short game" : "Standard"}
-                </label>
-              ))}
-            </div>
-            <p className="mt-3 text-sm font-medium">
-              {configuration.preset === "short-game"
-                ? "Short game"
-                : configuration.preset === "custom"
-                  ? "Custom rules"
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div>
+            <CardTitle>Game settings</CardTitle>
+            <CardDescription className="mt-1">
+              {configuration.preset === "custom"
+                ? "Custom rules"
+                : configuration.preset === "short-game"
+                  ? "Short game"
                   : "Standard rules"}
-            </p>
-            <ul className="mt-3 grid gap-3 sm:grid-cols-2">
-              {(Object.keys(LOBBY_VARIANT_COPY) as VariantKey[]).map((key) => (
-                <li key={key} className="rounded-(--radius-md) border border-line p-3">
-                  <label className="flex items-start gap-2">
+              {Object.values(values).filter(Boolean).length === 0
+                ? " · all optional rules off"
+                : " · optional rules selected"}
+            </CardDescription>
+          </div>
+          <Button
+            aria-expanded={settingsOpen}
+            onClick={() => setSettingsOpen((open) => !open)}
+            size="sm"
+            variant="secondary"
+          >
+            {settingsOpen ? "Close settings" : "Edit settings"}
+          </Button>
+        </CardHeader>
+        {settingsOpen ? (
+          <CardContent>
+            <fieldset disabled={!lobby.viewerIsHost || commandPending}>
+              <legend className="text-sm font-medium">Preset</legend>
+              <div className="mt-2 flex flex-wrap gap-4">
+                {(["standard", "short-game"] as const).map((preset) => (
+                  <label key={preset} className="flex min-h-11 items-center gap-2">
                     <input
-                      type="checkbox"
-                      checked={values[key]}
-                      onChange={(event) =>
-                        setDraftConfiguration({
-                          ...configuration,
-                          preset: "custom",
-                          [key]: event.target.checked,
-                        })
-                      }
+                      type="radio"
+                      name="lobby-preset"
+                      checked={configuration.preset === preset}
+                      onChange={() => setDraftConfiguration(presetConfiguration(preset))}
                     />
-                    <span>
-                      <span className="font-medium">{LOBBY_VARIANT_COPY[key].label}</span>
-                      <span className="block text-sm text-muted-ink">
-                        {values[key] ? LOBBY_VARIANT_COPY[key].warning : "Off for this game."}
-                      </span>
-                    </span>
+                    {preset === "short-game" ? "Short game" : "Standard"}
                   </label>
-                </li>
-              ))}
-            </ul>
-          </fieldset>
-          {lobby.viewerIsHost ? (
-            <Button
-              className="mt-4"
-              onClick={() => void saveConfiguration()}
-              disabled={commandPending}
-            >
-              {commandPending ? "Saving rules…" : "Save rules"}
-            </Button>
-          ) : null}
-        </CardContent>
+                ))}
+              </div>
+              <p className="mt-3 text-sm font-medium">
+                {configuration.preset === "short-game"
+                  ? "Short game"
+                  : configuration.preset === "custom"
+                    ? "Custom rules"
+                    : "Standard rules"}
+              </p>
+              <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+                {(Object.keys(LOBBY_VARIANT_COPY) as VariantKey[]).map((key) => (
+                  <li key={key} className="rounded-(--radius-md) border border-line p-3">
+                    <label className="flex items-start gap-2">
+                      <input
+                        type="checkbox"
+                        checked={values[key]}
+                        onChange={(event) =>
+                          setDraftConfiguration({
+                            ...configuration,
+                            preset: "custom",
+                            [key]: event.target.checked,
+                          })
+                        }
+                      />
+                      <span>
+                        <span className="font-medium">{LOBBY_VARIANT_COPY[key].label}</span>
+                        <span className="block text-sm text-muted-ink">
+                          {values[key] ? LOBBY_VARIANT_COPY[key].warning : "Off for this game."}
+                        </span>
+                      </span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </fieldset>
+            {lobby.viewerIsHost ? (
+              <Button
+                className="mt-4"
+                onClick={() => void saveConfiguration()}
+                disabled={commandPending}
+              >
+                {commandPending ? "Saving rules…" : "Save rules"}
+              </Button>
+            ) : null}
+          </CardContent>
+        ) : null}
       </Card>
 
       <section
@@ -448,11 +481,7 @@ export function LobbyClient({ gameId }: { gameId: string }) {
         <h2 id="start-heading" className="font-serif text-xl">
           Ready to start?
         </h2>
-        <p className="mt-1 text-sm text-muted-ink">
-          {ready
-            ? "Every seat is filled. Starting locks the rules for this game."
-            : lobby.startBlockedReason}
-        </p>
+        <p className="mt-1 text-sm text-muted-ink">{startCondition(lobby)}</p>
         {commandError === undefined ? null : (
           <p className="mt-2 text-sm text-danger" role="alert">
             {commandError}

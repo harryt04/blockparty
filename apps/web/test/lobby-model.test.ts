@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { STANDARD_CONFIGURATION, type LobbyProjection } from "@blockparty/contracts";
-import { configurationValues, inviteUrl, lobbyIsReady } from "../src/components/game/lobby-model";
+import {
+  configurationValues,
+  inviteUrl,
+  lobbyIsReady,
+  seatKindLabel,
+  seatStatusLabel,
+  startCondition,
+} from "../src/components/game/lobby-model";
 
 function lobby(overrides: Partial<LobbyProjection> = {}): LobbyProjection {
   return {
@@ -70,5 +77,23 @@ describe("lobby presentation model", () => {
       "https://play.example/join/abcdefghijklmnopqrstuvwxyz123456",
     );
     expect(inviteUrl("/game/private", "https://play.example")).toBeUndefined();
+  });
+
+  it("keeps the lobby seat vocabulary and exact unmet start condition visible", () => {
+    expect(seatKindLabel("human")).toBe("Human");
+    expect(seatKindLabel("open")).toBe("Open Human");
+    expect(seatKindLabel("bot")).toBe("Computer");
+    expect(seatStatusLabel("open", false)).toBe("Waiting for a player");
+    expect(startCondition(lobby())).toBe("Waiting for 1 Human seat.");
+    expect(
+      startCondition(
+        lobby({
+          canStart: true,
+          seats: lobby().seats.map((seat) =>
+            seat.kind === "open" ? { ...seat, kind: "bot" as const, name: "Bot 1" } : seat,
+          ),
+        }),
+      ),
+    ).toContain("Every planned Human seat is claimed");
   });
 });

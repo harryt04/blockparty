@@ -43,6 +43,12 @@ const request = CreateGameRequest.parse({
   acknowledged13Plus: true,
 });
 
+const openLobbyRequest = CreateGameRequest.parse({
+  ...request,
+  humanSeatCount: 2,
+  botSeatCount: 0,
+});
+
 function insertion<T>() {
   const documents: T[] = [];
   return {
@@ -54,7 +60,7 @@ function insertion<T>() {
   };
 }
 
-async function fixture() {
+async function fixture(gameRequest = request) {
   const games = insertion<GameDocument>();
   const invitations = insertion<InvitationDocument>();
   const capabilities = insertion<CapabilityDocument>();
@@ -63,7 +69,7 @@ async function fixture() {
   const created = await createGameInTransaction(
     { games, invitations, capabilities, hostCapabilities, auditLog } satisfies CreationStore,
     {} as ClientSession,
-    request,
+    gameRequest,
     new Date("2026-09-03T15:00:00.000Z"),
   );
   const game = games.documents[0]!;
@@ -177,6 +183,23 @@ function configureCommand(gameId: string, commandId: string, expectedVersion: nu
         restSpaceJackpot: true,
       },
     },
+  };
+}
+
+function seatCommand(
+  gameId: string,
+  commandId: string,
+  expectedVersion: number,
+  payload: { type: "AddBotSeat" } | { type: "RemoveSeat"; seatId: string },
+) {
+  return {
+    protocolVersion: 1 as const,
+    type: "game.command" as const,
+    requestId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    gameId,
+    commandId,
+    expectedVersion,
+    payload,
   };
 }
 
@@ -370,5 +393,41 @@ describe("transactional command path", () => {
       code: "PHASE_MISMATCH",
       reason: "RULES_LOCKED_AFTER_START",
     });
+  });
+
+  it("commits host-only Computer seat changes and updates the lobby projection", async () => {
+    const fixtureState = await fixture(openLobbyRequest);
+    const host = {
+      gameId: fixtureState.game._id,
+      seatId: fixtureState.game.hostSeatId,
+      kind: "host" as const,
+    };
+    const openSeatId = fixtureState.game.seats.find((seat) => seat.kind === "open")?.seatId;
+    if (openSeatId === undefined) throw new Error("expected an open Human seat");
+
+    const added = await handleCommand(
+      seatCommand(fixtureState.game._id, "22222222-2222-4222-8222-222222222222", 0, {
+        type: "AddBotSeat",
+      }),
+      host,
+      { database: fixtureState.commandStore, transaction: fixtureState.transaction },
+    );
+    expect(added).toMatchObject({ ok: true, aggregateVersion: 1, firstSequence: 1 });
+    expect(fixtureState.game.seats.find((seat) => seat.seatId === openSeatId)?.kind).toBe("bot");
+    expect(fixtureState.game.lobby.canStart).toBe(true);
+    expect(fixtureState.events[0]?.type).toBe("BotSeatAdded");
+
+    const removed = await handleCommand(
+      seatCommand(fixtureState.game._id, "33333333-3333-4333-8333-333333333333", 1, {
+        type: "RemoveSeat",
+        seatId: openSeatId,
+      }),
+      host,
+      { database: fixtureState.commandStore, transaction: fixtureState.transaction },
+    );
+    expect(removed).toMatchObject({ ok: true, aggregateVersion: 2 });
+    expect(fixtureState.game.seats.find((seat) => seat.seatId === openSeatId)?.kind).toBe("open");
+    expect(fixtureState.game.lobby.canStart).toBe(false);
+    expect(fixtureState.events[1]?.type).toBe("SeatOpened");
   });
 });

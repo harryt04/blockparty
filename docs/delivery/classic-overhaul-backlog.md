@@ -642,7 +642,7 @@ accidental collapse in coverage.
       capability issuance. Mutation testing confirmed the browser test fails when
       the refresh call is removed.
 
-- [ ] **CO-022 — Rebuild the lobby as a table preview**
+- [x] **CO-022 — Rebuild the lobby as a table preview**
       Blocked by: CO-021
       Requirements: UX-043, PRD-FUN-004–005, DS-073
       Read: lobby client/model, host/recovery commands, updated UX
@@ -656,6 +656,16 @@ accidental collapse in coverage.
       unchanged; 2–6 seat arrangements reflow without horizontal page scroll.
       Proves: lobby model/state table, host authorization integration tests,
       responsive Playwright screenshots, axe, and keyboard traversal.
+      Evidence: `apps/web/src/components/game/lobby-preview.tsx` adds the classic
+      40-space miniature board and explicit seat tray; `lobby-client.tsx` makes
+      invite/share primary, collapses settings, and exposes host-only Computer
+      add/remove controls. `packages/game-engine/src/index.ts` and the single
+      transactional command path implement `AddBotSeat`/`RemoveSeat` with
+      `BotSeatAdded`/`SeatOpened` events. Model, reducer, and server integration
+      tests pass. `apps/web/e2e/accessibility.spec.ts` verifies the preview and
+      exact unmet condition at 375px and 1280px, and the Chromium axe route
+      audit passes; cross-browser screenshot and assistive-technology evidence
+      remains assigned to CO-030–031.
 
 ## Phase F — Rebuild the live table
 

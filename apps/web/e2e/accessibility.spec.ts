@@ -150,18 +150,30 @@ function snapshot(phase: GameSnapshotProjectionType["phase"]): GameSnapshotProje
 }
 
 function lobby(): LobbyProjection {
+  const seats = snapshot("Lobby").seats;
+  const openSeat = seats[1]!;
   return {
     gameId: GAME_ID,
     status: "LOBBY",
     name: "Accessibility test lobby",
     seatCount: 2,
-    seats: snapshot("Lobby").seats,
+    seats: [
+      seats[0]!,
+      {
+        ...openSeat,
+        kind: "open",
+        name: undefined,
+        connected: false,
+        isSelf: false,
+      },
+    ],
     configuration: STANDARD_CONFIGURATION,
     versions: snapshot("Lobby").versions,
     viewerSeatId: "seat-a",
     viewerIsHost: true,
     invitePath: `/join/${GAME_ID}`,
-    canStart: true,
+    canStart: false,
+    startBlockedReason: "Every seat must be filled by a person or bot.",
     expiresAt: "2026-10-03T15:00:00.000Z",
   };
 }
@@ -256,6 +268,27 @@ test.describe("accessibility release matrix", () => {
     for (const route of PUBLIC_ROUTES) await assertAxe(page, route);
     for (const route of [`/game/${GAME_ID}/lobby`, `/game/${GAME_ID}/summary`]) {
       await assertAxe(page, route);
+    }
+  });
+
+  test("keeps the lobby preview and unmet start condition inside phone and desktop widths", async ({
+    page,
+  }) => {
+    await mockGameApi(page, "Lobby");
+    for (const width of [375, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`/game/${GAME_ID}/lobby`, { waitUntil: "domcontentloaded" });
+      await expect(page.getByRole("img", { name: "Classic 40-space board preview" })).toBeVisible();
+      await expect(page.getByText("Open Human seat", { exact: true })).toBeVisible();
+      await expect(page.locator('p[role="status"]')).toContainText("Waiting for 1 Human seat.");
+      await expect(page.getByRole("button", { name: "Add a Computer" })).toBeVisible();
+      const dimensions = await page.evaluate(() => ({
+        clientWidth: document.documentElement.clientWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      }));
+      expect(dimensions.scrollWidth, `${width}px lobby page overflow`).toBeLessThanOrEqual(
+        dimensions.clientWidth + 1,
+      );
     }
   });
 
