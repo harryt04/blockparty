@@ -810,6 +810,12 @@ accidental collapse in coverage.
       decision heading visible, disables acceptance and rejection, announces the
       pause, and produces no command. The isolated three-project run passes;
       broader disconnect matrices and release evidence remain outstanding.
+      Iteration 35 adds paused detention and paused debt scenarios: a
+      disconnected required actor keeps the exit/payment context and decision
+      heading visible, all corresponding choices remain disabled, and no roll
+      or bankruptcy command is submitted. The two new scenarios pass in
+      Chromium, Firefox, and WebKit; broader disconnect matrices and release
+      evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

@@ -525,6 +525,46 @@ test("detention decision focuses its heading and submits only an advertised rout
   });
 });
 
+test("paused detention keeps the exit choices visible without submitting a roll", async ({
+  page,
+}) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitChoice", 1, {
+      paused: true,
+      seats: snapshot("AwaitChoice", 1).seats.map((seat) =>
+        seat.seatId === "seat-a"
+          ? { ...seat, connected: false, detained: true, detentionTurnsRemaining: 2 }
+          : seat,
+      ),
+      legalActions: [
+        {
+          type: "ChoosePendingOption",
+          constraints: { choiceId: "choice-paused", optionId: "attempt-roll" },
+        },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  await expect(
+    page.getByRole("heading", { name: "Noise Complaint: choose your exit" }),
+  ).toBeVisible();
+  await expect(page.getByText("2 of 3 failed matching attempts used.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Attempt a matching roll" })).toBeDisabled();
+  await expect(page.getByRole("note").filter({ hasText: "Play is paused" })).toBeVisible();
+  expect(commands).toHaveLength(0);
+});
+
 test("debt decision shows payment context and confirms bankruptcy destructively", async ({
   page,
 }) => {
@@ -570,6 +610,44 @@ test("debt decision shows payment context and confirms bankruptcy destructively"
   expect((commands[0] as { payload: unknown }).payload).toEqual({
     type: "DeclareBankruptcy",
   });
+});
+
+test("paused debt keeps payment context visible without submitting bankruptcy", async ({
+  page,
+}) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitChoice", 1, {
+      paused: true,
+      seats: snapshot("AwaitChoice", 1).seats.map((seat) =>
+        seat.seatId === "seat-a" ? { ...seat, connected: false } : seat,
+      ),
+      obligation: {
+        debtorSeatId: "seat-a",
+        creditorSeatId: "seat-b",
+        amount: 200_000,
+        reasonCode: "RENT_DUE",
+        reason: "Rent is due to Side Street.",
+      },
+      legalActions: [{ type: "DeclareBankruptcy" }],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  await expect(page.getByRole("heading", { name: "Owed: payment required" })).toBeVisible();
+  await expect(page.getByText("Amount due").locator("..")).toContainText("2,000 Tabs");
+  await expect(page.getByRole("button", { name: "Declare bankruptcy" })).toBeDisabled();
+  await expect(page.getByRole("note").filter({ hasText: "Play is paused" })).toBeVisible();
+  expect(commands).toHaveLength(0);
 });
 
 test("pending trade focuses the offer and accepts only for its named counterparty", async ({
