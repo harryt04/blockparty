@@ -2219,6 +2219,47 @@ test("authoritative decision events produce one live announcement", async ({ pag
   await expect(announcement).toHaveCount(1);
 });
 
+test("event history groups committed updates while preserving sequence order", async ({ page }) => {
+  await mockLiveStream(page);
+  await mockGameApi(page);
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByLabel("Connection status: Connected").first()).toBeVisible();
+
+  const historySnapshot = snapshot("AwaitPurchase", 4, {
+    publicEvents: [
+      event("FeePaid", 2, { amount: 50_000 }),
+      event("BankPaymentCollected", 3, { amount: 50_000 }),
+      event("RentPaid", 4, { amount: 20_000 }),
+    ].map((item, index) => ({
+      ...item,
+      aggregateVersion: index === 2 ? 2 : 1,
+    })),
+  });
+
+  for (const width of [375, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await emitSnapshot(page, historySnapshot);
+
+    const history = page.getByRole("region", { name: "History" });
+    await expect(history.getByRole("heading", { name: "Update 1" })).toBeVisible();
+    await expect(history.getByRole("heading", { name: "Update 2" })).toBeVisible();
+    await expect(history.getByRole("list", { name: "Events in update 1" })).toContainText(
+      "#2 The Committee: Permit fee paid · 500 Tabs",
+    );
+    await expect(history.getByRole("list", { name: "Events in update 1" })).toContainText(
+      "#3 The Committee: Payment collected by the Committee · 500 Tabs",
+    );
+    await expect(history.getByRole("list", { name: "Events in update 2" })).toContainText(
+      "#4 The Committee: Rent paid · 200 Tabs",
+    );
+
+    const updateOne = history.getByRole("list", { name: "Events in update 1" });
+    const updateTwo = history.getByRole("list", { name: "Events in update 2" });
+    expect(await updateOne.locator("li").count()).toBe(2);
+    expect(await updateTwo.locator("li").count()).toBe(1);
+  }
+});
+
 test("confirmed movement appears at its authoritative destination without reduced-motion interpolation", async ({
   page,
 }) => {

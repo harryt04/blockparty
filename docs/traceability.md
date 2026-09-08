@@ -384,6 +384,13 @@ state to `Connecting`. The 375px Chromium regression in
 `Reconnecting` text plus the accessible label; mutation back to the collapsed
 rendering fails the test. Broader multiplayer and release evidence remain
 planned.
+Iteration 75 adds responsive browser evidence for the rendered event history:
+contiguous events from one aggregate update appear under one update heading,
+sequence numbers remain visible and ordered, and the next aggregate starts a
+separate group at both 375px and 1280px in
+`apps/web/e2e/iteration4-gameplay.spec.ts`. The Chromium mutation run fails
+when aggregate-version grouping is removed. Broader multiplayer and release
+evidence remain planned.
 
 No self-hosted font files are present because licensed, provenanced faces have
 not yet been approved. The PWA shell caches only versioned public/app-shell

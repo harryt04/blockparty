@@ -1031,6 +1031,13 @@ accidental collapse in coverage.
       connected state; mutation of the rendering back to the old collapsed
       labels fails the test. Broader live multiplayer, real replica-set, and
       release evidence remain outstanding.
+      Iteration 75 adds responsive browser evidence for the rendered event
+      history: contiguous events from one aggregate update appear under one
+      update heading, sequence numbers remain visible and ordered, and the
+      next aggregate starts a separate group at both 375px and 1280px. The
+      Chromium mutation run fails when aggregate-version grouping is removed;
+      broader live multiplayer, real replica-set, and release evidence remain
+      outstanding.
 
 - [~] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
