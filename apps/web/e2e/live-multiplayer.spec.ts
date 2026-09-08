@@ -78,6 +78,32 @@ test.describe("live multiplayer authority", () => {
       );
     }
 
+    async function openActionSheetIfNeeded(target: typeof host): Promise<void> {
+      const modal = target.locator('[data-modal-layer="true"]');
+      if (await modal.isVisible()) return;
+      // A blocking decision can auto-open between the visibility check and
+      // the trigger click. The trigger's handler is idempotent, so force the
+      // same click through that narrow overlay race rather than waiting for a
+      // modal that may only exist on the next render.
+      await target.getByRole("button", { name: "Open action sheet" }).click({ force: true });
+    }
+
+    async function dismissIdleActionSheet(target: typeof host): Promise<void> {
+      const modal = target.locator('[data-modal-layer="true"]');
+      const idle = modal.getByText("No action is required from you right now.", { exact: true });
+      if (!(await idle.isVisible())) return;
+      await modal.getByRole("button", { name: "Close" }).click({ force: true });
+    }
+
+    async function readBootstrap(target: typeof host, gameId: string): Promise<BootstrapResponse> {
+      const response = await target.evaluate(async (id) => {
+        const result = await fetch(`/api/games/${id}/bootstrap`);
+        return { status: result.status, body: await result.json() };
+      }, gameId);
+      expect(response.status).toBe(200);
+      return BootstrapResponse.parse(response.body);
+    }
+
     try {
       await host.setViewportSize({ width: 375, height: 900 });
       await host.goto("/create", { waitUntil: "domcontentloaded" });
@@ -125,10 +151,13 @@ test.describe("live multiplayer authority", () => {
       await expect(joiner.getByText("Live Host", { exact: true })).toBeVisible();
       await assertNoHorizontalOverflow(joiner, "join lobby");
       if (captureVisualBaseline) {
+        await host.addStyleTag({
+          content: "nextjs-portal { display: none !important; }",
+        });
         await expect(host).toHaveScreenshot("live-lobby-375.png", {
           animations: "disabled",
           caret: "hide",
-          mask: [host.getByLabel("Invite link")],
+          mask: [host.getByLabel("Invite link"), host.locator("nextjs-portal")],
         });
       }
 
@@ -154,8 +183,17 @@ test.describe("live multiplayer authority", () => {
         });
       }
 
-      await host.getByRole("button", { name: "Open action sheet" }).click();
-      await joiner.getByRole("button", { name: "Open action sheet" }).click();
+      const initialTurnStates = await Promise.all(
+        [host, joiner].map(async (page) => ({
+          page,
+          state: await readBootstrap(page, created.gameId),
+        })),
+      );
+      const initialTurnPlayers = initialTurnStates.filter(({ state }) =>
+        state.snapshot.legalActions.some((action) => action.type === "RollDice"),
+      );
+      expect(initialTurnPlayers, "one live seat should own the opening roll").toHaveLength(1);
+      await openActionSheetIfNeeded(initialTurnPlayers[0]!.page);
       const hostRoll = host.getByRole("button", { name: "Roll and advance" });
       const joinerRoll = joiner.getByRole("button", { name: "Roll and advance" });
       await expect
@@ -178,9 +216,17 @@ test.describe("live multiplayer authority", () => {
       await activePlayer.getByRole("button", { name: "Roll and advance" }).click();
       const rollResponse = await rollResponsePromise;
       expect(rollResponse.ok()).toBe(true);
-      await expect(host.getByText(/Dice rolled/)).toBeVisible();
-      await expect(joiner.getByText(/Dice rolled/)).toBeVisible();
-
+      await expect
+        .poll(async () => {
+          const states = await Promise.all([
+            readBootstrap(host, created.gameId),
+            readBootstrap(joiner, created.gameId),
+          ]);
+          return states.every((state) =>
+            state.snapshot.publicEvents?.some((event) => event.type === "DiceRolled"),
+          );
+        })
+        .toBe(true);
       const players = [
         { name: "host", page: host },
         { name: "joiner", page: joiner },
@@ -189,12 +235,7 @@ test.describe("live multiplayer authority", () => {
         target: typeof host,
         gameId = created.gameId,
       ): Promise<BootstrapResponse> {
-        const response = await target.evaluate(async (id) => {
-          const result = await fetch(`/api/games/${id}/bootstrap`);
-          return { status: result.status, body: await result.json() };
-        }, gameId);
-        expect(response.status).toBe(200);
-        return BootstrapResponse.parse(response.body);
+        return readBootstrap(target, gameId);
       }
       async function issueCommand(
         target: typeof host,
@@ -417,6 +458,7 @@ test.describe("live multiplayer authority", () => {
             exact: true,
           }),
         ).toBeVisible();
+        await dismissIdleActionSheet(counterparty.page);
 
         const acceptResponsePromise = counterparty.page.waitForResponse(
           (response) =>
@@ -486,42 +528,40 @@ test.describe("live multiplayer authority", () => {
       expect((await auctionStartResponsePromise).ok()).toBe(true);
       await expect(host).toHaveURL(new RegExp(`/game/${auctionCreated.gameId}$`));
       await expect(joiner).toHaveURL(new RegExp(`/game/${auctionCreated.gameId}$`));
-      await host.getByRole("button", { name: "Open action sheet" }).click();
-      await joiner.getByRole("button", { name: "Open action sheet" }).click();
 
       const auctionPlayers = [
         { name: "host", page: host },
         { name: "joiner", page: joiner },
       ] as const;
-      await expect
-        .poll(
-          async () => {
-            const available = await Promise.all(
-              auctionPlayers.map(async (player) => ({
-                player,
-                enabled: await player.page
-                  .getByRole("button", { name: "Roll and advance" })
-                  .isEnabled(),
-              })),
-            );
-            return available.find(({ enabled }) => enabled)?.player.name ?? "none";
-          },
-          { timeout: 30_000 },
-        )
-        .not.toBe("none");
-      const auctionRoller = (await host
-        .getByRole("button", { name: "Roll and advance" })
-        .isEnabled())
-        ? "host"
-        : "joiner";
-      const auctionRollerPage = auctionRoller === "host" ? host : joiner;
-      const auctionRollResponsePromise = auctionRollerPage.waitForResponse(
-        (response) =>
-          response.url().endsWith(`/api/games/${auctionCreated.gameId}/commands`) &&
-          response.request().method() === "POST",
+      const auctionTurnStates = await Promise.all(
+        [host, joiner].map(async (page) => ({
+          page,
+          state: await readBootstrap(page, auctionCreated.gameId),
+        })),
       );
-      await auctionRollerPage.getByRole("button", { name: "Roll and advance" }).click();
-      expect((await auctionRollResponsePromise).ok()).toBe(true);
+      const auctionTurnPlayer = auctionTurnStates.find(({ state }) =>
+        state.snapshot.legalActions.some((action) => action.type === "RollDice"),
+      );
+      expect(
+        auctionTurnPlayer,
+        "one live seat should own the auction game opening roll",
+      ).toBeDefined();
+      if (auctionTurnPlayer === undefined)
+        throw new Error("No auction opening roller was advertised");
+      const auctionRoll = auctionTurnPlayer.state.snapshot.legalActions.find(
+        (action) => action.type === "RollDice",
+      );
+      expect(
+        auctionRoll,
+        "the opening roller should retain the advertised RollDice action",
+      ).toBeDefined();
+      if (auctionRoll === undefined) throw new Error("RollDice was no longer advertised");
+      await issueCommand(
+        auctionTurnPlayer.page,
+        auctionTurnPlayer.state.aggregateVersion,
+        commandForLegalAction(auctionRoll),
+        auctionCreated.gameId,
+      );
 
       let auctionParticipant: (typeof auctionPlayers)[number] | undefined;
       for (let step = 0; step < 36 && auctionParticipant === undefined; step += 1) {

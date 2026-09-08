@@ -23,7 +23,7 @@ export default defineConfig({
     // Production output avoids the Next dev compiler's optional MongoDB
     // dependency warnings while testing the same artifact shipped to users.
     command: liveE2E
-      ? "NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000 ALLOWED_ORIGINS=http://127.0.0.1:3000 pnpm dev"
+      ? "NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000 ALLOWED_ORIGINS=http://127.0.0.1:3000 CONTENT_VERSION=1.0.0 pnpm dev"
       : "BLOCKPARTY_LOCAL_HTTP_TEST=1 NEXT_PUBLIC_POSTHOG_KEY=phc_browser_test NEXT_PUBLIC_POSTHOG_HOST=http://127.0.0.1:3100 pnpm run build && BLOCKPARTY_LOCAL_HTTP_TEST=1 NEXT_PUBLIC_POSTHOG_KEY=phc_browser_test NEXT_PUBLIC_POSTHOG_HOST=http://127.0.0.1:3100 pnpm --filter @blockparty/web start --hostname 127.0.0.1 --port 3100",
     url: liveE2E ? "http://127.0.0.1:3000" : "http://127.0.0.1:3100",
     reuseExistingServer: !process.env.CI,

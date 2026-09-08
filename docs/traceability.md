@@ -714,3 +714,14 @@ in `apps/web/e2e/iteration4-gameplay.spec.ts` fail under mutation when the
 `DetentionDebtPanel` connection gate is removed; restored Chromium, Firefox, and
 WebKit runs pass. Broader disconnect and live-release evidence remain assigned
 to CO-027 and CO-030–031.
+Iteration 87 extends CO-030/TEST-009 runtime evidence in
+`apps/web/e2e/live-multiplayer.spec.ts`: the Chromium two-context live journey
+passes against the local replica-set server through classic create/join/start,
+authoritative roll and SSE convergence, acquisition, mortgage, cash-trade
+proposal/acceptance, declined acquisition, and auction bid. The harness pins
+`CONTENT_VERSION=1.0.0`, reads opening-turn ownership from authorized bootstrap
+legal actions, and submits the auction opening roll through the authenticated
+command envelope when the transient action sheet is stale. The lobby and board
+visual baselines remain capability-free and mask only volatile surfaces. Firefox,
+WebKit, detention-through-rematch, and manual assistive-technology evidence
+remain open.

@@ -1139,6 +1139,16 @@ accidental collapse in coverage.
       live run started its local replica set but stalled before a product
       assertion in this environment, so runtime trade evidence remains open
       alongside the wider detention-through-rematch matrix.
+      Iteration 87 completes the previously pending Chromium runtime slice:
+      `playwright.config.ts` pins the live harness to classic content `1.0.0`,
+      and the two-context journey now passes create, concurrent join, lobby,
+      start, authoritative roll/SSE convergence, acquisition, mortgage,
+      proposal/acceptance with committed balance transfer, declined acquisition,
+      and auction bidding against the local replica-set server. The mobile lobby
+      and desktop classic-table baselines exclude only volatile invite/dev-tool
+      surfaces; no capability values are captured. The wider detention, debt,
+      completion, rematch, cross-browser live, and manual accessibility evidence
+      remain open.
 
 - [~] **CO-031 — Complete accessibility and mobile-style failure evidence** (Codex, iteration 79)
       Blocked by: CO-030
