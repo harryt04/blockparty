@@ -1101,8 +1101,15 @@ accidental collapse in coverage.
       create, concurrent join, lobby projection, start, authoritative roll, SSE
       convergence, and 375/1280 overflow checks; the Chromium mutation of the
       roll assertion fails as expected. WebKit stalls in this local live-server
-      run without reaching a product assertion; visual baselines and the wider
-      purchase-through-rematch matrix remain open.
+      run without reaching a product assertion; the wider purchase-through-
+      rematch matrix remains open.
+      Iteration 80 adds masked Chromium Playwright visual baselines to that
+      authoritative journey for the 375px joined lobby and 1280px classic board.
+      The invite output is masked so the generated game capability path cannot
+      enter the baseline; fixed pseudonyms, content, and pre-roll state keep the
+      captured surfaces deterministic. Chromium live visual assertions pass;
+      Firefox/WebKit visual baselines plus the wider purchase-through-rematch
+      matrix remain open.
 
 - [~] **CO-031 — Complete accessibility and mobile-style failure evidence** (Codex, iteration 79)
       Blocked by: CO-030
