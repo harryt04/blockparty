@@ -7,6 +7,7 @@
  */
 import Link from "next/link";
 import { JoinLinkForm } from "@/components/entry/join-link-form";
+import { MiniBoard } from "@/components/game/lobby-preview";
 import { AppShell } from "@/components/shell/app-shell";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
@@ -22,21 +23,30 @@ const HOW_IT_WORKS = [
 export default function LandingPage() {
   return (
     <AppShell>
-      <div className="mx-auto flex max-w-3xl flex-col gap-8">
-        <section className="flex flex-col gap-4">
-          <h1 className="font-serif text-3xl">A private game, one link away.</h1>
-          <p className="max-w-prose text-muted-ink">
-            Start a property board game for two to six players. No account, no sign-up, no
-            matchmaking. Share one link and play.
-          </p>
-          <div className="flex flex-wrap gap-3">
+      <div className="mx-auto flex max-w-6xl flex-col gap-10">
+        <section className="grid items-center gap-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(24rem,1.15fr)]">
+          <div className="flex flex-col items-start gap-5">
+            <p className="text-sm font-semibold tracking-[0.18em] text-brand uppercase">
+              A classic property game in a magical city
+            </p>
+            <h1 className="max-w-xl font-serif text-4xl leading-tight md:text-6xl">
+              Own the block. Build your fortune.
+            </h1>
+            <p className="max-w-prose text-lg text-muted-ink">
+              Gather two to six players around a private table, claim Addresses, complete Blocks,
+              build Houses and Hotels, and be the last player standing.
+            </p>
             <Link href="/create" className={buttonVariants({ variant: "primary", size: "lg" })}>
-              Create a game
+              Set up the table
             </Link>
+            <p className="text-sm text-muted-ink">No account. One private invite link.</p>
+          </div>
+          <div className="rounded-(--radius-lg) border border-line bg-surface-raised p-3 shadow-lg md:p-5">
+            <MiniBoard />
           </div>
         </section>
 
-        <Card>
+        <Card className="mx-auto w-full max-w-3xl">
           <CardHeader>
             <CardTitle>Join with a link</CardTitle>
             <CardDescription>
@@ -49,7 +59,7 @@ export default function LandingPage() {
           </CardContent>
         </Card>
 
-        <section aria-labelledby="how-it-works">
+        <section aria-labelledby="how-it-works" className="mx-auto w-full max-w-3xl">
           <h2 id="how-it-works" className="font-serif text-xl">
             How it works
           </h2>
@@ -63,7 +73,7 @@ export default function LandingPage() {
           </ol>
         </section>
 
-        <Alert variant="info">
+        <Alert variant="info" className="mx-auto w-full max-w-3xl">
           <AlertDescription>
             For players aged 13 and over. Anyone with the invite link can join until the game
             starts. Games are removed 30 days after the last action.

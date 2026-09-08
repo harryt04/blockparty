@@ -48,7 +48,7 @@ logs, or analytics.
 
 | Route/screen | Required experience |
 | --- | --- |
-| `/` — Landing | Explain the private Blockparty table in one sentence. Make **Create game** the primary action and **Join with link** the secondary action. Include the 13+ notice, accessibility/settings links, install education, and no account wall. |
+| `/` — Landing | Open with the Blockparty city/table promise and a non-interactive classic-table preview. Make **Set up the table** the primary action and **Join with link** the secondary action. Use the compact top navigation; include the 13+ notice, accessibility/settings links, install education, and no account wall. |
 | `/create` — Create | One page for the host pseudonym, host piece, optional table name, Human count, Computer count, collapsed house-rule summary, and age acknowledgement. Show the resulting seat tray before submission. |
 | `/join/[inviteId]` — Join | Validate the invite before collecting input. Show only server-reported open Human seats and available pieces. Collect a game-scoped pseudonym, one remaining piece, and age acknowledgement. |
 | `/game/[gameId]/lobby` — Lobby | Show a miniature classic board, seat tray, claimed/open Human seats, Computer seats, selected Standard/Custom summary, invite/share action, and host-only start or seat controls. Explain the exact unmet start condition. |

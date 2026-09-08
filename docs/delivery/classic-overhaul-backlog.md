@@ -1203,6 +1203,14 @@ accidental collapse in coverage.
       WebKit reproduces the local live-server stall before product assertions,
       so confirmed bankruptcy, WebKit runtime, and the remaining broader
       screenshot matrix remain open.
+      The current CO-030 visual-regression pass also corrects the implemented
+      classic-table presentation: the board and lobby preview retain their
+      cream-paper material in dark device themes, board cells prioritize public
+      name/price over canonical IDs, desktop renders the active decision
+      directly in its decision rail, and 768px entry/rail controls no longer
+      collapse into overlapping two-column controls. Chromium checks pass for
+      the revised entry and responsive workspace surfaces; the remaining live
+      journey and accessibility matrix stays open.
 
 - [~] **CO-031 — Complete accessibility and mobile-style failure evidence** (Codex, iteration 79)
       Blocked by: CO-030

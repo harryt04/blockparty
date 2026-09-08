@@ -157,7 +157,7 @@ Pin compatible versions in `package.json`, workspace package manifests, and `pnp
 | Workspace/build          | `typescript`, Next.js ESLint integration, ESLint import/dependency-direction rules, formatter, pnpm workspace tooling, and `tsx` or an equivalent runner for maintenance scripts                |
 | Tests                    | `vitest`, `fast-check`, coverage tooling, `mongodb-memory-server` or an ephemeral replica-set MongoDB test service, `@playwright/test`, and axe integration                                     |
 
-shadcn/ui is treated as source-owned accessible components configured in the app, not as a separately deployed runtime. The primary navigation uses the shadcn Sidebar composition from the design system. Avoid adding an ORM, a second database abstraction, Socket.IO, Fastify, PostgreSQL/Drizzle, Redis, or a second web framework unless a new reviewed architecture decision replaces this one.
+shadcn/ui is treated as source-owned accessible components configured in the app, not as a separately deployed runtime. The primary navigation is a compact, responsive top bar so entry tasks retain their content width; active games use their dedicated table rails. Avoid adding an ORM, a second database abstraction, Socket.IO, Fastify, PostgreSQL/Drizzle, Redis, or a second web framework unless a new reviewed architecture decision replaces this one.
 
 ## ENG-004: Deployment and lifecycle
 
@@ -183,7 +183,7 @@ Required server configuration is documented by [OPS-003](../delivery/operations.
 | ENG-006 | MongoDB with the official driver                                  | Document snapshots fit the bounded game aggregate, transactions provide atomic command persistence, and change streams provide process-local event delivery without another runtime service. Supersedes the prior PostgreSQL/Drizzle decision.        |
 | ENG-007 | HTTP Route Handlers plus authenticated SSE                        | Commands are explicit and retryable over HTTP; committed state can stream from the same Next.js runtime without a separate WebSocket server.                                                                                                          |
 | ENG-008 | Internal pure packages remain                                     | Contracts, content, and the engine are deep seams that preserve determinism, legal-rule locality, and testability while remaining part of one deployed application.                                                                                   |
-| ENG-009 | shadcn/ui and shadcn Sidebar                                      | Accessible, source-owned UI primitives and the requested navigation composition provide a consistent presentation seam without introducing a UI runtime service.                                                                                      |
+| ENG-009 | shadcn/ui source-owned primitives                                 | Accessible, source-owned UI primitives and compact responsive navigation provide a consistent presentation seam without introducing a UI runtime service.                                                                                              |
 | ENG-010 | Snapshot plus append-only event journal and separate capabilities | Snapshots keep bootstrap/recovery bounded; events preserve ordering, replay, auditability, and catch-up. Invite admission, seat commands, host controls, and reclaim remain different authorities with separate hashes, cookies, and lifecycle rules. |
 
 The following are explicitly rejected for this final architecture:
@@ -207,7 +207,7 @@ The following are explicitly rejected for this final architecture:
 - Only server-side Next.js modules call `game-engine`; browser code receives authorized projections and cannot import database or engine-acceptance modules.
 - Commands/events use canonical wire vocabulary and versioned schemas; UI display names remain at the presentation boundary.
 - Duplicate, stale, malformed, unauthorized, out-of-order, reconnect, replacement, reclaim, host-transfer, expiry, and no-contest cases satisfy the linked protocol/security requirements.
-- The board, navigation sidebar, dialogs, action surfaces, event feed, and accessible board list use shadcn/Tailwind design rules and pass the UX/DS requirements.
+- The board, compact top navigation, dialogs, action surfaces, event feed, and accessible board list use shadcn/Tailwind design rules and pass the UX/DS requirements.
 - `pnpm run ci` covers package boundaries, engine determinism, MongoDB transaction/idempotency behavior, route/projection authorization, SSE/sync recovery, PWA behavior, accessibility, and security redaction.
 - Coolify deployment, backup/restore, cleanup, readiness, rollback, and capacity evidence is recorded against [traceability](../traceability.md).
 

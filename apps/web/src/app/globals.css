@@ -348,14 +348,18 @@
  * so labels and action controls cannot create page-level horizontal scrolling.
  */
 @layer components {
-  /* DS-040: fixed 11 × 11 classic perimeter geometry. */
-  .classic-board-frame {
+  .classic-board-frame,
+  .mini-classic-board {
     --board-paper: oklch(95.5% 0.025 87);
     --board-cell: oklch(98% 0.012 87);
     --board-ink: oklch(24% 0.025 60);
     --board-muted-ink: oklch(38% 0.02 60);
     --board-line: oklch(34% 0.02 60);
     --board-selection: oklch(88% 0.08 78);
+  }
+
+  /* DS-040: fixed 11 × 11 classic perimeter geometry. */
+  .classic-board-frame {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -416,6 +420,21 @@
 
   .classic-board-muted {
     color: var(--board-muted-ink);
+  }
+
+  .mini-classic-board {
+    color: var(--board-ink);
+    background: var(--board-line);
+  }
+
+  .mini-classic-board-center {
+    color: var(--board-muted-ink);
+    background: var(--board-paper);
+  }
+
+  .mini-classic-board-cell {
+    color: var(--board-ink);
+    background: var(--board-cell);
   }
 
   .game-shell {

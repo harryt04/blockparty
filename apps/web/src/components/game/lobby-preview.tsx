@@ -37,14 +37,14 @@ function spaceLabel(type: (typeof CLASSIC_LOBBY_SPACES)[number]["type"]): string
   return "Start";
 }
 
-function MiniBoard() {
+export function MiniBoard() {
   return (
     <div
       aria-label="Classic 40-space board preview"
-      className="grid aspect-square min-w-0 grid-cols-11 grid-rows-11 gap-px rounded-(--radius-md) border-2 border-brand bg-line p-1"
+      className="mini-classic-board grid aspect-square min-w-0 grid-cols-11 grid-rows-11 gap-px rounded-(--radius-md) border-2 border-brand p-1"
       role="img"
     >
-      <div className="col-span-9 row-span-9 col-start-2 row-start-2 flex items-center justify-center bg-canvas p-2 text-center text-xs text-muted-ink">
+      <div className="mini-classic-board-center col-span-9 row-span-9 col-start-2 row-start-2 flex items-center justify-center p-2 text-center text-xs">
         <span>Classic table preview</span>
       </div>
       {Array.from({ length: 40 }, (_, routeIndex) => {
@@ -55,7 +55,7 @@ function MiniBoard() {
         return (
           <div
             key={space.spaceId}
-            className={`min-w-0 overflow-hidden bg-surface-raised p-0.5 text-[8px] leading-tight text-ink ${
+            className={`mini-classic-board-cell min-w-0 overflow-hidden p-0.5 text-[8px] leading-tight ${
               group === undefined ? "" : (DISTRICT_CLASSES[group] ?? "")
             }`}
             style={{
@@ -65,7 +65,7 @@ function MiniBoard() {
             title={`${space.routeIndex + 1}. ${space.name} — ${spaceLabel(space.type)}`}
           >
             <span className="block truncate font-semibold">{space.name}</span>
-            <span className="block truncate text-muted-ink">{spaceLabel(space.type)}</span>
+            <span className="classic-board-muted block truncate">{spaceLabel(space.type)}</span>
           </div>
         );
       })}
