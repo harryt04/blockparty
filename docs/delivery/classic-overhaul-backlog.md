@@ -885,6 +885,12 @@ accidental collapse in coverage.
       dedicated panel. Model coverage and a Chromium regression prove the pending-trade sheet
       stays empty of unrelated primary actions; mutation and broader disconnect, axe, and
       live-release evidence remain outstanding.
+      Iteration 51 adds a populated blocking-decision accessibility matrix in
+      `apps/web/e2e/accessibility.spec.ts` covering detention, debt, pending
+      trade, auction, and acquisition surfaces. The matrix passes axe checks in
+      Chromium, Firefox, and WebKit; modal-backed states also assert their dialog name, and mutation
+      of the dialog title reference fails both modal cases. Broader disconnect
+      and release evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

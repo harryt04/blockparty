@@ -91,7 +91,10 @@ function board(): GameSnapshotProjectionType["board"] {
   });
 }
 
-function snapshot(phase: GameSnapshotProjectionType["phase"]): GameSnapshotProjectionType {
+function snapshot(
+  phase: GameSnapshotProjectionType["phase"],
+  overrides: Partial<GameSnapshotProjectionType> = {},
+): GameSnapshotProjectionType {
   const finished = phase === "Finished";
   const lobby = phase === "Lobby";
   return {
@@ -146,6 +149,7 @@ function snapshot(phase: GameSnapshotProjectionType["phase"]): GameSnapshotProje
     paused: false,
     expiresAt: "2026-10-03T15:00:00.000Z",
     configuration: STANDARD_CONFIGURATION,
+    ...overrides,
   };
 }
 
@@ -178,7 +182,11 @@ function lobby(): LobbyProjection {
   };
 }
 
-async function mockGameApi(page: Page, phase: GameSnapshotProjectionType["phase"]): Promise<void> {
+async function mockGameApi(
+  page: Page,
+  phase: GameSnapshotProjectionType["phase"],
+  overrides: Partial<GameSnapshotProjectionType> = {},
+): Promise<void> {
   await page.route(`**/api/games/${GAME_ID}/**`, async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/events")) {
@@ -186,7 +194,7 @@ async function mockGameApi(page: Page, phase: GameSnapshotProjectionType["phase"
       return;
     }
     if (path.endsWith("/bootstrap")) {
-      const projected = snapshot(phase);
+      const projected = snapshot(phase, overrides);
       const parsed = GameSnapshotProjection.safeParse(projected);
       if (!parsed.success) throw new Error(`Invalid E6 browser fixture: ${parsed.error.message}`);
       await route.fulfill({
@@ -298,6 +306,101 @@ test.describe("accessibility release matrix", () => {
       await assertAxe(page, `/game/${GAME_ID}`);
       await expect(page.locator("[data-responsive-shell]")).toBeVisible({ timeout: 10_000 });
       await expect(page.locator('[role="group"][aria-label="Game announcements"]')).toHaveCount(1);
+    });
+  }
+
+  const dedicatedBlockingStates = [
+    {
+      label: "detention",
+      phase: "AwaitChoice" as const,
+      overrides: {
+        seats: snapshot("AwaitChoice").seats.map((seat) =>
+          seat.seatId === "seat-a" ? { ...seat, detained: true, detentionTurnsRemaining: 1 } : seat,
+        ),
+        legalActions: [
+          {
+            type: "ChoosePendingOption" as const,
+            constraints: { choiceId: "choice-e6", optionId: "pay-release-fee" },
+          },
+        ],
+      },
+    },
+    {
+      label: "debt",
+      phase: "AwaitDebt" as const,
+      overrides: {
+        obligation: {
+          debtorSeatId: "seat-a",
+          creditorSeatId: "seat-b",
+          amount: 200_000,
+          reasonCode: "RENT_DUE",
+          reason: "North Star owes 2,000 Tabs in Rent.",
+        },
+        legalActions: [{ type: "PayObligation" as const }, { type: "DeclareBankruptcy" as const }],
+      },
+    },
+    {
+      label: "pending trade",
+      phase: "TurnStart" as const,
+      overrides: {
+        pendingTrade: {
+          tradeId: "trade-a11y-1",
+          proposerSeatId: "seat-b",
+          counterpartySeatId: "seat-a",
+          offered: { cash: 2_000, deedIds: [], detentionReleaseCardIds: [] },
+          requested: { cash: 0, deedIds: [], detentionReleaseCardIds: [] },
+          proposerBalance: 153_000,
+          counterpartyBalance: 145_000,
+          aggregateVersion: 1,
+        },
+        legalActions: [
+          { type: "AcceptTrade" as const, constraints: { tradeId: "trade-a11y-1" } },
+          { type: "RejectTrade" as const, constraints: { tradeId: "trade-a11y-1" } },
+        ],
+      },
+    },
+    {
+      label: "auction",
+      phase: "AwaitAuction" as const,
+      dialogTitle: "game-action-sheet-title",
+      overrides: {
+        prioritySeatId: "seat-a",
+        auction: {
+          deedId: "d-sawhorse-lane",
+          minimumNextBid: 4_001,
+          prioritySeatId: "seat-a",
+          passedSeatIds: [],
+        },
+      },
+    },
+    {
+      label: "acquisition",
+      phase: "AwaitPurchase" as const,
+      dialogTitle: "game-action-sheet-title",
+      overrides: {
+        legalActions: [
+          { type: "AcquireDeed" as const, constraints: { deedId: "d-sawhorse-lane" } },
+          { type: "DeclineAcquisition" as const, constraints: { deedId: "d-sawhorse-lane" } },
+        ],
+      },
+    },
+  ] satisfies readonly {
+    label: string;
+    phase: GameSnapshotProjectionType["phase"];
+    dialogTitle?: string;
+    overrides: Partial<GameSnapshotProjectionType>;
+  }[];
+
+  for (const state of dedicatedBlockingStates) {
+    test(`audits the populated ${state.label} decision surface`, async ({ page }) => {
+      await mockGameApi(page, state.phase, state.overrides);
+      await assertAxe(page, `/game/${GAME_ID}`);
+      if (state.dialogTitle !== undefined) {
+        await expect(page.getByRole("dialog")).toHaveAttribute(
+          "aria-labelledby",
+          state.dialogTitle,
+        );
+      }
     });
   }
 
