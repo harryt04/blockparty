@@ -281,6 +281,32 @@ test.describe("accessibility release matrix", () => {
     }
   });
 
+  test("keeps the app stylesheet applied at the iPhone-sized viewport", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+
+    const styleState = await page.evaluate(() => {
+      const body = getComputedStyle(document.body);
+      const main = document.querySelector("main");
+      return {
+        stylesheetCount: document.styleSheets.length,
+        backgroundColor: body.backgroundColor,
+        fontFamily: body.fontFamily,
+        fontSize: body.fontSize,
+        mainWidth: main?.getBoundingClientRect().width ?? 0,
+        viewportWidth: window.innerWidth,
+      };
+    });
+
+    expect(styleState.stylesheetCount, "the phone capture must load app CSS").toBeGreaterThan(0);
+    expect(styleState.backgroundColor, "unstyled pages retain a transparent body").not.toBe(
+      "rgba(0, 0, 0, 0)",
+    );
+    expect(styleState.fontFamily).toContain("Atkinson Hyperlegible");
+    expect(styleState.fontSize).toBe("16px");
+    expect(styleState.mainWidth).toBeLessThanOrEqual(styleState.viewportWidth);
+  });
+
   test("keeps the lobby preview and unmet start condition inside phone and desktop widths", async ({
     page,
   }) => {

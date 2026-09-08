@@ -1104,7 +1104,7 @@ accidental collapse in coverage.
       run without reaching a product assertion; visual baselines and the wider
       purchase-through-rematch matrix remain open.
 
-- [ ] **CO-031 — Complete accessibility and mobile-style failure evidence**
+- [~] **CO-031 — Complete accessibility and mobile-style failure evidence** (Codex, iteration 79)
       Blocked by: CO-030
       Requirements: UX-041–047, DS-071–073, TEST-009
       Read: accessibility checklist, design system, responsive test suite
@@ -1117,6 +1117,12 @@ accidental collapse in coverage.
       human assistive-technology results are attached.
       Proves: automated reports plus named manual evidence.
       Completion mark: `[?]` until VoiceOver and NVDA evidence is signed by a human.
+      Iteration 79 adds a production-browser regression at 375 CSS px that
+      detects the previously observed unstyled iPhone state through the loaded
+      stylesheet, themed body surface, Blockparty UI font, and 16px body floor;
+      `apps/web/e2e/accessibility.spec.ts` proves the presentation remains
+      styled at the phone viewport. Axe, wider mobile-style coverage, and
+      named human assistive-technology evidence remain open.
 
 - [ ] **CO-032 — Perform the final all-Markdown truth sweep**
       Blocked by: CO-031
