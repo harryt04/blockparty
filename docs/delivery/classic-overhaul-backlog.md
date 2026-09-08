@@ -1113,6 +1113,12 @@ accidental collapse in coverage.
       Firefox, preserving the deterministic 375px lobby and 1280px board
       assertions while WebKit remains separately blocked by its local live-server
       stall.
+      Iteration 82 extends the Chromium and Firefox live journey through an
+      authoritative acquisition: each browser context reads its own authorized
+      bootstrap, submits real command envelopes to progress whichever seat is
+      active, then the owning context acquires the rendered Address and verifies
+      its projection-backed Property hand. The wider purchase-through-rematch
+      matrix and WebKit live-server stall remain open.
 
 - [~] **CO-031 — Complete accessibility and mobile-style failure evidence** (Codex, iteration 79)
       Blocked by: CO-030

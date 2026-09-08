@@ -1,4 +1,53 @@
 import { expect, test } from "@playwright/test";
+import { BootstrapResponse, type Command, type LegalAction } from "@blockparty/contracts";
+
+function commandForLegalAction(action: LegalAction): Command {
+  const constraints = action.constraints ?? {};
+  const stringConstraint = (key: string): string | undefined =>
+    typeof constraints[key] === "string" ? constraints[key] : undefined;
+
+  switch (action.type) {
+    case "EndTurn":
+    case "PayObligation":
+    case "PassAuction":
+    case "RollDice":
+      return { type: action.type };
+    case "ChoosePendingOption": {
+      const choiceId = stringConstraint("choiceId");
+      if (choiceId === undefined) throw new Error("ChoosePendingOption omitted choiceId");
+      return {
+        type: action.type,
+        choiceId,
+        optionId: stringConstraint("optionId") ?? "selected",
+      };
+    }
+    case "PlaceAuctionBid": {
+      const minimum = constraints.minBid;
+      if (typeof minimum !== "number") throw new Error("PlaceAuctionBid omitted minBid");
+      return { type: action.type, amount: minimum };
+    }
+    case "AcquireDeed":
+    case "DeclineAcquisition":
+    case "MortgageDeed":
+    case "RedeemMortgage":
+    case "BuyImprovement":
+    case "SellImprovement":
+    case "RequestScarceImprovement": {
+      const deedId = stringConstraint("deedId");
+      if (deedId === undefined) throw new Error(`${action.type} omitted deedId`);
+      return { type: action.type, deedId };
+    }
+    case "AcceptTrade":
+    case "RejectTrade":
+    case "CancelTrade": {
+      const tradeId = stringConstraint("tradeId");
+      if (tradeId === undefined) throw new Error(`${action.type} omitted tradeId`);
+      return { type: action.type, tradeId };
+    }
+    default:
+      throw new Error(`Unsupported live progression action: ${action.type}`);
+  }
+}
 
 test.describe("live multiplayer authority", () => {
   test.skip(
@@ -7,7 +56,7 @@ test.describe("live multiplayer authority", () => {
   );
   test.use({ serviceWorkers: "block" });
 
-  test("creates, joins, starts, and syncs one authoritative command across two seats", async ({
+  test("creates, joins, starts, and syncs authoritative play across two seats", async ({
     browser,
     page: host,
   }) => {
@@ -131,6 +180,122 @@ test.describe("live multiplayer authority", () => {
       expect(rollResponse.ok()).toBe(true);
       await expect(host.getByText(/Dice rolled/)).toBeVisible();
       await expect(joiner.getByText(/Dice rolled/)).toBeVisible();
+
+      const players = [
+        { name: "host", page: host },
+        { name: "joiner", page: joiner },
+      ] as const;
+      async function bootstrap(target: typeof host): Promise<BootstrapResponse> {
+        const response = await target.evaluate(async (gameId) => {
+          const result = await fetch(`/api/games/${gameId}/bootstrap`);
+          return { status: result.status, body: await result.json() };
+        }, created.gameId);
+        expect(response.status).toBe(200);
+        return BootstrapResponse.parse(response.body);
+      }
+      async function issueCommand(
+        target: typeof host,
+        expectedVersion: number,
+        payload: Command,
+      ): Promise<void> {
+        const response = await target.evaluate(
+          async ({ gameId, expectedVersion: version, payload: command }) => {
+            const csrf = document.cookie
+              .split("; ")
+              .find((entry) => entry.startsWith("bp_csrf="))
+              ?.slice("bp_csrf=".length);
+            if (csrf === undefined) return { status: 0 };
+            const result = await fetch(`/api/games/${gameId}/commands`, {
+              method: "POST",
+              headers: { "content-type": "application/json", "x-csrf-token": csrf },
+              body: JSON.stringify({
+                protocolVersion: 1,
+                type: "game.command",
+                requestId: crypto.randomUUID(),
+                gameId,
+                commandId: crypto.randomUUID(),
+                expectedVersion: version,
+                payload: command,
+              }),
+            });
+            return { status: result.status };
+          },
+          { gameId: created.gameId, expectedVersion, payload },
+        );
+        expect(response.status).toBe(202);
+      }
+      function supportedProgressionAction(
+        actions: readonly LegalAction[],
+      ): LegalAction | undefined {
+        return actions.find((action) =>
+          [
+            "RollDice",
+            "EndTurn",
+            "ChoosePendingOption",
+            "PayObligation",
+            "PassAuction",
+            "PlaceAuctionBid",
+            "DeclineAcquisition",
+            "MortgageDeed",
+            "RedeemMortgage",
+            "BuyImprovement",
+            "SellImprovement",
+            "RequestScarceImprovement",
+            "AcceptTrade",
+            "RejectTrade",
+            "CancelTrade",
+          ].includes(action.type),
+        );
+      }
+
+      let owner: (typeof players)[number] | undefined;
+      for (let step = 0; step < 36 && owner === undefined; step += 1) {
+        const states = await Promise.all(
+          players.map(async (player) => ({ player, bootstrap: await bootstrap(player.page) })),
+        );
+        const acquisition = states.find(({ bootstrap: current }) =>
+          current.snapshot.legalActions.some((action) => action.type === "AcquireDeed"),
+        );
+        if (acquisition !== undefined) {
+          owner = acquisition.player;
+          break;
+        }
+
+        const actor = states
+          .map((state) => ({
+            ...state,
+            action: supportedProgressionAction(state.bootstrap.snapshot.legalActions),
+          }))
+          .find(({ action }) => action !== undefined);
+        expect(actor, "a live seat should advertise the next authoritative action").toBeDefined();
+        if (actor === undefined) throw new Error("No live action was advertised");
+        if (actor.action === undefined) throw new Error("Unsupported live progression action");
+        await issueCommand(
+          actor.player.page,
+          actor.bootstrap.aggregateVersion,
+          commandForLegalAction(actor.action),
+        );
+      }
+
+      expect(owner, "a live player should acquire an unowned Address").toBeDefined();
+      if (owner !== undefined) {
+        await expect(
+          owner.page.getByRole("button", { name: "Acquire this Address" }),
+        ).toBeVisible();
+        const responsePromise = owner.page.waitForResponse(
+          (response) =>
+            response.url().endsWith(`/api/games/${created.gameId}/commands`) &&
+            response.request().method() === "POST",
+        );
+        await owner.page.getByRole("button", { name: "Acquire this Address" }).click();
+        const response = await responsePromise;
+        expect(response.ok()).toBe(true);
+        await expect
+          .poll(() =>
+            owner.page.locator('[data-property-hand="local"] [data-property-group]').count(),
+          )
+          .toBeGreaterThan(0);
+      }
 
       await joiner.setViewportSize({ width: 1280, height: 900 });
       await assertNoHorizontalOverflow(host, "host game");
