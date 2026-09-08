@@ -72,7 +72,7 @@ export function DetentionDebtPanel({
               After {detention.maxAttempts} failed attempts, the{" "}
               {formatMoney(detention.releaseFee, "Tabs")} release fee is required before the roll.
             </p>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3">
               {detention.routes.map((route, index) => (
                 <div
                   key={actionRenderKey(route.action, "legal", index)}
@@ -127,7 +127,7 @@ export function DetentionDebtPanel({
                 <h3 id="liquidation-heading" className="font-medium">
                   Ways to raise the payment
                 </h3>
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2">
                   {obligation.liquidation.map((action) => (
                     <Button
                       key={`${action.type}:${commandTarget(action)}`}

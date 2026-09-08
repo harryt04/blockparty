@@ -185,7 +185,7 @@ export function ManagementPanel({
                 below for the server&apos;s reason.
               </p>
             ) : (
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2">
                 {deed.actions.map((action) => (
                   <div key={`${deed.deedId}:${action.type}`} className="space-y-1">
                     <Button

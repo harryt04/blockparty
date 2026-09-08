@@ -270,7 +270,7 @@ export function CreateGameForm() {
             />
             <FieldError field="hostToken" errors={errors} />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2">
             <SeatStepper
               id="human-seats"
               label="Human players"

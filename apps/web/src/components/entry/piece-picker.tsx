@@ -61,7 +61,7 @@ export function PiecePicker({
       aria-describedby={errorId}
     >
       <legend className="text-sm font-medium">{legend}</legend>
-      <div className="grid min-w-0 grid-cols-1 gap-3 min-[20rem]:grid-cols-2 sm:grid-cols-3">
+      <div className="grid min-w-0 grid-cols-1 gap-3 min-[20rem]:grid-cols-2 lg:grid-cols-3">
         {PIECE_OPTIONS.map((piece) => {
           const available = pieceIsAvailable(piece, availablePieceIds);
           const patternLabel = PIECE_PATTERN_LABELS[piece.token.pattern];

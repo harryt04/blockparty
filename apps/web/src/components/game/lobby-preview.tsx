@@ -14,14 +14,14 @@ import {
 } from "./lobby-model";
 
 const DISTRICT_CLASSES: Record<string, string> = {
-  "district-ash": "border-t-4 border-t-asset-district-north",
-  "district-moonfen": "border-t-4 border-t-asset-district-east",
-  "district-rosecoil": "border-t-4 border-t-asset-district-west",
-  "district-copperwake": "border-t-4 border-t-player-4",
-  "district-starling": "border-t-4 border-t-player-2",
-  "district-thornlight": "border-t-4 border-t-player-5",
-  "district-nightjar": "border-t-4 border-t-player-3",
-  "district-crown": "border-t-4 border-t-player-6",
+  "district-ash": "border-t-4 border-t-asset-district-ash",
+  "district-moonfen": "border-t-4 border-t-asset-district-moonfen",
+  "district-rosecoil": "border-t-4 border-t-asset-district-rosecoil",
+  "district-copperwake": "border-t-4 border-t-asset-district-copperwake",
+  "district-starling": "border-t-4 border-t-asset-district-starling",
+  "district-thornlight": "border-t-4 border-t-asset-district-thornlight",
+  "district-nightjar": "border-t-4 border-t-asset-district-nightjar",
+  "district-crown": "border-t-4 border-t-asset-district-crown",
 };
 
 const spaceByRouteIndex = new Map(CLASSIC_LOBBY_SPACES.map((space) => [space.routeIndex, space]));

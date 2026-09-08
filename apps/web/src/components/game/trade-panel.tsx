@@ -188,7 +188,7 @@ function TradeComposer({
     const outgoingCharge = requestedDeeds.reduce((sum, deed) => sum + deed.transferCharge, 0);
     return (
       <div className="space-y-4" aria-label="Review trade">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4">
           <AssetList
             title="You give"
             cash={give}
@@ -250,7 +250,7 @@ function TradeComposer({
       </div>
       <fieldset className="space-y-2">
         <legend className="font-medium">Cash</legend>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3">
           <label className="text-sm">
             You give (Tabs)
             <Input
@@ -407,7 +407,7 @@ export function TradePanel({
               ? `Your offer to ${pendingTrade.counterpartyName} is waiting for a response.`
               : `${pendingTrade.proposerName} sent you an offer.`}
           </p>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4">
             <AssetList
               title="You give"
               cash={giveSide.cash}
