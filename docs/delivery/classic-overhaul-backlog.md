@@ -765,7 +765,7 @@ accidental collapse in coverage.
       responsive, regression, typecheck, and Chromium 320/375/1280 checks pass;
       the known repository lint blocker in `prettier.config.cjs` remains.
 
-- [~] **CO-027 — Rebuild acquisition, auction, trade, detention, and debt decisions**
+- [x] **CO-027 — Rebuild acquisition, auction, trade, detention, and debt decisions**
       Blocked by: CO-026
       Requirements: UX-044–046, RULE-013–014
       Read: action bar, auction summary, trade panel, detention/debt panel
@@ -967,6 +967,16 @@ accidental collapse in coverage.
       events sharing an aggregate version, and preserves every journal sequence
       in the nested event list. Focused model coverage passes; full reconnect,
       motion, multi-context recovery, and release evidence remain outstanding.
+      Iteration 65 closes this ticket: the focused CO-027 matrix passes in
+      Chromium (39 tests), Firefox (39 tests), and WebKit (39 tests), covering
+      foreground filtering for all five blocking decisions, exact context and
+      destructive confirmation, focus entry/restoration, transport-loss pause,
+      authoritative reconnect recovery, same-task and acknowledged-response
+      retry de-duplication, and live-announcement de-duplication. The focused
+      event-feed model tests also pass. Mutation evidence recorded in
+      iterations 30, 31, 33, 36, 43–58, and 60–63 demonstrates that the
+      protected guards fail when removed. Release-wide visual and multi-context
+      recovery evidence remains assigned to CO-028 and CO-030–031.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
