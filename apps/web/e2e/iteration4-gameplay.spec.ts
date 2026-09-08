@@ -172,7 +172,10 @@ async function mockLiveStream(page: Page): Promise<void> {
   });
 }
 
-async function mockGameApi(page: Page): Promise<{ commands: unknown[] }> {
+async function mockGameApi(
+  page: Page,
+  options: { readonly failFirstCommand?: boolean } = {},
+): Promise<{ commands: unknown[] }> {
   let phase: GameSnapshotProjectionType["phase"] = "TurnStart";
   let sequence = 1;
   const commands: unknown[] = [];
@@ -203,6 +206,10 @@ async function mockGameApi(page: Page): Promise<{ commands: unknown[] }> {
     if (path.endsWith("/commands")) {
       const command = JSON.parse(route.request().postData() ?? "{}");
       commands.push(command);
+      if (options.failFirstCommand === true && commands.length === 1) {
+        await route.abort("connectionreset");
+        return;
+      }
       if (command.payload.type === "RollDice") {
         phase = "AwaitPurchase";
         sequence = 2;
@@ -307,6 +314,29 @@ test("same-task activation submits a game command only once", async ({ page }) =
   await expect.poll(() => commands.length).toBe(1);
   await expect(page.getByText("Await Purchase · 2 players ·", { exact: false })).toBeVisible();
   expect((commands[0] as { payload: { type: string } }).payload.type).toBe("RollDice");
+});
+
+test("a retry after a lost response reuses the command identity", async ({ page }) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page, { failFirstCommand: true });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  await page.getByRole("button", { name: "Open action sheet" }).click();
+  await page.getByRole("button", { name: "Roll and advance" }).click();
+  await expect(
+    page.getByText("The action could not be sent. Check your connection and try again.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Open action sheet" }).click();
+  await page.getByRole("button", { name: "Roll and advance" }).click();
+  await expect.poll(() => commands.length).toBe(2);
+  expect(commands[1]).toMatchObject({
+    commandId: (commands[0] as { commandId: string }).commandId,
+    requestId: (commands[0] as { requestId: string }).requestId,
+  });
+  await expect(page.getByText("Await Purchase · 2 players ·", { exact: false })).toBeVisible();
 });
 
 test("auction decision exposes context, bounds bids, and prevents duplicate submission", async ({

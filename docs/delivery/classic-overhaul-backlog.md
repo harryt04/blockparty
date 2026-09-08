@@ -765,7 +765,7 @@ accidental collapse in coverage.
       responsive, regression, typecheck, and Chromium 320/375/1280 checks pass;
       the known repository lint blocker in `prettier.config.cjs` remains.
 
-- [ ] **CO-027 — Rebuild acquisition, auction, trade, detention, and debt decisions**
+- [~] **CO-027 — Rebuild acquisition, auction, trade, detention, and debt decisions**
       Blocked by: CO-026
       Requirements: UX-044–046, RULE-013–014
       Read: action bar, auction summary, trade panel, detention/debt panel
@@ -792,7 +792,9 @@ accidental collapse in coverage.
       confirmation, named-party trade acceptance, and one authoritative decision
       announcement. Full disconnect matrices, duplicate-command behavior beyond
       same-task activation, and cross-browser evidence remain outstanding before
-      this ticket can be marked complete.
+      this ticket can be marked complete. Iteration 30 makes a retry after a
+      lost response reuse the same request and command identity, with a passing
+      Chromium regression and a mutation that fails when identity reuse is removed.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

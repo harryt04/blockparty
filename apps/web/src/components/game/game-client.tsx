@@ -76,6 +76,13 @@ function csrfToken(): string | undefined {
   return cookie?.split("=").slice(1).join("=");
 }
 
+type RetryableCommand = {
+  readonly payloadKey: string;
+  readonly requestId: string;
+  readonly commandId: string;
+  readonly awaitingAuthoritativeResult: boolean;
+};
+
 export function GameClient({ gameId }: { gameId: string }) {
   const router = useRouter();
   const { track } = useAnalytics();
@@ -84,6 +91,8 @@ export function GameClient({ gameId }: { gameId: string }) {
   const previousPhase = useRef(state.snapshot?.phase);
   const previousActiveSpaceId = useRef<string | undefined>(undefined);
   const commandSubmissionInFlight = useRef(false);
+  const retryableCommand = useRef<RetryableCommand | undefined>(undefined);
+  const acknowledgedCommandId = useRef<string | undefined>(undefined);
   const authoritativeSnapshotVersion = state.snapshot?.aggregateVersion;
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>();
   const [pendingAction, setPendingAction] = useState<LegalAction>();
@@ -157,6 +166,15 @@ export function GameClient({ gameId }: { gameId: string }) {
     if (hasAuthoritativeActionResult(acknowledgedActionVersion, authoritativeSnapshotVersion)) {
       setAcknowledgedActionVersion(undefined);
       setActionStatus(undefined);
+      const acknowledgedCommand = retryableCommand.current;
+      if (
+        acknowledgedCommand !== undefined &&
+        acknowledgedCommand.commandId === acknowledgedCommandId.current &&
+        acknowledgedCommand.awaitingAuthoritativeResult
+      ) {
+        retryableCommand.current = undefined;
+      }
+      acknowledgedCommandId.current = undefined;
     }
   }, [acknowledgedActionVersion, authoritativeSnapshotVersion]);
 
@@ -262,6 +280,19 @@ export function GameClient({ gameId }: { gameId: string }) {
     // cannot issue duplicate authoritative commands before the button
     // rerenders disabled.
     commandSubmissionInFlight.current = true;
+    const payloadKey = JSON.stringify(payload);
+    const previousCommand = retryableCommand.current;
+    const commandIdentity =
+      previousCommand?.payloadKey === payloadKey
+        ? previousCommand
+        : {
+            payloadKey,
+            requestId: crypto.randomUUID(),
+            commandId: crypto.randomUUID(),
+            awaitingAuthoritativeResult: false,
+          };
+    retryableCommand.current = commandIdentity;
+    acknowledgedCommandId.current = undefined;
     setPendingAction({ type: payload.type });
     setAcknowledgedActionVersion(undefined);
     setActionError(undefined);
@@ -279,9 +310,9 @@ export function GameClient({ gameId }: { gameId: string }) {
         body: JSON.stringify({
           protocolVersion: 1,
           type: "game.command",
-          requestId: crypto.randomUUID(),
+          requestId: commandIdentity.requestId,
           gameId,
-          commandId: crypto.randomUUID(),
+          commandId: commandIdentity.commandId,
           expectedVersion: snapshot.aggregateVersion,
           payload,
         }),
@@ -296,6 +327,7 @@ export function GameClient({ gameId }: { gameId: string }) {
         announceCommand(`Action rejected: ${message}`, "assertive");
         setActionStatus(undefined);
         setPendingAction(undefined);
+        retryableCommand.current = undefined;
         if (parsed.success && parsed.data.error.code === "STALE_VERSION") retry();
         return false;
       }
@@ -306,9 +338,15 @@ export function GameClient({ gameId }: { gameId: string }) {
         announceCommand(`Action rejected: ${message}`, "assertive");
         setActionStatus(undefined);
         setPendingAction(undefined);
+        retryableCommand.current = undefined;
         retry();
         return false;
       }
+      retryableCommand.current = {
+        ...commandIdentity,
+        awaitingAuthoritativeResult: true,
+      };
+      acknowledgedCommandId.current = commandIdentity.commandId;
       setAcknowledgedActionVersion(ack.data.aggregateVersion);
       setActionStatus("Action accepted. Waiting for the authoritative result.");
       announceCommand("Action accepted. Waiting for the authoritative result.", "polite");
