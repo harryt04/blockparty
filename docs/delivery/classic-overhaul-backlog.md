@@ -1125,6 +1125,12 @@ accidental collapse in coverage.
       submits one real bid through the browser control. The wider management,
       trade, detention, debt, completion, rematch, and WebKit live-server
       evidence remain open.
+      Iteration 84 extends the first live journey through an authoritative
+      mortgage: the acquiring seat reads its server-advertised MortgageDeed,
+      opens the projection-backed management panel, confirms the rendered
+      mortgage action, and observes the committed Mortgaged Property hand
+      state. The trade, detention, debt, completion, rematch, and WebKit
+      live-server evidence remain open.
 
 - [~] **CO-031 — Complete accessibility and mobile-style failure evidence** (Codex, iteration 79)
       Blocked by: CO-030

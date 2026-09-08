@@ -299,6 +299,43 @@ test.describe("live multiplayer authority", () => {
             owner.page.locator('[data-property-hand="local"] [data-property-group]').count(),
           )
           .toBeGreaterThan(0);
+
+        const managedState = await bootstrap(owner.page);
+        const mortgage = managedState.snapshot.legalActions.find(
+          (action) => action.type === "MortgageDeed",
+        );
+        expect(
+          mortgage,
+          "the acquiring seat should receive an authoritative management action",
+        ).toBeDefined();
+        if (mortgage === undefined)
+          throw new Error("MortgageDeed was not advertised after acquire");
+
+        await owner.page.getByRole("button", { name: "Manage" }).first().click();
+        await expect(
+          owner.page.getByRole("heading", { name: "Manage your Addresses" }),
+        ).toBeVisible();
+        await expect(
+          owner.page.getByRole("button", { name: "Mortgage this Address" }).first(),
+        ).toBeVisible();
+        await owner.page.getByRole("button", { name: "Mortgage this Address" }).first().click();
+        await expect(
+          owner.page.getByRole("button", { name: "Confirm Mortgage this Address" }),
+        ).toBeVisible();
+
+        const mortgageResponsePromise = owner.page.waitForResponse(
+          (response) =>
+            response.url().endsWith(`/api/games/${created.gameId}/commands`) &&
+            response.request().method() === "POST",
+        );
+        await owner.page.getByRole("button", { name: "Confirm Mortgage this Address" }).click();
+        const mortgageResponse = await mortgageResponsePromise;
+        expect(mortgageResponse.ok()).toBe(true);
+        await expect(
+          owner.page.locator('[data-property-hand="local"]').getByText("Mortgaged", {
+            exact: true,
+          }),
+        ).toBeVisible();
       }
 
       await host.goto("/create", { waitUntil: "domcontentloaded" });
