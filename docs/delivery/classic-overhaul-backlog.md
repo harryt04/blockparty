@@ -719,7 +719,7 @@ accidental collapse in coverage.
       `prettier.config.cjs` `module` no-undef error, and full cross-browser/axe
       evidence remains assigned to CO-030–031.
 
-- [ ] **CO-025 — Build the mobile overview, focus, and navigation shell**
+- [x] **CO-025 — Build the mobile overview, focus, and navigation shell**
       Blocked by: CO-024
       Requirements: PRD-FUN-023, UX-045, DS-073
       Read: responsive shell CSS, board/detail/list, presentation preferences
@@ -732,6 +732,17 @@ accidental collapse in coverage.
       space changes; browser zoom remains enabled.
       Proves: state-model tests for follow versus manual inspection, 320/375/400%
       Playwright runs, orientation changes, touch targets, and screen-reader path.
+      Evidence: the mobile shell now exposes projection-backed turn, position, cash/debt,
+      roll, and connectivity facts; the board viewport owns pan/zoom with reset and
+      Follow active space controls; Board/Properties/Trade/History navigation scrolls
+      without discarding the decision surface. `isManualSpaceInspection` and
+      `selectedSpaceAfterActiveChange` are covered by `apps/web/test/game-model.test.ts`,
+      the responsive contract is covered by `apps/web/test/responsive-layout.test.ts`,
+      and Chromium verifies the 320/375/1280 layouts, zoom/reset, navigation, action
+      reachability, and no page overflow in `apps/web/e2e/iteration4-gameplay.spec.ts`.
+      Mutation of the inspection predicate failed its focused test. Full cross-browser,
+      orientation, axe, and manual assistive-technology evidence remains assigned to
+      CO-030–031.
 
 - [ ] **CO-026 — Rebuild the property hand and management interactions**
       Blocked by: CO-025

@@ -248,3 +248,35 @@ test("phone keeps the three regions stacked without page overflow", async ({ pag
   await expect(page.getByRole("button", { name: "Open action sheet" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
 });
+
+test("320px phone keeps status, inspection controls, navigation, and decisions reachable", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 812 });
+  await mockLiveStream(page);
+  await mockGameApi(page);
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  await expect(page.getByRole("region", { name: "Current game status" })).toBeVisible();
+  await expect(page.locator("[data-mobile-cash]")).toContainText("Cash");
+  await expect(page.locator("[data-mobile-cash]")).toContainText("1,450 Tabs");
+  await expect(page.getByRole("button", { name: "Open action sheet" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Game sections" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Zoom in on board" })).toBeVisible();
+  await expect(page.locator('[data-board-zoom="1"]')).toBeVisible();
+
+  await page.getByRole("button", { name: "Zoom in on board" }).click();
+  await expect(page.locator('[data-board-zoom="1.25"]')).toBeVisible();
+  await page.getByRole("button", { name: "Reset board view" }).click();
+  await expect(page.locator('[data-board-zoom="1"]')).toBeVisible();
+
+  await page.getByRole("button", { name: "Properties", exact: true }).click();
+  await expect
+    .poll(() =>
+      page
+        .locator("#properties-section")
+        .evaluate((element) => element.getBoundingClientRect().top),
+    )
+    .toBeLessThan(140);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+});

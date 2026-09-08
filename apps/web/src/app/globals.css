@@ -407,6 +407,33 @@
     height: clamp(16rem, 75vw, 22rem);
   }
 
+  .game-board-pan-viewport {
+    min-width: 0;
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-x pan-y;
+  }
+
+  .game-board-zoom-frame {
+    flex: 0 0 auto;
+  }
+
+  .game-mobile-status,
+  .game-mobile-nav,
+  .game-board-inspection-controls {
+    display: none;
+  }
+
+  .game-mobile-status,
+  #board-section,
+  #properties-section,
+  #trade-section,
+  #history-section {
+    scroll-margin-top: 1rem;
+  }
+
   .game-player-rail {
     order: 2;
   }
@@ -430,6 +457,68 @@
     padding: 0.75rem max(var(--game-gutter), env(safe-area-inset-left))
       calc(0.75rem + env(safe-area-inset-bottom))
       max(var(--game-gutter), env(safe-area-inset-right));
+  }
+
+  @media (max-width: 47.99rem) {
+    .game-desktop-header {
+      display: none;
+    }
+
+    .game-mobile-status {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.75rem;
+      align-items: start;
+      border: 1px solid var(--color-line);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface-raised);
+      padding: 0.75rem;
+    }
+
+    .game-mobile-status-facts {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.25rem;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .game-mobile-status-facts p {
+      font-size: 0.875rem;
+    }
+
+    .game-mobile-status-facts [aria-label^="Connection status"] {
+      padding-inline: 0.5rem;
+    }
+
+    .game-mobile-nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.25rem;
+      border-block: 1px solid var(--color-line);
+      background: var(--color-canvas);
+      padding-block: 0.5rem;
+    }
+
+    .game-board-inspection-controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.25rem;
+    }
+
+    .game-board-inspection-controls button {
+      min-width: 2.75rem;
+    }
+
+    .game-board-pan-viewport {
+      scrollbar-width: thin;
+    }
   }
 
   @media (min-width: 48rem) {

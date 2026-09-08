@@ -107,6 +107,21 @@ export function selectedSpaceAfterActiveChange(
 }
 
 /**
+ * A selected stop is a deliberate inspection only while it differs from the
+ * authoritative active stop. See UX-045 and DS-060.
+ */
+export function isManualSpaceInspection(
+  selectedSpaceId: string | undefined,
+  activeSpaceId: string | undefined,
+): boolean {
+  return (
+    selectedSpaceId !== undefined &&
+    activeSpaceId !== undefined &&
+    selectedSpaceId !== activeSpaceId
+  );
+}
+
+/**
  * An acknowledgement is reflected only when the authorized snapshot has
  * reached the committed command version. Delivery cursors may move ahead of
  * that snapshot while /sync is still loading, so callers must pass the

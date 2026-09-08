@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConnectionStatus } from "@/components/shell/connection-status";
+import { formatMoney } from "@/components/display-names";
 import { ActiveSpaceDetail } from "./active-space-detail";
 import { AcquisitionAuctionSummary } from "./acquisition-auction-summary";
 import { BankAssets } from "./bank-assets";
@@ -38,6 +39,7 @@ import {
   districtNames,
   enabledVariantLabels,
   hasAuthoritativeActionResult,
+  isManualSpaceInspection,
   latestDiceResult,
   managementDecisionContext,
   orderedBoard,
@@ -46,6 +48,7 @@ import {
 } from "./game-model";
 import { PlayerStrip } from "./player-strip";
 import { PropertyHand } from "./property-hand";
+import { MobileGameNav, type MobileGameSection } from "./mobile-game-nav";
 
 function GameLoading() {
   return (
@@ -89,6 +92,8 @@ export function GameClient({ gameId }: { gameId: string }) {
   const [commandAnnouncement, setCommandAnnouncement] = useState<CommandAnnouncement>();
   const [managementOpen, setManagementOpen] = useState(false);
   const [recoveryStatus, setRecoveryStatus] = useState<string>();
+  const [boardZoom, setBoardZoom] = useState<1 | 1.25 | 1.5>(1);
+  const [mobileSection, setMobileSection] = useState<MobileGameSection>("board-section");
 
   const snapshot = state.snapshot;
   const spaces = useMemo(
@@ -101,6 +106,9 @@ export function GameClient({ gameId }: { gameId: string }) {
   const districtMap = snapshot === undefined ? {} : districtNames(snapshot);
   const variants = snapshot === undefined ? [] : enabledVariantLabels(snapshot.configuration);
   const diceResult = snapshot === undefined ? undefined : latestDiceResult(snapshot);
+  const selfSeat = snapshot?.seats.find((seat) => seat.isSelf);
+  const activeSpaceId = active?.spaceId;
+  const manualInspection = isManualSpaceInspection(selectedSpaceId, activeSpaceId);
   const management = snapshot === undefined ? undefined : managementDecisionContext(snapshot);
   const canManageSelectedSpace =
     detailSpace?.deedId !== undefined &&
@@ -222,6 +230,20 @@ export function GameClient({ gameId }: { gameId: string }) {
   }
 
   const turnText = turnLabel(snapshot);
+  const viewerDebt =
+    snapshot.obligation !== undefined && snapshot.obligation.debtorSeatId === selfSeat?.seatId
+      ? snapshot.obligation
+      : undefined;
+  const mobileConnectionLabel =
+    state.connection === "live"
+      ? "Connected"
+      : state.connection === "closed"
+        ? "Unavailable"
+        : state.connection === "reconnecting"
+          ? "Reconnecting"
+          : state.connection === "resyncing"
+            ? "Resyncing"
+            : "Connecting";
   const history = [...(snapshot.publicEvents ?? [])].sort(
     (left, right) => left.sequence - right.sequence,
   );
@@ -328,6 +350,14 @@ export function GameClient({ gameId }: { gameId: string }) {
     await submitCommand(payload);
   }
 
+  function navigateMobileSection(section: MobileGameSection): void {
+    setMobileSection(section);
+    document.getElementById(section)?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "start",
+    });
+  }
+
   return (
     <div className="game-shell mx-auto flex max-w-7xl flex-col gap-5" data-responsive-shell>
       <LiveAnnouncements
@@ -336,7 +366,7 @@ export function GameClient({ gameId }: { gameId: string }) {
         command={commandAnnouncement}
       />
       <header
-        className="game-shell-header flex flex-wrap items-start justify-between gap-4"
+        className="game-shell-header game-desktop-header flex flex-wrap items-start justify-between gap-4"
         data-responsive-region="header"
       >
         <div>
@@ -352,6 +382,56 @@ export function GameClient({ gameId }: { gameId: string }) {
           <ConnectionStatus state={state.connection} />
         </div>
       </header>
+
+      <section
+        className="game-mobile-status"
+        aria-label="Current game status"
+        data-responsive-region="header"
+      >
+        <div className="min-w-0">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-ink">Now</p>
+          <h1 className="truncate font-serif text-xl">{turnText}</h1>
+          <p className="truncate text-sm text-muted-ink">
+            {phaseLabel(snapshot.phase)} ·{" "}
+            {selfSeat?.position === undefined
+              ? "Position unknown"
+              : `Position Stop ${selfSeat.position}`}
+          </p>
+        </div>
+        <div className="game-mobile-status-facts">
+          <p data-mobile-cash>
+            <span className="text-muted-ink">Cash</span>{" "}
+            <span className="tabular">
+              {selfSeat?.balance === undefined ? "Unknown" : formatMoney(selfSeat.balance, "Tabs")}
+            </span>
+          </p>
+          {viewerDebt !== undefined ? (
+            <p data-mobile-debt>
+              <span className="text-muted-ink">Debt</span>{" "}
+              <span className="tabular">{formatMoney(viewerDebt.amount, "Tabs")}</span>
+            </p>
+          ) : null}
+          {diceResult === undefined ? null : (
+            <p data-mobile-roll>
+              <span className="text-muted-ink">Roll</span>{" "}
+              <span className="tabular">{diceResult.first + diceResult.second}</span>
+            </p>
+          )}
+          <p
+            aria-label={`Connection status: ${mobileConnectionLabel}`}
+            className="rounded-(--radius-pill) border border-line bg-surface px-2 py-1 text-xs font-medium"
+            data-mobile-connection
+          >
+            {state.connection === "live"
+              ? "Online"
+              : state.connection === "closed"
+                ? "Unavailable"
+                : "Connecting"}
+          </p>
+        </div>
+      </section>
+
+      <MobileGameNav currentSection={mobileSection} onNavigate={navigateMobileSection} />
 
       {state.connection === "closed" ? (
         <Alert variant="warning">
@@ -383,12 +463,49 @@ export function GameClient({ gameId }: { gameId: string }) {
 
         <section
           aria-label="Game board"
+          id="board-section"
           className="game-board-column min-w-0 space-y-5"
           data-responsive-region="board"
         >
           <Card>
             <CardHeader>
-              <CardTitle>Classic table</CardTitle>
+              <div className="flex items-start justify-between gap-3">
+                <CardTitle>Classic table</CardTitle>
+                <div className="game-board-inspection-controls" aria-label="Board inspection">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    aria-label="Zoom out on board"
+                    onClick={() =>
+                      setBoardZoom((value) => (value === 1 ? 1 : value === 1.5 ? 1.25 : 1))
+                    }
+                  >
+                    −
+                  </Button>
+                  <span className="self-center text-xs tabular" aria-live="polite">
+                    {Math.round(boardZoom * 100)}%
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    aria-label="Zoom in on board"
+                    onClick={() => setBoardZoom((value) => (value === 1 ? 1.25 : 1.5))}
+                  >
+                    +
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    aria-label="Reset board view"
+                    onClick={() => {
+                      setBoardZoom(1);
+                      setSelectedSpaceId(activeSpaceId);
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <BoardView
@@ -398,16 +515,32 @@ export function GameClient({ gameId }: { gameId: string }) {
                 districtNames={districtMap}
                 selectedSpaceId={selectedSpace?.spaceId}
                 onSelect={setSelectedSpaceId}
+                zoom={boardZoom}
                 className="game-board-viewport"
               />
             </CardContent>
           </Card>
 
-          <PropertyHand
-            snapshot={snapshot}
-            selectedSpaceId={selectedSpace?.spaceId}
-            onSelect={setSelectedSpaceId}
-          />
+          {manualInspection ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-md) border border-selection bg-surface p-3">
+              <p className="text-sm">Inspecting {detailSpace?.name ?? "a selected stop"}.</p>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setSelectedSpaceId(activeSpaceId)}
+              >
+                Follow active space
+              </Button>
+            </div>
+          ) : null}
+
+          <section id="properties-section" aria-label="Properties">
+            <PropertyHand
+              snapshot={snapshot}
+              selectedSpaceId={selectedSpace?.spaceId}
+              onSelect={setSelectedSpaceId}
+            />
+          </section>
 
           <section
             aria-labelledby="board-list-heading"
@@ -486,12 +619,14 @@ export function GameClient({ gameId }: { gameId: string }) {
             onClose={() => setManagementOpen(false)}
           />
 
-          <TradePanel
-            snapshot={snapshot}
-            disabled={state.connection !== "live" || snapshot.paused}
-            pending={pendingAction !== undefined}
-            onCommand={(command) => void submitCommand(command)}
-          />
+          <section id="trade-section" aria-label="Trade">
+            <TradePanel
+              snapshot={snapshot}
+              disabled={state.connection !== "live" || snapshot.paused}
+              pending={pendingAction !== undefined}
+              onCommand={(command) => void submitCommand(command)}
+            />
+          </section>
 
           <DetentionDebtPanel
             snapshot={snapshot}
@@ -535,7 +670,9 @@ export function GameClient({ gameId }: { gameId: string }) {
             </CardContent>
           </Card>
 
-          <EventFeed events={history} seats={snapshot.seats} currencyLabel="Tabs" defaultOpen />
+          <section id="history-section" aria-label="History">
+            <EventFeed events={history} seats={snapshot.seats} currencyLabel="Tabs" defaultOpen />
+          </section>
 
           <p className="text-sm text-muted-ink">
             Need the lobby?{" "}

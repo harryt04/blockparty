@@ -97,6 +97,7 @@ export function BoardView({
   selectedSpaceId,
   currencyLabel = "Tabs",
   onSelect,
+  zoom = 1,
   className,
 }: {
   spaces: readonly BoardSpaceProjection[];
@@ -106,87 +107,95 @@ export function BoardView({
   selectedSpaceId?: string;
   currencyLabel?: string;
   onSelect: (spaceId: string) => void;
+  /** Presentation-only zoom, scoped to the board viewport. See UX-045. */
+  zoom?: 1 | 1.25 | 1.5;
   className?: string;
 }) {
   return (
     <div className={cn("flex min-h-0 flex-col overflow-hidden rounded-(--radius-md)", className)}>
-      <div className="classic-board-frame min-h-0 flex-1">
+      <div className="game-board-pan-viewport" tabIndex={0} aria-label="Board viewport">
         <div
-          className="classic-board-grid"
-          role="group"
-          aria-label="Classic 40-space board"
-          data-board-topology="perimeter-40"
+          className="classic-board-frame game-board-zoom-frame"
+          style={{ width: `${zoom * 100}%`, minHeight: `${zoom * 100}%` }}
+          data-board-zoom={zoom}
         >
           <div
-            className="classic-board-center flex items-center justify-center border border-line bg-canvas p-3 text-center"
-            style={{ gridColumn: "2 / span 9", gridRow: "2 / span 9" }}
+            className="classic-board-grid"
+            role="group"
+            aria-label="Classic 40-space board"
+            data-board-topology="perimeter-40"
           >
-            <div>
-              <p className="font-serif text-lg">Blockparty</p>
-              <p className="mt-1 text-xs text-muted-ink">40-space classic table</p>
+            <div
+              className="classic-board-center flex items-center justify-center border border-line bg-canvas p-3 text-center"
+              style={{ gridColumn: "2 / span 9", gridRow: "2 / span 9" }}
+            >
+              <div>
+                <p className="font-serif text-lg">Blockparty</p>
+                <p className="mt-1 text-xs text-muted-ink">40-space classic table</p>
+              </div>
             </div>
-          </div>
 
-          {spaces.map((space) => {
-            const coordinates = boardCellCoordinates(space, layout, space.spaceId);
-            const side = sideFor(coordinates);
-            const selected = space.spaceId === selectedSpaceId;
-            const category = SPACE_CATEGORY_DISPLAY[space.category];
-            const deedCategory =
-              space.deedCategory === undefined
-                ? undefined
-                : DEED_CATEGORY_DISPLAY[space.deedCategory];
-            const districtName =
-              space.districtId === undefined ? undefined : districtNames[space.districtId];
-            const details = boardStopAccessibleLabel(space, seats, currencyLabel, districtNames);
-            const state = stateLabel(space, seats);
+            {spaces.map((space) => {
+              const coordinates = boardCellCoordinates(space, layout, space.spaceId);
+              const side = sideFor(coordinates);
+              const selected = space.spaceId === selectedSpaceId;
+              const category = SPACE_CATEGORY_DISPLAY[space.category];
+              const deedCategory =
+                space.deedCategory === undefined
+                  ? undefined
+                  : DEED_CATEGORY_DISPLAY[space.deedCategory];
+              const districtName =
+                space.districtId === undefined ? undefined : districtNames[space.districtId];
+              const details = boardStopAccessibleLabel(space, seats, currencyLabel, districtNames);
+              const state = stateLabel(space, seats);
 
-            return (
-              <button
-                key={space.spaceId}
-                type="button"
-                className={cn(
-                  "classic-board-cell min-w-0 overflow-hidden border border-line bg-surface-raised p-1 text-left text-ink",
-                  "focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-focus",
-                  selected && "classic-board-cell-selected",
-                )}
-                style={{
-                  gridColumn: coordinates.x + 1,
-                  gridRow: coordinates.y + 1,
-                }}
-                data-board-side={side}
-                data-board-state={space.ownerSeatId === undefined ? "available" : "owned"}
-                aria-label={`Inspect ${details}`}
-                aria-pressed={selected}
-                aria-current={selected ? "location" : undefined}
-                aria-controls="active-space-detail"
-                title={details}
-                onClick={() => onSelect(space.spaceId)}
-              >
-                <span
+              return (
+                <button
+                  key={space.spaceId}
+                  type="button"
                   className={cn(
-                    "classic-board-band block h-2 shrink-0 border-t-4",
-                    bandClass(space),
+                    "classic-board-cell min-w-0 overflow-hidden border border-line bg-surface-raised p-1 text-left text-ink",
+                    "focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-focus",
+                    selected && "classic-board-cell-selected",
                   )}
-                />
-                <span className="mt-1 flex min-w-0 items-center justify-between gap-1 text-[0.6rem] leading-none text-muted-ink">
-                  <span className="tabular shrink-0">{space.routeIndex}</span>
-                  <span className="truncate">{space.spaceId}</span>
-                </span>
-                <span className="classic-board-cell-name mt-1 line-clamp-2 font-semibold leading-tight">
-                  {space.name}
-                </span>
-                <span className="mt-1 block truncate text-[0.6rem] leading-tight text-muted-ink">
-                  {deedCategory?.label ?? category.label}
-                  {districtName === undefined ? "" : ` · ${districtName}`}
-                </span>
-                <span className="mt-1 flex min-w-0 items-center justify-between gap-1 text-[0.6rem] leading-tight">
-                  <span className="truncate">{state}</span>
-                  <OccupantStack space={space} seats={seats} />
-                </span>
-              </button>
-            );
-          })}
+                  style={{
+                    gridColumn: coordinates.x + 1,
+                    gridRow: coordinates.y + 1,
+                  }}
+                  data-board-side={side}
+                  data-board-state={space.ownerSeatId === undefined ? "available" : "owned"}
+                  aria-label={`Inspect ${details}`}
+                  aria-pressed={selected}
+                  aria-current={selected ? "location" : undefined}
+                  aria-controls="active-space-detail"
+                  title={details}
+                  onClick={() => onSelect(space.spaceId)}
+                >
+                  <span
+                    className={cn(
+                      "classic-board-band block h-2 shrink-0 border-t-4",
+                      bandClass(space),
+                    )}
+                  />
+                  <span className="mt-1 flex min-w-0 items-center justify-between gap-1 text-[0.6rem] leading-none text-muted-ink">
+                    <span className="tabular shrink-0">{space.routeIndex}</span>
+                    <span className="truncate">{space.spaceId}</span>
+                  </span>
+                  <span className="classic-board-cell-name mt-1 line-clamp-2 font-semibold leading-tight">
+                    {space.name}
+                  </span>
+                  <span className="mt-1 block truncate text-[0.6rem] leading-tight text-muted-ink">
+                    {deedCategory?.label ?? category.label}
+                    {districtName === undefined ? "" : ` · ${districtName}`}
+                  </span>
+                  <span className="mt-1 flex min-w-0 items-center justify-between gap-1 text-[0.6rem] leading-tight">
+                    <span className="truncate">{state}</span>
+                    <OccupantStack space={space} seats={seats} />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
       <p className="border-t border-line bg-surface px-3 py-2 text-xs text-muted-ink">

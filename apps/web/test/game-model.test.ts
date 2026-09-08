@@ -12,12 +12,14 @@ import {
   districtNames,
   enabledVariantLabels,
   hasAuthoritativeActionResult,
+  isManualSpaceInspection,
   latestDiceResult,
   managementDecisionContext,
   detentionDecisionContext,
   obligationDecisionContext,
   orderedBoard,
   recoveryDecisionContext,
+  selectedSpaceAfterActiveChange,
   turnLabel,
   latestTradeOutcome,
   tradeComposerContext,
@@ -102,6 +104,14 @@ describe("game presentation model", () => {
     expect(activeSpace(value)?.spaceId).toBe("s01");
     expect(boardLayout(value).s00).toEqual({ x: 2, y: 0 });
     expect(districtNames(value)["dist-north"]).toBe("North Kerb");
+  });
+
+  it("keeps deliberate inspection separate from the authoritative active stop", () => {
+    expect(isManualSpaceInspection("s00", "s01")).toBe(true);
+    expect(isManualSpaceInspection("s01", "s01")).toBe(false);
+    expect(isManualSpaceInspection(undefined, "s01")).toBe(false);
+    expect(selectedSpaceAfterActiveChange("s01", "s01", "s00")).toBe("s00");
+    expect(selectedSpaceAfterActiveChange("s01", "s02", "s00")).toBe("s02");
   });
 
   it("keeps every visible board fact in the keyboard stop name", () => {

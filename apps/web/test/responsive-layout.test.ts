@@ -26,6 +26,10 @@ const propertyHand = readFileSync(
   new URL("../src/components/game/property-hand.tsx", import.meta.url),
   "utf8",
 );
+const mobileNav = readFileSync(
+  new URL("../src/components/game/mobile-game-nav.tsx", import.meta.url),
+  "utf8",
+);
 
 describe("responsive game shell contract", () => {
   it("defines the documented phone, tablet, desktop, and landscape modes", () => {
@@ -51,6 +55,23 @@ describe("responsive game shell contract", () => {
     expect(gameClient).toContain('data-responsive-region="player-rail"');
     expect(stylesheet).toContain(".game-player-rail {\n    order: 2;");
     expect(stylesheet).toContain(".game-context {\n    order: 3;");
+  });
+
+  it("provides a compact mobile status, in-board zoom, and section navigation", () => {
+    expect(gameClient).toContain('aria-label="Current game status"');
+    expect(gameClient).toContain("data-mobile-cash");
+    expect(gameClient).toContain("data-mobile-debt");
+    expect(gameClient).toContain("data-mobile-roll");
+    expect(gameClient).toContain("Follow active space");
+    expect(gameClient).toContain("zoom={boardZoom}");
+    expect(mobileNav).toContain('label: "Board"');
+    expect(mobileNav).toContain('label: "Properties"');
+    expect(mobileNav).toContain('label: "Trade"');
+    expect(mobileNav).toContain('label: "History"');
+    expect(stylesheet).toContain(".game-board-pan-viewport");
+    expect(stylesheet).toContain("touch-action: pan-x pan-y");
+    expect(stylesheet).toContain("@media (max-width: 47.99rem)");
+    expect(stylesheet).not.toContain("user-scalable=no");
   });
 
   it("keeps the visual board semantic and equivalent to the ordered list", () => {
