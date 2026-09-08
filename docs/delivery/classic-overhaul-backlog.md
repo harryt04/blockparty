@@ -998,6 +998,12 @@ accidental collapse in coverage.
       labeled in the grouped event history. Focused announcement tests cover
       each transition; multi-context disconnect/reclaim evidence remains
       outstanding.
+      Iteration 69 adds visibility-resume recovery coverage in
+      `apps/web/test/sync-client.test.ts`: a hidden tab does not resync, while
+      becoming visible closes the stale stream, requests `/sync` from the last
+      confirmed sequence/version, applies the newer authoritative snapshot, and
+      reopens delivery. Multi-context disconnect/reclaim evidence remains
+      outstanding.
 
 - [~] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

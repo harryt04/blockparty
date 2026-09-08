@@ -353,7 +353,10 @@ replacement, and seat reclaim request/approval in
 `apps/web/src/components/game/live-announcements-model.ts` and
 `apps/web/src/components/game/event-feed.tsx`, with focused assertions in
 `apps/web/test/live-announcements.test.ts`. Multi-context disconnect and reclaim
-evidence remain planned.
+evidence remain planned. Iteration 69 adds visibility-resume recovery coverage
+in `apps/web/test/sync-client.test.ts`: hidden tabs do not resync, while a visible
+tab requests `/sync` from its last confirmed sequence/version, applies the newer
+authoritative snapshot, and reopens the authenticated stream.
 
 No self-hosted font files are present because licensed, provenanced faces have
 not yet been approved. The PWA shell caches only versioned public/app-shell
