@@ -336,6 +336,7 @@ test("acquisition decision exposes only its foreground choices", async ({ page }
 
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("Acquire an Address");
+  await expect(dialog.getByRole("button", { name: "Close" })).toBeFocused();
   await expect(dialog.getByRole("button", { name: "Acquire this Address" })).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Decline and open the auction" })).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Roll and advance" })).toHaveCount(0);
@@ -377,6 +378,7 @@ test("auction decision exposes only its foreground choices", async ({ page }) =>
 
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Close" })).toBeFocused();
   await expect(dialog).toContainText("Untimed Address auction");
   await expect(dialog.getByLabel("Place bid")).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Pass on this auction" })).toBeVisible();

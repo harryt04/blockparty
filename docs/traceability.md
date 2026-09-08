@@ -584,3 +584,9 @@ for the authoritative trade ID. Removing the shared synchronous submission lock
 makes the Chromium regression emit two commands; Chromium, Firefox, and WebKit
 pass with the lock restored. Broader disconnect and live-release evidence remain
 assigned to CO-027 and CO-030–031.
+Iteration 58 adds explicit keyboard-focus evidence for the auto-opened acquisition
+and auction sheets in `apps/web/e2e/iteration4-gameplay.spec.ts` for UX-044,
+UX-046, and UX-047. Chromium, Firefox, and WebKit confirm that the sheet's Close
+control receives focus; the Chromium mutation run fails both regressions when the
+modal's initial focus call is removed. Broader disconnect and live-release
+evidence remain assigned to CO-027 and CO-030–031.

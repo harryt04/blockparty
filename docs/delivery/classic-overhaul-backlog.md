@@ -926,6 +926,9 @@ accidental collapse in coverage.
       commands when the shared synchronous submission lock is removed; the
       restored Chromium, Firefox, and WebKit runs pass. Broader disconnect and
       release evidence remain outstanding.
+      Iteration 58 adds explicit keyboard-focus assertions for the auto-opened acquisition and auction sheets;
+      Chromium, Firefox, and WebKit pass, and removing the modal's initial focus call fails both Chromium
+      regressions. Broader disconnect and release evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
