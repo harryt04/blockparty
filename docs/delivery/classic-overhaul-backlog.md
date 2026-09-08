@@ -1058,7 +1058,7 @@ accidental collapse in coverage.
       Proves: sync gap/resume tests, reduced-motion browser checks, multi-context
       disconnect/reclaim scenarios, and event ordering assertions.
 
-- [ ] **CO-029 — Rebuild completion, retirement summary, and rematch**
+- [x] **CO-029 — Rebuild completion, retirement summary, and rematch**
       Blocked by: CO-028
       Requirements: UX-047, PRD-FUN-015, PRD-FUN-021, PRD-FUN-024
       Read: summary client/route, rematch form/route, retirement behavior
@@ -1070,6 +1070,15 @@ accidental collapse in coverage.
       are distinguishable; rematch uses new contracts and issues fresh capabilities.
       Proves: summary projection tests, rematch route/model tests, capability
       separation checks, and responsive browser scenarios.
+      Implemented in the terminal summary projection and client: winner, ordinary
+      no-contest, expired, and retired placeholder results are distinct; retired
+      summaries explain the unsupported content and omit rematch creation. Rematch
+      uses the shared piece picker, Human/Computer steppers, seat preview, collapsed
+      rules summary, and the existing fresh-capability create transaction. Evidence:
+      `apps/web/test/summary-route.test.ts`, `apps/web/test/rematch-route.test.ts`,
+      and the Chromium responsive scenarios in `apps/web/e2e/accessibility.spec.ts`.
+      Focused tests, mutation check, typecheck, build, and formatting pass; full
+      cross-browser/release evidence remains assigned to CO-030–031.
 
 ## Phase G — Release evidence and documentation closure
 

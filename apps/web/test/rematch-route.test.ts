@@ -45,7 +45,7 @@ const requestBody = {
   acknowledged13Plus: true,
 };
 
-function arrange(status: "COMPLETED" | "ACTIVE" = "COMPLETED") {
+function arrange(status: "COMPLETED" | "ACTIVE" = "COMPLETED", contentVersion = "1.0.0") {
   mocks.getDb.mockReturnValue({
     collection: (name: string) =>
       name === "games"
@@ -53,6 +53,7 @@ function arrange(status: "COMPLETED" | "ACTIVE" = "COMPLETED") {
             findOne: vi.fn().mockResolvedValue({
               _id: GAME_ID,
               status,
+              contentVersion,
               expiresAt: new Date("2026-10-03T00:00:00.000Z"),
               seats: [{ seatId: "seat-a" }],
             }),
@@ -117,6 +118,23 @@ describe("POST /api/games/[gameId]/rematch", () => {
       { params: Promise.resolve({ gameId: GAME_ID }) },
     );
     expect(response.status).toBe(422);
+    expect(mocks.createGameInTransaction).not.toHaveBeenCalled();
+  });
+
+  it("does not reopen retired placeholder content as a rematch", async () => {
+    mocks.readGameCapability.mockResolvedValue({ gameId: GAME_ID, seatId: "seat-a", kind: "seat" });
+    arrange("COMPLETED", "0.0.0-placeholder");
+
+    const response = await POST(
+      new Request("http://localhost", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(requestBody),
+      }),
+      { params: Promise.resolve({ gameId: GAME_ID }) },
+    );
+
+    expect(response.status).toBe(426);
     expect(mocks.createGameInTransaction).not.toHaveBeenCalled();
   });
 });

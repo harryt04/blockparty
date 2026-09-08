@@ -288,7 +288,7 @@ export const SummaryProjection = z
   .object({
     gameId: GameId,
     status: GameStatus,
-    finishReason: z.enum(["WINNER", "NO_WINNER", "NO_CONTEST", "EXPIRED"]),
+    finishReason: z.enum(["WINNER", "NO_WINNER", "NO_CONTEST", "EXPIRED", "CONTENT_RETIRED"]),
     winnerSeatId: SeatId.optional(),
     standings: z
       .array(

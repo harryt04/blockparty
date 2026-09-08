@@ -29,6 +29,7 @@ import {
   type GameState,
   type RuleSet,
 } from "@blockparty/game-engine";
+import { PLACEHOLDER_BUNDLE } from "@blockparty/game-content";
 import { normalizeGameState } from "../games/normalize-state";
 
 export interface ProjectionSeatSource {
@@ -318,6 +319,7 @@ export function buildLobbyProjection(source: {
 export function buildSummaryProjection(source: {
   readonly gameId: string;
   readonly status: "COMPLETED" | "NO_CONTEST" | "EXPIRED";
+  readonly contentVersion: string;
   readonly state: GameState;
   readonly configuration: RulesConfiguration;
   readonly durationSeconds: number;
@@ -339,7 +341,9 @@ export function buildSummaryProjection(source: {
     .reverse();
   const finishReason =
     source.status === "NO_CONTEST"
-      ? "NO_CONTEST"
+      ? source.contentVersion === PLACEHOLDER_BUNDLE.contentVersion
+        ? "CONTENT_RETIRED"
+        : "NO_CONTEST"
       : source.status === "EXPIRED"
         ? "EXPIRED"
         : source.state.winnerSeatId === undefined

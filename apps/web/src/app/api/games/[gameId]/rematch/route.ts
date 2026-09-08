@@ -4,6 +4,7 @@
  * never reused. See UX-019, PRD-FUN-015, and SEC-002.
  */
 import { CreateGameRequest, type CreateGameResponse } from "@blockparty/contracts";
+import { PLACEHOLDER_BUNDLE } from "@blockparty/game-content";
 import { getDb, withMongoTransaction } from "@/server/db/client";
 import { COLLECTIONS } from "@/server/db/collections";
 import { isProduction } from "@/server/env";
@@ -58,6 +59,9 @@ async function createRematch(request: Request, params: Promise<{ gameId: string 
       .findOne({ _id: gameId });
     if (previous === null) return jsonError("NOT_FOUND", { gameId });
     if (previous.expiresAt <= new Date()) return jsonError("GAME_EXPIRED", { gameId });
+    if (previous.contentVersion === PLACEHOLDER_BUNDLE.contentVersion) {
+      return jsonError("CONTENT_UNSUPPORTED", { gameId });
+    }
     if (previous.status !== "COMPLETED" && previous.status !== "NO_CONTEST") {
       return jsonError("ILLEGAL_ACTION", { gameId, reason: "GAME_NOT_COMPLETE" });
     }

@@ -186,6 +186,7 @@ async function mockGameApi(
   page: Page,
   phase: GameSnapshotProjectionType["phase"],
   overrides: Partial<GameSnapshotProjectionType> = {},
+  summaryReason: "WINNER" | "CONTENT_RETIRED" = "WINNER",
 ): Promise<void> {
   await page.route(`**/api/games/${GAME_ID}/**`, async (route) => {
     const path = new URL(route.request().url()).pathname;
@@ -216,9 +217,9 @@ async function mockGameApi(
         json: {
           summary: {
             gameId: GAME_ID,
-            status: "COMPLETED",
-            finishReason: "WINNER",
-            winnerSeatId: "seat-a",
+            status: summaryReason === "CONTENT_RETIRED" ? "NO_CONTEST" : "COMPLETED",
+            finishReason: summaryReason,
+            ...(summaryReason === "WINNER" ? { winnerSeatId: "seat-a" } : {}),
             standings: [
               {
                 seatId: "seat-a",
@@ -240,6 +241,7 @@ async function mockGameApi(
             publicEvents: [],
             expiresAt: "2026-10-03T15:00:00.000Z",
           },
+          serverTime: "2026-09-03T15:00:00.000Z",
         },
       });
       return;
@@ -298,6 +300,41 @@ test.describe("accessibility release matrix", () => {
         dimensions.clientWidth + 1,
       );
     }
+  });
+
+  test("keeps completion results distinct and rematch controls usable at phone width", async ({
+    page,
+  }) => {
+    await mockGameApi(page, "Finished");
+    await page.setViewportSize({ width: 375, height: 900 });
+    await page.goto(`/game/${GAME_ID}/summary`, { waitUntil: "domcontentloaded" });
+    for (const width of [375, 1280]) {
+      if (width !== 375) await page.setViewportSize({ width, height: 900 });
+      await expect(page.getByRole("heading", { name: "Start a rematch" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Increase Human players" })).toBeVisible();
+      await expect(page.locator('input[type="number"]')).toHaveCount(0);
+      await expect(page.getByText("Rules: Standard · all house rules off")).toBeVisible();
+      const dimensions = await page.evaluate(() => ({
+        clientWidth: document.documentElement.clientWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      }));
+      expect(dimensions.scrollWidth, `${width}px summary page overflow`).toBeLessThanOrEqual(
+        dimensions.clientWidth + 1,
+      );
+    }
+  });
+
+  test("explains retired content and offers no rematch from the read-only result", async ({
+    page,
+  }) => {
+    await mockGameApi(page, "Finished", {}, "CONTENT_RETIRED");
+    await page.setViewportSize({ width: 375, height: 900 });
+    await page.goto(`/game/${GAME_ID}/summary`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("This game’s earlier content was retired")).toBeVisible();
+    await expect(
+      page.getByText("It was not migrated to the current Blockparty rules."),
+    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Start a rematch" })).toHaveCount(0);
   });
 
   for (const phase of GAME_PHASES) {

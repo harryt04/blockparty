@@ -71,6 +71,7 @@ async function getSummary(params: Promise<{ gameId: string }>) {
     const summary = buildSummaryProjection({
       gameId,
       status: game.status,
+      contentVersion: game.contentVersion,
       state: game.snapshot,
       configuration: game.configuration,
       durationSeconds: Math.max(

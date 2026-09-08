@@ -18,7 +18,9 @@ function durationLabel(seconds: number): string {
   return minutes === 0 ? `${remaining}s` : `${minutes}m ${remaining}s`;
 }
 
-function finishLabel(reason: "WINNER" | "NO_WINNER" | "NO_CONTEST" | "EXPIRED"): string {
+function finishLabel(
+  reason: "WINNER" | "NO_WINNER" | "NO_CONTEST" | "EXPIRED" | "CONTENT_RETIRED",
+): string {
   switch (reason) {
     case "WINNER":
       return "Winner";
@@ -28,6 +30,8 @@ function finishLabel(reason: "WINNER" | "NO_WINNER" | "NO_CONTEST" | "EXPIRED"):
       return "No result";
     case "EXPIRED":
       return "Expired";
+    case "CONTENT_RETIRED":
+      return "Content retired";
   }
 }
 
@@ -97,17 +101,31 @@ export function SummaryClient({ gameId }: { gameId: string }) {
       ? finishLabel(summary.finishReason)
       : `Winner: ${seatNames[summary.winnerSeatId] ?? "A player"}`;
   const variants = enabledVariantLabels(summary.configuration);
+  const contentRetired = summary.finishReason === "CONTENT_RETIRED";
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-8">
       <header>
-        <p className="text-sm text-muted-ink">Completed game</p>
+        <p className="text-sm text-muted-ink">
+          {contentRetired ? "Retired game" : "Completed game"}
+        </p>
         <h1 className="mt-1 text-3xl">{winner}</h1>
         <div className="mt-3 flex flex-wrap gap-2">
           <Badge>{finishLabel(summary.finishReason)}</Badge>
           <Badge>Read-only</Badge>
         </div>
       </header>
+
+      {contentRetired ? (
+        <Alert variant="info">
+          <AlertTitle>This game’s earlier content was retired</AlertTitle>
+          <AlertDescription>
+            This table was ended as no-contest because its earlier content version is no longer
+            supported. It was not migrated to the current Blockparty rules. This summary is
+            read-only; return home to create a fresh table.
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -166,7 +184,7 @@ export function SummaryClient({ gameId }: { gameId: string }) {
         </Link>
       </div>
 
-      <RematchForm gameId={gameId} />
+      {contentRetired ? null : <RematchForm gameId={gameId} />}
     </div>
   );
 }

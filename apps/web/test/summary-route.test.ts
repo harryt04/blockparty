@@ -16,17 +16,21 @@ vi.mock("@/server/db/client", () => ({ getDb: mocks.getDb }));
 vi.mock("@/server/env", () => ({ isProduction: false }));
 
 import { SummaryResponse } from "@blockparty/contracts";
-import { canonicalHashBundle, PLACEHOLDER_BUNDLE } from "@blockparty/game-content";
+import { canonicalHashBundle, CLASSIC_BUNDLE, PLACEHOLDER_BUNDLE } from "@blockparty/game-content";
 import { deriveInitialState, type GameState } from "@blockparty/game-engine";
 import type { GameDocument } from "../src/server/games/create-game";
 import { GET } from "../src/app/api/games/[gameId]/summary/route";
+import { buildSummaryProjection } from "../src/server/projections/authorize";
 
 const GAME_ID = "00000000-0000-4000-8000-000000000042";
 
-function game(status: "COMPLETED" | "NO_CONTEST" = "COMPLETED"): GameDocument {
+function game(
+  status: "COMPLETED" | "NO_CONTEST" | "EXPIRED" = "COMPLETED",
+  contentBundle = PLACEHOLDER_BUNDLE,
+): GameDocument {
   const state: GameState = {
     stateSchemaVersion: "1.0.0",
-    contentVersion: PLACEHOLDER_BUNDLE.contentVersion,
+    contentVersion: contentBundle.contentVersion,
     gameId: GAME_ID,
     aggregateVersion: 4,
     phase: "Finished",
@@ -97,10 +101,10 @@ function game(status: "COMPLETED" | "NO_CONTEST" = "COMPLETED"): GameDocument {
       relaxedEvenBuilding: false,
       unlimitedImprovementInventory: false,
     },
-    contentHash: canonicalHashBundle(PLACEHOLDER_BUNDLE),
-    contentVersion: PLACEHOLDER_BUNDLE.contentVersion,
-    rulesSchemaVersion: PLACEHOLDER_BUNDLE.rulesSchemaVersion,
-    variantSchemaVersion: PLACEHOLDER_BUNDLE.variantSchemaVersion,
+    contentHash: canonicalHashBundle(contentBundle),
+    contentVersion: contentBundle.contentVersion,
+    rulesSchemaVersion: contentBundle.rulesSchemaVersion,
+    variantSchemaVersion: contentBundle.variantSchemaVersion,
     stateSchemaVersion: "1.0.0",
     engineVersion: "0.1.0",
     secretSeed: {} as GameDocument["secretSeed"],
@@ -130,6 +134,38 @@ function arrange(storedGame: GameDocument, events: readonly Record<string, unkno
 }
 
 describe("GET /api/games/[gameId]/summary", () => {
+  it("keeps winner, host no-contest, expiry, and content retirement distinct", () => {
+    const cases = [
+      [game("COMPLETED", CLASSIC_BUNDLE), "WINNER"],
+      [game("NO_CONTEST", CLASSIC_BUNDLE), "NO_CONTEST"],
+      [game("EXPIRED", CLASSIC_BUNDLE), "EXPIRED"],
+      [game("NO_CONTEST"), "CONTENT_RETIRED"],
+    ] as const;
+
+    for (const [storedGame, expectedReason] of cases) {
+      const summary = buildSummaryProjection({
+        gameId: storedGame._id,
+        status: storedGame.status as "COMPLETED" | "NO_CONTEST" | "EXPIRED",
+        contentVersion: storedGame.contentVersion,
+        state: storedGame.snapshot,
+        configuration: storedGame.configuration,
+        durationSeconds: 245,
+        expiresAt: storedGame.expiresAt,
+        seats: storedGame.seats.map((seat) => ({
+          seatId: seat.seatId,
+          kind: seat.kind,
+          name: seat.name,
+          token: seat.token,
+          isHost: seat.seatId === storedGame.hostSeatId,
+          connected: false,
+        })),
+        publicEvents: [],
+      });
+
+      expect(summary.finishReason).toBe(expectedReason);
+    }
+  });
+
   it("returns a terminal, authorized standings projection with redacted history", async () => {
     const storedGame = game();
     mocks.readGameCapability.mockResolvedValue({ gameId: GAME_ID, seatId: "seat-a", kind: "seat" });
@@ -161,7 +197,7 @@ describe("GET /api/games/[gameId]/summary", () => {
 
   it("makes no-winner terminal state explicit and rejects an unfinished game", async () => {
     mocks.readGameCapability.mockResolvedValue({ gameId: GAME_ID, seatId: "seat-a", kind: "seat" });
-    const noWinner = game("NO_CONTEST");
+    const noWinner = game("NO_CONTEST", CLASSIC_BUNDLE);
     arrange(noWinner);
     const noWinnerResponse = await GET(new Request("http://localhost"), {
       params: Promise.resolve({ gameId: GAME_ID }),
@@ -189,7 +225,7 @@ describe("GET /api/games/[gameId]/summary", () => {
     });
 
     expect(response.status).toBe(200);
-    expect((await response.json()).summary.finishReason).toBe("NO_CONTEST");
+    expect((await response.json()).summary.finishReason).toBe("CONTENT_RETIRED");
     expect(mocks.readRetiredGameSummaryCapability).toHaveBeenCalledWith(GAME_ID, "seat");
   });
 });
