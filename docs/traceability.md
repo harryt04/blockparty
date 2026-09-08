@@ -571,3 +571,10 @@ Iteration 55 adds the matching cross-browser duplicate-command evidence for the 
 two same-task `PlaceAuctionBid` activations emit one command with the authoritative minimum bid,
 and the Chromium mutation run emits two when the synchronous submission lock is removed. Broader
 disconnect and live-release evidence remain assigned to CO-027 and CO-030–031.
+Iteration 56 adds the matching cross-browser duplicate-command evidence for the
+detention and debt decisions: two same-task `ChoosePendingOption` activations and
+two same-task `DeclareBankruptcy` confirmations each emit one command. Removing
+the shared synchronous submission lock makes both Chromium regressions emit two
+commands; Chromium, Firefox, and WebKit pass with the lock restored. This extends
+UX-044, UX-046, and UX-047 evidence; broader disconnect and live-release evidence
+remain assigned to CO-027 and CO-030–031.

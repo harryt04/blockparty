@@ -914,6 +914,12 @@ accidental collapse in coverage.
       authoritative minimum bid. Chromium, Firefox, and WebKit pass; removing
       the shared synchronous submission lock makes the regression emit two
       commands. Broader disconnect and release evidence remain outstanding.
+      Iteration 56 adds the remaining same-task blocking-decision regressions:
+      two synchronous detention-choice activations emit one `ChoosePendingOption`
+      command, and two synchronous bankruptcy-confirmation activations emit one
+      `DeclareBankruptcy` command. Chromium, Firefox, and WebKit pass; removing
+      the shared synchronous submission lock makes both regressions emit two
+      commands. Broader disconnect and release evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
