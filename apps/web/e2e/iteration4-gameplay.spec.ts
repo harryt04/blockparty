@@ -761,6 +761,66 @@ test("paused detention keeps the exit choices visible without submitting a roll"
   expect(commands).toHaveLength(0);
 });
 
+test("reconnected detention re-enables the authoritative exit route", async ({ page }) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitChoice", 1, {
+      paused: true,
+      seats: snapshot("AwaitChoice", 1).seats.map((seat) =>
+        seat.seatId === "seat-a"
+          ? { ...seat, connected: false, detained: true, detentionTurnsRemaining: 2 }
+          : seat,
+      ),
+      legalActions: [
+        {
+          type: "ChoosePendingOption",
+          constraints: { choiceId: "choice-reconnect", optionId: "attempt-roll" },
+        },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const attempt = page.getByRole("button", { name: "Attempt a matching roll" });
+  await expect(attempt).toBeDisabled();
+  await expect(page.getByRole("note").filter({ hasText: "Play is paused" })).toBeVisible();
+
+  await emitSnapshot(
+    page,
+    snapshot("AwaitChoice", 2, {
+      paused: false,
+      seats: snapshot("AwaitChoice", 2).seats.map((seat) =>
+        seat.seatId === "seat-a" ? { ...seat, detained: true, detentionTurnsRemaining: 2 } : seat,
+      ),
+      legalActions: [
+        {
+          type: "ChoosePendingOption",
+          constraints: { choiceId: "choice-reconnect", optionId: "attempt-roll" },
+        },
+      ],
+    }),
+  );
+
+  await expect(page.getByRole("note").filter({ hasText: "Play is paused" })).toHaveCount(0);
+  await expect(attempt).toBeEnabled();
+  await attempt.click();
+  await expect.poll(() => commands.length).toBe(1);
+  expect((commands[0] as { payload: unknown }).payload).toEqual({
+    type: "ChoosePendingOption",
+    choiceId: "choice-reconnect",
+    optionId: "attempt-roll",
+  });
+});
+
 test("debt decision shows payment context and confirms bankruptcy destructively", async ({
   page,
 }) => {

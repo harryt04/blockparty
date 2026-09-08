@@ -836,7 +836,12 @@ accidental collapse in coverage.
       while the proposer is disconnected and the game is paused, then an
       authoritative connected, unpaused snapshot enables exactly one AcceptTrade
       command. Chromium, Firefox, and WebKit pass; the broader disconnect matrix,
-      accessibility, and release evidence remain outstanding.
+      accessibility, and release evidence remain outstanding. Iteration 40 adds
+      detention recovery: the advertised exit route remains disabled while the
+      detained actor is disconnected and play is paused, then an authoritative
+      connected, unpaused snapshot enables exactly one ChoosePendingOption
+      command. The focused Chromium, Firefox, and WebKit scenario passes; debt
+      recovery and the broader disconnect matrix remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
