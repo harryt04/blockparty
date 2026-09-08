@@ -957,10 +957,14 @@ test.describe("live multiplayer authority", () => {
               state: await readBootstrap(page, created.gameId),
             })),
           );
-          debt = states.find(
-            ({ state }) =>
-              state.snapshot.phase === "AwaitDebt" && state.snapshot.legalActions.length > 0,
-          );
+          debt = states.find(({ state }) => {
+            const selfSeat = state.snapshot.seats.find((seat) => seat.isSelf);
+            return (
+              state.snapshot.phase === "AwaitDebt" &&
+              state.snapshot.legalActions.length > 0 &&
+              state.snapshot.obligation?.debtorSeatId === selfSeat?.seatId
+            );
+          });
           if (debt !== undefined) break;
 
           const actor = states
@@ -1022,7 +1026,8 @@ test.describe("live multiplayer authority", () => {
             });
           }
 
-          const mortgageAction = debt.state.snapshot.legalActions.find(
+          const currentDebtState = await readBootstrap(debt.page, created.gameId);
+          const mortgageAction = currentDebtState.snapshot.legalActions.find(
             (action) => action.type === "MortgageDeed",
           );
           expect(
@@ -1030,16 +1035,36 @@ test.describe("live multiplayer authority", () => {
             "Owed should expose an authoritative liquidation action",
           ).toBeDefined();
           if (mortgageAction !== undefined) {
-            const mortgageResponsePromise = debt.page.waitForResponse(
-              (response) =>
-                response.url().endsWith(`/api/games/${created.gameId}/commands`) &&
-                response.request().method() === "POST",
+            await issueCommand(
+              debt.page,
+              created.gameId,
+              currentDebtState.aggregateVersion,
+              commandForLegalAction(mortgageAction),
             );
-            await debt.page.getByRole("button", { name: "Mortgage an Address" }).first().click();
-            expect((await mortgageResponsePromise).ok()).toBe(true);
             await expect
               .poll(() => readBootstrap(debt!.page, created.gameId))
               .toMatchObject({ snapshot: { phase: "AwaitDebt" } });
+          }
+
+          const settledDebtState = await readBootstrap(debt.page, created.gameId);
+          const paymentAction = settledDebtState.snapshot.legalActions.find(
+            (action) => action.type === "PayObligation",
+          );
+          expect(
+            paymentAction,
+            "liquidation should leave the debtor with an authoritative payment action",
+          ).toBeDefined();
+          if (paymentAction !== undefined) {
+            await expect(debt.page.getByRole("button", { name: "Pay what is Owed" })).toBeVisible();
+            await issueCommand(
+              debt.page,
+              created.gameId,
+              settledDebtState.aggregateVersion,
+              commandForLegalAction(paymentAction),
+            );
+            await expect
+              .poll(() => readBootstrap(debt.page, created.gameId))
+              .not.toMatchObject({ snapshot: { phase: "AwaitDebt" } });
           }
         }
       }

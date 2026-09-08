@@ -1179,6 +1179,13 @@ accidental collapse in coverage.
       fails; the Firefox run reached baseline capture but stalled before its
       final command assertion, so debt runtime evidence remains open alongside
       bankruptcy, completion, rematch, WebKit, and broader screenshot coverage.
+      Iteration 92 completes the Chromium debt-resolution slice: the journey
+      matches the Owed debtor to its own projection, drives the advertised
+      MortgageDeed and PayObligation commands through the authenticated browser
+      envelope, verifies the visible Pay what is Owed action, and confirms that
+      AwaitDebt clears. Mutating that payment label makes the Chromium journey
+      fail. Bankruptcy, terminal summary, rematch, Firefox/WebKit runtime, and
+      broader screenshot coverage remain open.
 
 - [~] **CO-031 — Complete accessibility and mobile-style failure evidence** (Codex, iteration 79)
       Blocked by: CO-030
