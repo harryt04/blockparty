@@ -447,6 +447,58 @@ test("auction decision exposes context, bounds bids, and prevents duplicate subm
   });
 });
 
+test("an acknowledged auction retry reuses its command identity", async ({ page }) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page, { delayAuthoritativeResult: true });
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitAuction", 1, {
+      prioritySeatId: "seat-a",
+      auction: {
+        deedId: "d-sawhorse-lane",
+        minimumNextBid: 4_001,
+        prioritySeatId: "seat-a",
+        passedSeatIds: [],
+      },
+      legalActions: [
+        {
+          type: "PlaceAuctionBid",
+          constraints: { minBid: 4_001, maxBid: 145_000 },
+        },
+        { type: "PassAuction" },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const bid = page.getByRole("button", { name: "Submit bid" });
+  await bid.click();
+  await expect.poll(() => commands.length).toBe(1);
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Action accepted. Waiting for the authoritative result." })
+      .first(),
+  ).toBeVisible();
+
+  // The acknowledgement is accepted without a newer authoritative snapshot.
+  // Retrying the still-visible bid must preserve both capability-safe IDs.
+  await page.getByRole("button", { name: "Open action sheet" }).click();
+  await page.getByRole("button", { name: "Submit bid" }).click();
+  await expect.poll(() => commands.length).toBe(2);
+  expect(commands[1]).toMatchObject({
+    commandId: (commands[0] as { commandId: string }).commandId,
+    requestId: (commands[0] as { requestId: string }).requestId,
+  });
+});
+
 test("paused auction preserves context, disables bid or pass, and submits nothing", async ({
   page,
 }) => {

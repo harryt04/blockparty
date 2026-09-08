@@ -854,6 +854,12 @@ accidental collapse in coverage.
       Iteration 43 adds a browser regression for retrying an acknowledged acquisition before its
       authoritative snapshot arrives: the second activation reuses the original request and
       command identity, preserving command idempotency while the legal action remains visible.
+      Iteration 44 adds the equivalent acknowledged-auction retry regression in
+      `apps/web/e2e/iteration4-gameplay.spec.ts`: after an accepted bid whose newer snapshot is
+      delayed, retrying the still-visible bid reuses both request and command identity. The
+      regression passes in Chromium, Firefox, and WebKit and fails under mutation when retry
+      identity reuse is removed;
+      broader disconnect, axe, and live-release evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
