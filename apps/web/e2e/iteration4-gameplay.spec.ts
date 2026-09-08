@@ -586,6 +586,51 @@ test("pending trade focuses the offer and accepts only for its named counterpart
   });
 });
 
+test("paused pending trade keeps the offer visible without fabricating acceptance", async ({
+  page,
+}) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("TurnStart", 1, {
+      paused: true,
+      seats: snapshot("TurnStart", 1).seats.map((seat) =>
+        seat.seatId === "seat-b" ? { ...seat, connected: false } : seat,
+      ),
+      pendingTrade: {
+        tradeId: "trade-paused-1",
+        proposerSeatId: "seat-b",
+        counterpartySeatId: "seat-a",
+        offered: { cash: 2_000, deedIds: [], detentionReleaseCardIds: [] },
+        requested: { cash: 0, deedIds: [], detentionReleaseCardIds: [] },
+        proposerBalance: 153_000,
+        counterpartyBalance: 145_000,
+        aggregateVersion: 1,
+      },
+      legalActions: [
+        { type: "AcceptTrade", constraints: { tradeId: "trade-paused-1" } },
+        { type: "RejectTrade", constraints: { tradeId: "trade-paused-1" } },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  await expect(page.getByRole("heading", { name: "Pending trade" })).toBeFocused();
+  await expect(page.getByText("Side Street sent you an offer.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Accept this trade" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Reject this trade" })).toBeDisabled();
+  await expect(page.getByRole("note").filter({ hasText: "Play is paused" })).toBeVisible();
+  expect(commands).toHaveLength(0);
+});
+
 test("authoritative decision events produce one live announcement", async ({ page }) => {
   await mockLiveStream(page);
   await mockGameApi(page);

@@ -798,6 +798,9 @@ accidental collapse in coverage.
       Iteration 31 defers action-sheet focus restoration until the trigger is
       enabled after command completion, with a passing Chromium regression and a
       mutation that fails when the restoration is removed.
+      Iteration 32 adds a paused pending-trade Chromium scenario: a disconnected
+      proposer leaves the named offer and decision heading visible, disables
+      acceptance/rejection, announces the pause, and produces no command.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
