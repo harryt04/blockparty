@@ -112,7 +112,9 @@ describe("A12 obligation settlement and legal liquidity", () => {
     expect(settled).toMatchObject({ ok: true, events: [{ type: "ObligationSettled" }] });
     if (!settled.ok) throw new Error("expected bank obligation to settle");
     expect(settled.state.seats[0]?.balance).toBe(0);
-    expect(settled.state.bank.cash).toBe(0);
+    // The bank may create the mortgage payout, then receives the settled debt
+    // back as ordinary bank cash.
+    expect(settled.state.bank.cash).toBe(6_000);
     expect(settled.state.deeds.find((deed) => deed.deedId === "d-sawhorse-lane"))?.toMatchObject({
       mortgaged: true,
     });

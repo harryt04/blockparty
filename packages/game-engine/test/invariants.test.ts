@@ -179,6 +179,11 @@ describe("A16 invariants and replay fixtures", () => {
       "NEGATIVE_SEAT_BALANCE",
     );
 
+    const negativeBankCash = { ...started.state, bank: { ...started.state.bank, cash: -1 } };
+    expect(checkInvariants(negativeBankCash, RULES).map((item) => item.code)).toContain(
+      "INVALID_BANK_CASH",
+    );
+
     const duplicateSeat = {
       ...started.state,
       seats: [

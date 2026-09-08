@@ -190,6 +190,18 @@ describe("D3 auction and detained-income variants", () => {
     },
   );
 
+  it("keeps bank-funded card income at a non-negative bank balance", () => {
+    const before = queuedIncomeState({ type: "CollectBank", amount: 5_000 });
+    const state = { ...before, bank: { ...before.bank, cash: 0 } };
+    const result = resolveIncome(state, rulesFor());
+
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) throw new Error("expected bank income to resolve");
+    expect(result.state.seats[0]?.balance).toBe(105_000);
+    expect(result.state.bank.cash).toBe(0);
+    expect(replay(state, result.events, rulesFor())).toEqual(result.state);
+  });
+
   it("leaves bank-directed payments intact while suppressing detained income", () => {
     const before = queuedIncomeState({ type: "PayBank", amount: 5_000 });
     const result = resolveIncome(before, rulesFor({ noIncomeWhileDetained: true }));

@@ -896,7 +896,9 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         seats: state.seats.map((seat) =>
           seat.seatId === seatId ? { ...seat, balance: seat.balance + amount } : seat,
         ),
-        bank: { ...state.bank, cash: state.bank.cash - amount },
+        // The bank is solvent and may create currency for board/card payouts;
+        // never expose a negative public bank balance. RULE-013.
+        bank: { ...state.bank, cash: Math.max(0, state.bank.cash - amount) },
       });
     }
     case "PlayerPaymentCollected": {
@@ -966,7 +968,7 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
             ? { ...candidate, balance: candidate.balance + amount }
             : candidate,
         ),
-        bank: { ...state.bank, cash: state.bank.cash - amount },
+        bank: { ...state.bank, cash: Math.max(0, state.bank.cash - amount) },
       });
     }
     case "CardDrawn": {
@@ -1128,7 +1130,7 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
         deeds: state.deeds.map((item) =>
           item.deedId === deedId ? { ...item, mortgaged: true } : item,
         ),
-        bank: { ...state.bank, cash: state.bank.cash - amount },
+        bank: { ...state.bank, cash: Math.max(0, state.bank.cash - amount) },
       });
     }
     case "MortgageRedeemed": {
@@ -1889,7 +1891,9 @@ function applyEvent(state: GameState, event: EngineEvent): GameState {
       }
       const buying = event.type === "ImprovementBought";
       const nextBalance = buying ? seat.balance - amount : seat.balance + amount;
-      const nextBankCash = buying ? state.bank.cash + amount : state.bank.cash - amount;
+      const nextBankCash = buying
+        ? state.bank.cash + amount
+        : Math.max(0, state.bank.cash - amount);
       const nextInventory = applyInventoryDeltas(
         state.bank.improvementInventory,
         inventoryDeltas,

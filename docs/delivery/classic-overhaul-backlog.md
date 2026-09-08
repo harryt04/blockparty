@@ -1159,6 +1159,11 @@ accidental collapse in coverage.
       heading and passes after restoration. Debt, bankruptcy, completion,
       rematch, Firefox/WebKit runtime, and broader screenshot coverage remain
       open.
+      Iteration 89 hardens the same live authority path's bank ledger: replayed
+      bank-funded payout events clamp the solvent bank's public cash at zero
+      when a payout creates currency, and invariant coverage rejects corrupted
+      negative bank cash. Debt, bankruptcy, completion, rematch, Firefox/WebKit
+      runtime, and broader screenshot coverage remain open.
 
 - [~] **CO-031 — Complete accessibility and mobile-style failure evidence** (Codex, iteration 79)
       Blocked by: CO-030

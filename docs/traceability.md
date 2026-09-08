@@ -725,3 +725,9 @@ command envelope when the transient action sheet is stale. The lobby and board
 visual baselines remain capability-free and mask only volatile surfaces. Firefox,
 WebKit, detention-through-rematch, and manual assistive-technology evidence
 remain open.
+Iteration 89 hardens the engine ledger exposed by the live-game progression:
+bank-funded payout events now let the solvent bank create currency without
+producing a negative public balance, replay preserves the same result, and the
+invariant suite rejects corrupted negative bank cash. Debt, bankruptcy,
+completion, rematch, Firefox/WebKit runtime, and manual accessibility evidence
+remain open.
