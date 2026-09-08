@@ -528,3 +528,9 @@ original request and command identity; Chromium, Firefox, and WebKit pass, while
 the Chromium regression fails under mutation when identity reuse is removed.
 Broader disconnect, axe, and live-release evidence remain assigned to CO-027
 and CO-030–031.
+Iteration 45 adds the matching acknowledged pending-trade retry evidence in
+`apps/web/e2e/iteration4-gameplay.spec.ts`: after an acceptance acknowledgement arrives
+without a newer authoritative snapshot, retrying the still-visible offer reuses the original
+request and command identity. Chromium, Firefox, and WebKit pass, while mutation of command
+identity reuse makes the regression fail. Broader disconnect, axe, and live-release evidence
+remain assigned to CO-027 and CO-030–031.

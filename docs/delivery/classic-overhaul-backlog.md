@@ -859,6 +859,10 @@ accidental collapse in coverage.
       delayed, retrying the still-visible bid reuses both request and command identity. The
       regression passes in Chromium, Firefox, and WebKit and fails under mutation when retry
       identity reuse is removed;
+      Iteration 45 adds the matching acknowledged pending-trade retry regression: after an
+      accepted response whose newer snapshot is delayed, retrying the still-visible offer reuses
+      both request and command identity. Chromium, Firefox, and WebKit pass, and mutation of
+      command identity reuse makes the regression fail;
       broader disconnect, axe, and live-release evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**

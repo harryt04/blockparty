@@ -499,6 +499,59 @@ test("an acknowledged auction retry reuses its command identity", async ({ page 
   });
 });
 
+test("an acknowledged pending-trade retry reuses its command identity", async ({ page }) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page, { delayAuthoritativeResult: true });
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("TurnStart", 1, {
+      pendingTrade: {
+        tradeId: "trade-ack-retry-1",
+        proposerSeatId: "seat-b",
+        counterpartySeatId: "seat-a",
+        offered: { cash: 2_000, deedIds: [], detentionReleaseCardIds: [] },
+        requested: { cash: 0, deedIds: [], detentionReleaseCardIds: [] },
+        proposerBalance: 153_000,
+        counterpartyBalance: 145_000,
+        aggregateVersion: 1,
+      },
+      legalActions: [
+        { type: "AcceptTrade", constraints: { tradeId: "trade-ack-retry-1" } },
+        { type: "RejectTrade", constraints: { tradeId: "trade-ack-retry-1" } },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const accept = page.getByRole("button", { name: "Accept this trade" });
+  await accept.click();
+  await expect.poll(() => commands.length).toBe(1);
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Action accepted. Waiting for the authoritative result." })
+      .first(),
+  ).toBeVisible();
+
+  // The acknowledgement arrives without a newer snapshot. Retrying the still-visible
+  // offer must preserve both capability-safe IDs and remain idempotent.
+  // Pending-trade response controls live in the decision card rather than the
+  // action sheet, so the still-visible response is directly retryable.
+  await page.getByRole("button", { name: "Accept this trade" }).click();
+  await expect.poll(() => commands.length).toBe(2);
+  expect(commands[1]).toMatchObject({
+    commandId: (commands[0] as { commandId: string }).commandId,
+    requestId: (commands[0] as { requestId: string }).requestId,
+  });
+});
+
 test("paused auction preserves context, disables bid or pass, and submits nothing", async ({
   page,
 }) => {
