@@ -17,7 +17,7 @@ test.describe("live multiplayer authority", () => {
       viewport: { width: 375, height: 900 },
     });
     const joiner = await joinerContext.newPage();
-    const captureVisualBaseline = test.info().project.name === "chromium";
+    const captureVisualBaseline = ["chromium", "firefox"].includes(test.info().project.name);
 
     async function assertNoHorizontalOverflow(target: typeof host, label: string): Promise<void> {
       const dimensions = await target.evaluate(() => ({

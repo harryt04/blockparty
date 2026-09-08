@@ -1109,7 +1109,10 @@ accidental collapse in coverage.
       enter the baseline; fixed pseudonyms, content, and pre-roll state keep the
       captured surfaces deterministic. Chromium live visual assertions pass;
       Firefox/WebKit visual baselines plus the wider purchase-through-rematch
-      matrix remain open.
+      matrix remain open. Iteration 81 extends the same masked baselines to
+      Firefox, preserving the deterministic 375px lobby and 1280px board
+      assertions while WebKit remains separately blocked by its local live-server
+      stall.
 
 - [~] **CO-031 — Complete accessibility and mobile-style failure evidence** (Codex, iteration 79)
       Blocked by: CO-030
