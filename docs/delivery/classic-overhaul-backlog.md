@@ -695,7 +695,7 @@ accidental collapse in coverage.
       pass; full cross-browser visual and assistive-technology evidence remains
       assigned to CO-030–031.
 
-- [ ] **CO-024 — Build the desktop classic-table workspace**
+- [x] **CO-024 — Build the desktop classic-table workspace**
       Blocked by: CO-023
       Requirements: PRD-FUN-022, UX-044, UX-046, DS-073
       Read: game client, player strip, action bar, active detail, event feed
@@ -707,6 +707,17 @@ accidental collapse in coverage.
       exactly one primary action, and no existing legal action becomes unreachable.
       Proves: legal-action-to-control coverage table, phase screenshots, axe,
       keyboard-only scenario, and stale/pending/rejected command tests.
+      Evidence: the live shell now uses a 240 px player rail, flexible board and
+      local Property hand, and a 288 px decision/detail rail; all server actions
+      remain in the ActionBar and pause/reconnect status remains visible. The
+      hand model and responsive contract pass in `apps/web/test/property-hand.test.ts`
+      and `apps/web/test/responsive-layout.test.ts`; the existing gameplay flow
+      plus new 1280/375 Chromium layout checks pass in
+      `apps/web/e2e/iteration4-gameplay.spec.ts`. Mutation of projected hand
+      levels fails its focused test. Formatting, typecheck, and production build
+      pass; the repository lint gate remains blocked by the pre-existing
+      `prettier.config.cjs` `module` no-undef error, and full cross-browser/axe
+      evidence remains assigned to CO-030–031.
 
 - [ ] **CO-025 — Build the mobile overview, focus, and navigation shell**
       Blocked by: CO-024

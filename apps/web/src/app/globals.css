@@ -315,7 +315,8 @@
  * - default / 320–767 px: focused board, one contextual column, fixed action
  *   bar; the semantic board list remains available below the board.
  * - 768–1023 px: board plus a 320–400 px contextual panel.
- * - 1024 px and up: board plus a persistent contextual sidebar.
+ * - 1024 px and up: a 240 px player rail, flexible board/hand, and 288 px
+ *   decision/detail rail.
  * - short landscape: board-first split view with a scrollable context panel.
  *
  * PRD-FUN-016, UX-030–033, and DS-050. Keep every grid track minmax(0, ...)
@@ -394,6 +395,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .game-player-rail,
   .game-board-column,
   .game-context,
   .game-board-column > *,
@@ -403,6 +405,22 @@
 
   .game-board-viewport {
     height: clamp(16rem, 75vw, 22rem);
+  }
+
+  .game-player-rail {
+    order: 2;
+  }
+
+  .game-board-column {
+    order: 1;
+  }
+
+  .game-context {
+    order: 3;
+  }
+
+  .game-player-list {
+    min-width: 0;
   }
 
   .game-action-bar {
@@ -444,7 +462,21 @@
     }
 
     .game-workspace {
-      grid-template-columns: minmax(0, 1fr) minmax(20rem, 22rem);
+      grid-template-columns: minmax(15rem, 15rem) minmax(0, 1fr) minmax(18rem, 18rem);
+      align-items: start;
+    }
+
+    .game-player-rail,
+    .game-board-column,
+    .game-context {
+      order: initial;
+    }
+
+    .game-player-list {
+      flex-direction: column;
+      overflow-x: hidden;
+      overflow-y: auto;
+      max-height: 30rem;
     }
 
     .game-board-viewport {

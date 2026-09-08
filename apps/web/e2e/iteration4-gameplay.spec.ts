@@ -214,3 +214,37 @@ test("a player can roll and acquire the current Address", async ({ page }) => {
     deedId: "d-sawhorse-lane",
   });
 });
+
+test("desktop keeps the board anchor, player rail, hand, and decision reachable", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await mockLiveStream(page);
+  await mockGameApi(page);
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  await expect(page.locator('[data-responsive-region="player-rail"]')).toBeVisible();
+  await expect(page.locator('[data-responsive-region="board"]')).toBeVisible();
+  await expect(page.locator('[data-property-hand="local"]')).toBeVisible();
+  await expect(page.locator('[data-responsive-region="context-panel"]')).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open action sheet" })).toBeVisible();
+
+  const board = await page.locator('[data-responsive-region="board"]').boundingBox();
+  const playerRail = await page.locator('[data-responsive-region="player-rail"]').boundingBox();
+  const context = await page.locator('[data-responsive-region="context-panel"]').boundingBox();
+  expect(board?.x).toBeGreaterThan(playerRail?.x ?? -1);
+  expect(context?.x).toBeGreaterThan(board?.x ?? -1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1280);
+});
+
+test("phone keeps the three regions stacked without page overflow", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await mockLiveStream(page);
+  await mockGameApi(page);
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  await expect(page.locator('[data-responsive-region="board"]')).toBeVisible();
+  await expect(page.locator('[data-property-hand="local"]')).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open action sheet" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+});

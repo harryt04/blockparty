@@ -45,6 +45,7 @@ import {
   turnLabel,
 } from "./game-model";
 import { PlayerStrip } from "./player-strip";
+import { PropertyHand } from "./property-hand";
 
 function GameLoading() {
   return (
@@ -365,6 +366,21 @@ export function GameClient({ gameId }: { gameId: string }) {
       ) : null}
 
       <div className="game-workspace" data-responsive-region="workspace">
+        <aside
+          className="game-player-rail min-w-0 space-y-3"
+          aria-label="Players"
+          data-responsive-region="player-rail"
+        >
+          <h2 id="players-heading" className="font-serif text-xl">
+            Players
+          </h2>
+          <PlayerStrip
+            seats={snapshot.seats}
+            activeSeatId={snapshot.activeSeatId}
+            className="game-player-list"
+          />
+        </aside>
+
         <section
           aria-label="Game board"
           className="game-board-column min-w-0 space-y-5"
@@ -386,6 +402,12 @@ export function GameClient({ gameId }: { gameId: string }) {
               />
             </CardContent>
           </Card>
+
+          <PropertyHand
+            snapshot={snapshot}
+            selectedSpaceId={selectedSpace?.spaceId}
+            onSelect={setSelectedSpaceId}
+          />
 
           <section
             aria-labelledby="board-list-heading"
@@ -430,6 +452,20 @@ export function GameClient({ gameId }: { gameId: string }) {
             )}
           </section>
 
+          <ActionBar
+            legalActions={snapshot.legalActions}
+            actionAvailability={snapshot.actionAvailability}
+            decisionSnapshot={snapshot}
+            statusText={
+              actionError ??
+              actionStatus ??
+              (snapshot.paused ? "Play is paused until the required player reconnects." : undefined)
+            }
+            pending={pendingAction !== undefined}
+            disabled={state.connection !== "live" || snapshot.paused || pendingAction !== undefined}
+            onAction={(action, amount) => void submitAction(action, amount)}
+          />
+
           <ActiveSpaceDetail
             space={detailSpace}
             seats={snapshot.seats}
@@ -440,13 +476,6 @@ export function GameClient({ gameId }: { gameId: string }) {
             canManage={canManageSelectedSpace}
             onManage={() => setManagementOpen(true)}
           />
-
-          <section aria-labelledby="players-heading" data-responsive-region="player-strip">
-            <h2 id="players-heading" className="mb-2 font-serif text-xl">
-              Players
-            </h2>
-            <PlayerStrip seats={snapshot.seats} activeSeatId={snapshot.activeSeatId} />
-          </section>
 
           <ManagementPanel
             snapshot={snapshot}
@@ -516,19 +545,6 @@ export function GameClient({ gameId }: { gameId: string }) {
           </p>
         </aside>
       </div>
-      <ActionBar
-        legalActions={snapshot.legalActions}
-        actionAvailability={snapshot.actionAvailability}
-        decisionSnapshot={snapshot}
-        statusText={
-          actionError ??
-          actionStatus ??
-          (snapshot.paused ? "Play is paused until the required player reconnects." : undefined)
-        }
-        pending={pendingAction !== undefined}
-        disabled={state.connection !== "live" || snapshot.paused || pendingAction !== undefined}
-        onAction={(action, amount) => void submitAction(action, amount)}
-      />
     </div>
   );
 }

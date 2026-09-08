@@ -22,6 +22,10 @@ const boardView = readFileSync(
   new URL("../src/components/game/board-view.tsx", import.meta.url),
   "utf8",
 );
+const propertyHand = readFileSync(
+  new URL("../src/components/game/property-hand.tsx", import.meta.url),
+  "utf8",
+);
 
 describe("responsive game shell contract", () => {
   it("defines the documented phone, tablet, desktop, and landscape modes", () => {
@@ -29,7 +33,9 @@ describe("responsive game shell contract", () => {
     expect(stylesheet).toContain("@media (min-width: 48rem)");
     expect(stylesheet).toContain("grid-template-columns: minmax(0, 1fr) minmax(20rem, 25rem);");
     expect(stylesheet).toContain("@media (min-width: 64rem)");
-    expect(stylesheet).toContain("grid-template-columns: minmax(0, 1fr) minmax(20rem, 22rem);");
+    expect(stylesheet).toContain(
+      "grid-template-columns: minmax(15rem, 15rem) minmax(0, 1fr) minmax(18rem, 18rem);",
+    );
     expect(stylesheet).toContain("@media (orientation: landscape) and (max-height: 40rem)");
     expect(stylesheet).toContain("minmax(17rem, 43%)");
   });
@@ -42,9 +48,9 @@ describe("responsive game shell contract", () => {
     expect(stylesheet).toContain("height: clamp(16rem, 75vw, 22rem)");
     expect(gameClient).toContain('data-responsive-region="board"');
     expect(gameClient).toContain('data-responsive-region="context-panel"');
-    expect(gameClient.indexOf('data-responsive-region="player-strip"')).toBeGreaterThan(
-      gameClient.indexOf("<ActiveSpaceDetail"),
-    );
+    expect(gameClient).toContain('data-responsive-region="player-rail"');
+    expect(stylesheet).toContain(".game-player-rail {\n    order: 2;");
+    expect(stylesheet).toContain(".game-context {\n    order: 3;");
   });
 
   it("keeps the visual board semantic and equivalent to the ordered list", () => {
@@ -66,6 +72,22 @@ describe("responsive game shell contract", () => {
     expect(playerStrip).toContain('aria-label="Player list"');
     expect(playerStrip).toContain("tabIndex={0}");
     expect(playerStrip).not.toContain('<section aria-label="Players"');
+  });
+
+  it("uses the desktop three-region workspace and keeps the local hand below the board", () => {
+    expect(stylesheet).toContain(
+      "grid-template-columns: minmax(15rem, 15rem) minmax(0, 1fr) minmax(18rem, 18rem);",
+    );
+    expect(stylesheet).toContain("flex-direction: column;");
+    expect(gameClient).toContain('data-responsive-region="player-rail"');
+    expect(gameClient).toContain("<PropertyHand");
+    expect(gameClient.indexOf("<PropertyHand")).toBeGreaterThan(gameClient.indexOf("<BoardView"));
+    expect(gameClient.indexOf("<PropertyHand")).toBeLessThan(
+      gameClient.indexOf('data-responsive-region="context-panel"'),
+    );
+    expect(propertyHand).toContain('data-property-hand="local"');
+    expect(propertyHand).toContain("data-property-group={group.groupId}");
+    expect(propertyHand).toContain("data-deed-id={deed.deedId}");
   });
 
   it("keeps the bounded event history keyboard-scrollable", () => {
