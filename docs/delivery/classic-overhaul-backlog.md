@@ -841,7 +841,12 @@ accidental collapse in coverage.
       detained actor is disconnected and play is paused, then an authoritative
       connected, unpaused snapshot enables exactly one ChoosePendingOption
       command. The focused Chromium, Firefox, and WebKit scenario passes; debt
-      recovery and the broader disconnect matrix remain outstanding.
+      recovery and the broader disconnect matrix remain outstanding. Iteration 41 adds debt
+      recovery: the bankruptcy decision remains disabled while the debtor is disconnected and
+      play is paused, then an authoritative connected, unpaused snapshot enables exactly one
+      DeclareBankruptcy command after explicit confirmation. The focused Chromium, Firefox, and
+      WebKit scenario passes; the broader disconnect matrix and release evidence remain
+      outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

@@ -906,6 +906,66 @@ test("paused debt keeps payment context visible without submitting bankruptcy", 
   expect(commands).toHaveLength(0);
 });
 
+test("reconnected debt re-enables the authoritative bankruptcy decision", async ({ page }) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitChoice", 1, {
+      paused: true,
+      seats: snapshot("AwaitChoice", 1).seats.map((seat) =>
+        seat.seatId === "seat-a" ? { ...seat, connected: false } : seat,
+      ),
+      obligation: {
+        debtorSeatId: "seat-a",
+        creditorSeatId: "seat-b",
+        amount: 200_000,
+        reasonCode: "RENT_DUE",
+        reason: "Rent is due to Side Street.",
+      },
+      legalActions: [{ type: "DeclareBankruptcy" }],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const bankruptcy = page.getByRole("button", { name: "Declare bankruptcy" });
+  await expect(bankruptcy).toBeDisabled();
+  await expect(page.getByRole("note").filter({ hasText: "Play is paused" })).toBeVisible();
+  await expect(page.getByText("Amount due").locator("..")).toContainText("2,000 Tabs");
+  expect(commands).toHaveLength(0);
+
+  await emitSnapshot(
+    page,
+    snapshot("AwaitChoice", 2, {
+      paused: false,
+      obligation: {
+        debtorSeatId: "seat-a",
+        creditorSeatId: "seat-b",
+        amount: 200_000,
+        reasonCode: "RENT_DUE",
+        reason: "Rent is due to Side Street.",
+      },
+      legalActions: [{ type: "DeclareBankruptcy" }],
+    }),
+  );
+
+  await expect(page.getByRole("note").filter({ hasText: "Play is paused" })).toHaveCount(0);
+  await expect(bankruptcy).toBeEnabled();
+  await bankruptcy.click();
+  await page.getByRole("button", { name: "Confirm bankruptcy" }).click();
+  await expect.poll(() => commands.length).toBe(1);
+  expect((commands[0] as { payload: unknown }).payload).toEqual({
+    type: "DeclareBankruptcy",
+  });
+});
+
 test("pending trade focuses the offer and accepts only for its named counterparty", async ({
   page,
 }) => {
