@@ -596,3 +596,9 @@ by a newer confirmed snapshot, `GameClient` restores focus to the action-sheet
 entry; `apps/web/e2e/iteration4-gameplay.spec.ts` covers all three surfaces in
 Chromium, Firefox, and WebKit. Broader disconnect and live-release evidence
 remain assigned to CO-027 and CO-030–031.
+Iteration 60 adds cross-browser transport-loss evidence for UX-044, UX-046, and
+UX-047. An already-open acquisition choice remains visible but becomes disabled
+when the sync client enters `reconnecting`, and the browser emits no command;
+`apps/web/e2e/iteration4-gameplay.spec.ts` covers the client-side connection gate
+in Chromium, Firefox, and WebKit. Broader disconnect and live-release evidence
+remain assigned to CO-027 and CO-030–031.

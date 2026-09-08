@@ -934,6 +934,11 @@ accidental collapse in coverage.
       regression covers all three dedicated surfaces and confirms focus returns
       only after the confirmed snapshot is applied; broader disconnect and
       release evidence remain outstanding.
+      Iteration 60 adds a cross-browser transport-loss regression for an already
+      open acquisition decision: the exact Address choice remains visible but is
+      disabled as the sync client enters reconnecting, and no command is emitted.
+      The test protects the client-side connection gate while broader disconnect
+      and release evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
