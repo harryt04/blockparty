@@ -360,7 +360,12 @@ authoritative snapshot, and reopens the authenticated stream.
 Iteration 70 adds `apps/web/test/sse.test.ts` coverage for overlapping seat and
 reclaim browser contexts: closing either context alone does not emit a
 disconnected presence edge or trigger recovery, while closing the final context
-emits exactly one edge. Browser-level multi-context journeys remain planned.
+emits exactly one edge. Iteration 71 adds the cross-browser recovery journey in
+`apps/web/e2e/iteration4-gameplay.spec.ts`: transport loss applies a newer
+authoritative `/sync` snapshot and a late stale SSE snapshot cannot regress the
+visible phase or delivery sequence. Chromium, Firefox, and WebKit pass; removing
+the monotonic snapshot guard makes the Chromium regression fail. Browser-level
+multi-context disconnect/reclaim journeys remain planned.
 
 No self-hosted font files are present because licensed, provenanced faces have
 not yet been approved. The PWA shell caches only versioned public/app-shell

@@ -1007,8 +1007,11 @@ accidental collapse in coverage.
       Iteration 70 adds `apps/web/test/sse.test.ts` coverage for overlapping seat
       and reclaim browser contexts: closing either context alone does not emit a
       disconnected presence edge or trigger recovery, while closing the final
-      context emits exactly one edge. Browser-level multi-context journeys remain
-      outstanding.
+      context emits exactly one edge. Iteration 71 adds a Chromium/Firefox/WebKit
+      recovery journey in `apps/web/e2e/iteration4-gameplay.spec.ts`: after
+      transport loss, the browser applies the newer `/sync` snapshot and ignores
+      a late stale SSE snapshot, with the monotonic guard mutation-checked.
+      Browser-level multi-context disconnect/reclaim journeys remain outstanding.
 
 - [~] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

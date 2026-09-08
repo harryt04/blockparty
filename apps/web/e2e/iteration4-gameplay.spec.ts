@@ -181,6 +181,7 @@ async function mockGameApi(
   options: {
     readonly failFirstCommand?: boolean;
     readonly delayAuthoritativeResult?: boolean;
+    readonly syncSnapshot?: () => GameSnapshotProjectionType;
   } = {},
 ): Promise<{ commands: unknown[] }> {
   let phase: GameSnapshotProjectionType["phase"] = "TurnStart";
@@ -189,7 +190,10 @@ async function mockGameApi(
   await page.route(`**/api/games/${GAME_ID}/**`, async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/bootstrap") || path.endsWith("/sync")) {
-      const projected = snapshot(phase, sequence);
+      const projected =
+        path.endsWith("/sync") && options.syncSnapshot !== undefined
+          ? options.syncSnapshot()
+          : snapshot(phase, sequence);
       await route.fulfill({
         json: path.endsWith("/bootstrap")
           ? {
@@ -2126,6 +2130,41 @@ test("reconnect transitions announce once and stay quiet through transport churn
   });
   await expect(announcement).toHaveText("Connection lost. Reconnecting to the live game.");
   await expect(page.getByText("Connected", { exact: true })).toBeVisible({ timeout: 5_000 });
+});
+
+test("reconnect keeps the newer authoritative snapshot against a late stale frame", async ({
+  page,
+}) => {
+  await mockLiveStream(page);
+  const recovered = snapshot("AwaitPurchase", 2, {
+    publicEvents: [event("TokenMoved", 2, { seatId: "seat-a", toPosition: 4 })],
+  });
+  await mockGameApi(page, {
+    syncSnapshot: () => recovered,
+  });
+
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("Connected", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Turn Start · 2 players · sequence 1", { exact: true }),
+  ).toBeVisible();
+
+  await page.evaluate(() => {
+    (window as unknown as { __emitGameConnectionError?: () => void }).__emitGameConnectionError?.();
+  });
+  await expect(
+    page.getByText("Await Purchase · 2 players · sequence 2", { exact: true }),
+  ).toBeVisible({
+    timeout: 5_000,
+  });
+
+  await emitSnapshot(page, snapshot("TurnStart", 1));
+  await expect(
+    page.getByText("Await Purchase · 2 players · sequence 2", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Turn Start · 2 players · sequence 1", { exact: true })).toHaveCount(
+    0,
+  );
 });
 
 test("desktop keeps the board anchor, player rail, hand, and decision reachable", async ({
