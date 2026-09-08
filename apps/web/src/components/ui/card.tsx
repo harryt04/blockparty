@@ -4,7 +4,7 @@
  *
  * Hierarchy survives in grayscale, so elevation never carries state.
  */
-import type { HTMLAttributes } from "react";
+import type { HTMLAttributes, Ref } from "react";
 import { cn } from "@/lib/utils";
 
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
@@ -20,8 +20,14 @@ export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElemen
   return <div className={cn("flex flex-col gap-1 p-4", className)} {...props} />;
 }
 
-export function CardTitle({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) {
-  return <h2 className={cn("font-serif text-lg leading-tight", className)} {...props} />;
+export function CardTitle({
+  className,
+  ref,
+  ...props
+}: HTMLAttributes<HTMLHeadingElement> & {
+  ref?: Ref<HTMLHeadingElement>;
+}) {
+  return <h2 ref={ref} className={cn("font-serif text-lg leading-tight", className)} {...props} />;
 }
 
 export function CardDescription({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) {

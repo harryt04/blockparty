@@ -4,7 +4,7 @@
  * RULE-012 and UX-015.
  */
 import type { Command, GameSnapshotProjection } from "@blockparty/contracts";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatMoney } from "@/components/display-names";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -361,6 +361,13 @@ export function TradePanel({
   const [counterOpen, setCounterOpen] = useState(false);
   const [staleDismissed, setStaleDismissed] = useState(false);
   const outcome = latestTradeOutcome(snapshot);
+  const decisionHeadingRef = useRef<HTMLHeadingElement>(null);
+  const decisionKey = pendingTrade?.tradeId;
+
+  useEffect(() => {
+    if (decisionKey !== undefined) decisionHeadingRef.current?.focus();
+  }, [decisionKey]);
+
   if (pendingTrade !== undefined) {
     const acceptAction = snapshot.legalActions.find((action) => action.type === "AcceptTrade");
     const rejectAction = snapshot.legalActions.find((action) => action.type === "RejectTrade");
@@ -390,7 +397,9 @@ export function TradePanel({
     return (
       <Card aria-labelledby="trade-heading">
         <CardHeader>
-          <CardTitle id="trade-heading">Pending trade</CardTitle>
+          <CardTitle id="trade-heading" ref={decisionHeadingRef} tabIndex={-1}>
+            Pending trade
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm">

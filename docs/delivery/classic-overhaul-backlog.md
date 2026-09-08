@@ -778,6 +778,14 @@ accidental collapse in coverage.
       never duplicates a command.
       Proves: one browser scenario per blocking phase, focus-management tests,
       disconnected-actor cases, duplicate command tests, and live announcements.
+      Current evidence: the action-bar model now classifies one foreground
+      acquisition/auction/detention/debt/trade decision, scopes acquisition and
+      auction controls to that phase, auto-opens the required actor's sheet once
+      per authoritative decision key, and focuses newly arrived detention, debt,
+      and pending-trade headings. Focused model tests, typecheck, formatting, and
+      production build pass; browser phase coverage, disconnect cases, duplicate
+      command checks, and live announcements remain outstanding before this
+      ticket can be marked complete.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

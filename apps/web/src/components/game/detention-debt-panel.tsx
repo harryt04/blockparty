@@ -4,7 +4,7 @@
  * submits advertised commands. See RULE-009, RULE-011, UX-015, and UX-017.
  */
 import type { GameSnapshotProjection, LegalAction } from "@blockparty/contracts";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatMoney } from "@/components/display-names";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +32,18 @@ export function DetentionDebtPanel({
   const detention = detentionDecisionContext(snapshot);
   const obligation = obligationDecisionContext(snapshot);
   const [confirmBankruptcy, setConfirmBankruptcy] = useState(false);
+  const decisionHeadingRef = useRef<HTMLHeadingElement>(null);
+  const decisionKey =
+    detention === undefined
+      ? obligation === undefined
+        ? undefined
+        : `debt:${obligation.debtorName}:${obligation.amount}:${obligation.shortfall}`
+      : `detention:${detention.attempts}:${detention.routes.map((route) => actionRenderKey(route.action, "legal", 0)).join(",")}`;
+
+  useEffect(() => {
+    if (decisionKey !== undefined) decisionHeadingRef.current?.focus();
+  }, [decisionKey]);
+
   if (detention === undefined && obligation === undefined) return null;
 
   const bankruptcyAction = snapshot.legalActions.find(
@@ -47,7 +59,9 @@ export function DetentionDebtPanel({
       {detention === undefined ? null : (
         <Card aria-labelledby="detention-decision-heading" className="border-brand/60">
           <CardHeader>
-            <CardTitle id="detention-decision-heading">Noise Complaint: choose your exit</CardTitle>
+            <CardTitle id="detention-decision-heading" ref={decisionHeadingRef} tabIndex={-1}>
+              Noise Complaint: choose your exit
+            </CardTitle>
             <p className="text-sm text-muted-ink">
               {detention.attempts} of {detention.maxAttempts} failed matching attempts used. There
               is no timer; choose an available route when your turn starts.
@@ -82,7 +96,9 @@ export function DetentionDebtPanel({
       {obligation === undefined ? null : (
         <Card aria-labelledby="obligation-decision-heading" className="border-warning/70">
           <CardHeader>
-            <CardTitle id="obligation-decision-heading">Owed: payment required</CardTitle>
+            <CardTitle id="obligation-decision-heading" ref={decisionHeadingRef} tabIndex={-1}>
+              Owed: payment required
+            </CardTitle>
             <p className="text-sm text-muted-ink">
               {obligation.viewerIsDebtor
                 ? obligation.reason

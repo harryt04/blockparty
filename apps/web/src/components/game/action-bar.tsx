@@ -14,11 +14,17 @@ import type {
   GameSnapshotProjection,
   LegalAction,
 } from "@blockparty/contracts";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import { AcquisitionAuctionSummary } from "./acquisition-auction-summary";
-import { actionRenderKey } from "./action-bar-model";
+import {
+  blockingDecisionKey,
+  blockingDecisionKind,
+  isBlockingDecisionAction,
+  shouldAutoOpenBlockingDecision,
+  actionRenderKey,
+} from "./action-bar-model";
 import { actionLabel, MANAGEMENT_ACTION_TYPES } from "./game-model";
 
 export { actionLabel, actionRenderKey };
@@ -38,12 +44,14 @@ function ActionOptions({
   legalActions,
   actionAvailability,
   decisionSnapshot,
+  blockingKind,
   disabled,
   onAction,
 }: {
   legalActions: readonly LegalAction[];
   actionAvailability: readonly ActionAvailability[];
   decisionSnapshot?: GameSnapshotProjection;
+  blockingKind?: ReturnType<typeof blockingDecisionKind>;
   disabled: boolean;
   onAction: (action: LegalAction, amount?: number) => void;
 }) {
@@ -51,6 +59,9 @@ function ActionOptions({
   const tradeActionTypes = new Set<LegalAction["type"]>(["ProposeTrade"]);
   const visibleLegalActions = legalActions.filter(
     (action) =>
+      (blockingKind === "acquisition" || blockingKind === "auction"
+        ? isBlockingDecisionAction(action, blockingKind)
+        : true) &&
       !managementActionTypes.has(action.type) &&
       !tradeActionTypes.has(action.type) &&
       !(
@@ -65,6 +76,9 @@ function ActionOptions({
   );
   const visibleAvailability = actionAvailability.filter(
     (action) =>
+      (blockingKind === "acquisition" || blockingKind === "auction"
+        ? isBlockingDecisionAction(action, blockingKind)
+        : true) &&
       !managementActionTypes.has(action.type) &&
       !tradeActionTypes.has(action.type) &&
       !(
@@ -191,6 +205,26 @@ export function ActionBar({
 }) {
   const [open, setOpen] = useState(false);
   const submit = onAction ?? (() => undefined);
+  const blockingKind =
+    decisionSnapshot === undefined ? undefined : blockingDecisionKind(decisionSnapshot);
+  const decisionKey =
+    decisionSnapshot === undefined ? "none" : blockingDecisionKey(decisionSnapshot);
+  const autoOpen =
+    decisionSnapshot !== undefined &&
+    shouldAutoOpenBlockingDecision(blockingKind, [
+      ...decisionSnapshot.legalActions,
+      ...decisionSnapshot.actionAvailability,
+    ]);
+  const autoOpenedKey = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (autoOpen && autoOpenedKey.current !== decisionKey) {
+      setOpen(true);
+      autoOpenedKey.current = decisionKey;
+    } else if (!autoOpen) {
+      autoOpenedKey.current = undefined;
+    }
+  }, [autoOpen, decisionKey]);
 
   return (
     <section
@@ -225,7 +259,11 @@ export function ActionBar({
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 id="game-action-sheet-title" className="font-serif text-2xl">
-              Your actions
+              {blockingKind === "acquisition"
+                ? "Acquire or decline"
+                : blockingKind === "auction"
+                  ? "Auction decision"
+                  : "Your actions"}
             </h2>
             <p className="mt-1 text-sm text-muted-ink">
               These controls come from the current server state.
@@ -246,6 +284,7 @@ export function ActionBar({
               legalActions={legalActions}
               actionAvailability={actionAvailability}
               decisionSnapshot={decisionSnapshot}
+              blockingKind={blockingKind}
               disabled={disabled || pending}
               onAction={(action, amount) => {
                 submit(action, amount);
