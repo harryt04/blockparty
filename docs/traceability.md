@@ -488,5 +488,8 @@ WebKit, preserving the named offer and focused decision heading while disabling
 accept/reject and submitting no command. Iteration 35 adds paused detention and
 debt scenarios in Chromium, Firefox, and WebKit, preserving exit/payment
 context while disabling the advertised choice or bankruptcy command and
-submitting no command. Broader disconnect matrices, axe, and live-release
-evidence remain assigned to CO-027 and CO-030–031.
+submitting no command. Iteration 36 strengthens paused-auction evidence in the
+same three browsers: the exact Address, current/minimum bid, and cash context
+remain visible while bid/pass stay disabled and no command is emitted. Broader
+disconnect matrices, axe, and live-release evidence remain assigned to CO-027
+and CO-030–031.

@@ -407,9 +407,11 @@ test("auction decision exposes context, bounds bids, and prevents duplicate subm
   });
 });
 
-test("paused auction keeps the decision visible and disables bid or pass", async ({ page }) => {
+test("paused auction preserves context, disables bid or pass, and submits nothing", async ({
+  page,
+}) => {
   await mockLiveStream(page);
-  await mockGameApi(page);
+  const { commands } = await mockGameApi(page);
   await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
     const projected = snapshot("AwaitAuction", 1, {
       prioritySeatId: "seat-b",
@@ -445,10 +447,18 @@ test("paused auction keeps the decision visible and disables bid or pass", async
   await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
 
   const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("Sawhorse Lane");
+  await expect(dialog).toContainText("Current bid");
+  await expect(dialog).toContainText("40 Tabs");
+  await expect(dialog).toContainText("Minimum next bid");
+  await expect(dialog).toContainText("40.01 Tabs");
+  await expect(dialog).toContainText("Your cash");
+  await expect(dialog).toContainText("1,450 Tabs");
   await expect(dialog.getByText("Auction paused while Side Street reconnects.")).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Submit bid" })).toBeDisabled();
   await expect(dialog.getByRole("button", { name: "Pass on this auction" })).toBeDisabled();
   await expect(page.getByRole("note").filter({ hasText: "Play is paused" })).toBeVisible();
+  expect(commands).toHaveLength(0);
 });
 
 test("paused acquisition keeps property context visible without submitting a choice", async ({

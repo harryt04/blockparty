@@ -816,6 +816,10 @@ accidental collapse in coverage.
       or bankruptcy command is submitted. The two new scenarios pass in
       Chromium, Firefox, and WebKit; broader disconnect matrices and release
       evidence remain outstanding.
+      Iteration 36 strengthens the paused-auction scenario with exact Address,
+      bid, and cash context plus an explicit no-command assertion. The scenario
+      passes in Chromium, Firefox, and WebKit; the full disconnect matrix and
+      release evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
