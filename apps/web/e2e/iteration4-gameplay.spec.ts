@@ -495,6 +495,50 @@ test("paused acquisition keeps property context visible without submitting a cho
   expect(commands).toHaveLength(0);
 });
 
+test("reconnected acquisition re-enables the authoritative choice", async ({ page }) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitPurchase", 1, {
+      paused: true,
+      seats: snapshot("AwaitPurchase", 1).seats.map((seat) =>
+        seat.seatId === "seat-a" ? { ...seat, connected: false } : seat,
+      ),
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const dialog = page.getByRole("dialog");
+  const acquire = dialog.getByRole("button", { name: "Acquire this Address" });
+  await expect(acquire).toBeDisabled();
+  await expect(page.getByRole("note").filter({ hasText: "Play is paused" })).toBeVisible();
+
+  await emitSnapshot(
+    page,
+    snapshot("AwaitPurchase", 2, {
+      paused: false,
+      seats: snapshot("AwaitPurchase", 2).seats,
+    }),
+  );
+
+  await expect(page.getByRole("note").filter({ hasText: "Play is paused" })).toHaveCount(0);
+  await expect(acquire).toBeEnabled();
+  await acquire.click();
+  await expect.poll(() => commands.length).toBe(1);
+  expect((commands[0] as { payload: unknown }).payload).toEqual({
+    type: "AcquireDeed",
+    deedId: "d-sawhorse-lane",
+  });
+});
+
 test("detention decision focuses its heading and submits only an advertised route", async ({
   page,
 }) => {

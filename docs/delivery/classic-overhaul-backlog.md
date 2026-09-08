@@ -820,6 +820,12 @@ accidental collapse in coverage.
       bid, and cash context plus an explicit no-command assertion. The scenario
       passes in Chromium, Firefox, and WebKit; the full disconnect matrix and
       release evidence remain outstanding.
+      Iteration 37 adds a reconnect recovery scenario for acquisition: the
+      authoritative snapshot keeps the choice disabled while the required seat
+      is disconnected, then re-enables it after a connected, unpaused snapshot;
+      only the post-recovery AcquireDeed command is emitted. The scenario passes
+      in Chromium, Firefox, and WebKit; the full disconnect matrix and release
+      evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
