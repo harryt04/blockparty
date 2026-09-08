@@ -1119,6 +1119,12 @@ accidental collapse in coverage.
       active, then the owning context acquires the rendered Address and verifies
       its projection-backed Property hand. The wider purchase-through-rematch
       matrix and WebKit live-server stall remain open.
+      Iteration 83 extends the same Chromium and Firefox journey through a
+      second authoritative progression: it declines the next rendered Address,
+      verifies the untimed auction decision and server-provided bid floor, and
+      submits one real bid through the browser control. The wider management,
+      trade, detention, debt, completion, rematch, and WebKit live-server
+      evidence remain open.
 
 - [~] **CO-031 — Complete accessibility and mobile-style failure evidence** (Codex, iteration 79)
       Blocked by: CO-030

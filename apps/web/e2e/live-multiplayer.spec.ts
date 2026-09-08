@@ -60,7 +60,7 @@ test.describe("live multiplayer authority", () => {
     browser,
     page: host,
   }) => {
-    test.setTimeout(120_000);
+    test.setTimeout(180_000);
     const joinerContext = await browser.newContext({
       serviceWorkers: "block",
       viewport: { width: 375, height: 900 },
@@ -185,11 +185,14 @@ test.describe("live multiplayer authority", () => {
         { name: "host", page: host },
         { name: "joiner", page: joiner },
       ] as const;
-      async function bootstrap(target: typeof host): Promise<BootstrapResponse> {
-        const response = await target.evaluate(async (gameId) => {
-          const result = await fetch(`/api/games/${gameId}/bootstrap`);
+      async function bootstrap(
+        target: typeof host,
+        gameId = created.gameId,
+      ): Promise<BootstrapResponse> {
+        const response = await target.evaluate(async (id) => {
+          const result = await fetch(`/api/games/${id}/bootstrap`);
           return { status: result.status, body: await result.json() };
-        }, created.gameId);
+        }, gameId);
         expect(response.status).toBe(200);
         return BootstrapResponse.parse(response.body);
       }
@@ -197,22 +200,23 @@ test.describe("live multiplayer authority", () => {
         target: typeof host,
         expectedVersion: number,
         payload: Command,
+        gameId = created.gameId,
       ): Promise<void> {
         const response = await target.evaluate(
-          async ({ gameId, expectedVersion: version, payload: command }) => {
+          async ({ gameId: id, expectedVersion: version, payload: command }) => {
             const csrf = document.cookie
               .split("; ")
               .find((entry) => entry.startsWith("bp_csrf="))
               ?.slice("bp_csrf=".length);
             if (csrf === undefined) return { status: 0 };
-            const result = await fetch(`/api/games/${gameId}/commands`, {
+            const result = await fetch(`/api/games/${id}/commands`, {
               method: "POST",
               headers: { "content-type": "application/json", "x-csrf-token": csrf },
               body: JSON.stringify({
                 protocolVersion: 1,
                 type: "game.command",
                 requestId: crypto.randomUUID(),
-                gameId,
+                gameId: id,
                 commandId: crypto.randomUUID(),
                 expectedVersion: version,
                 payload: command,
@@ -220,7 +224,7 @@ test.describe("live multiplayer authority", () => {
             });
             return { status: result.status };
           },
-          { gameId: created.gameId, expectedVersion, payload },
+          { gameId, expectedVersion, payload },
         );
         expect(response.status).toBe(202);
       }
@@ -295,6 +299,183 @@ test.describe("live multiplayer authority", () => {
             owner.page.locator('[data-property-hand="local"] [data-property-group]').count(),
           )
           .toBeGreaterThan(0);
+      }
+
+      await host.goto("/create", { waitUntil: "domcontentloaded" });
+      await host.getByRole("textbox", { name: "Your pseudonym" }).fill("Auction Host");
+      await host.getByRole("radio", { name: "Lantern" }).check();
+      await host
+        .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
+        .check();
+      const auctionCreateResponsePromise = host.waitForResponse(
+        (response) =>
+          response.url().endsWith("/api/games") && response.request().method() === "POST",
+      );
+      await host.getByRole("button", { name: "Create lobby" }).click();
+      const auctionCreated = (await (await auctionCreateResponsePromise).json()) as {
+        gameId: string;
+        invitePath: string;
+      };
+      await expect(host).toHaveURL(new RegExp(`/game/${auctionCreated.gameId}/lobby$`));
+
+      await joiner.goto(auctionCreated.invitePath, { waitUntil: "domcontentloaded" });
+      await joiner.getByRole("textbox", { name: "Name for this game" }).fill("Auction Joiner");
+      await joiner.getByRole("radio", { name: "Key" }).check();
+      await joiner
+        .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
+        .check();
+      const auctionJoinResponsePromise = joiner.waitForResponse(
+        (response) => response.url().includes("/join") && response.request().method() === "POST",
+      );
+      await joiner.getByRole("button", { name: "Join the lobby" }).click();
+      expect((await auctionJoinResponsePromise).status()).toBe(200);
+      await expect(host.getByText("Auction Joiner", { exact: true })).toBeVisible();
+
+      const auctionStartResponsePromise = host.waitForResponse(
+        (response) =>
+          response.url().endsWith(`/api/games/${auctionCreated.gameId}/commands`) &&
+          response.request().method() === "POST",
+      );
+      await host.getByRole("button", { name: "Start game" }).click();
+      expect((await auctionStartResponsePromise).ok()).toBe(true);
+      await expect(host).toHaveURL(new RegExp(`/game/${auctionCreated.gameId}$`));
+      await expect(joiner).toHaveURL(new RegExp(`/game/${auctionCreated.gameId}$`));
+      await host.getByRole("button", { name: "Open action sheet" }).click();
+      await joiner.getByRole("button", { name: "Open action sheet" }).click();
+
+      const auctionPlayers = [
+        { name: "host", page: host },
+        { name: "joiner", page: joiner },
+      ] as const;
+      await expect
+        .poll(
+          async () => {
+            const available = await Promise.all(
+              auctionPlayers.map(async (player) => ({
+                player,
+                enabled: await player.page
+                  .getByRole("button", { name: "Roll and advance" })
+                  .isEnabled(),
+              })),
+            );
+            return available.find(({ enabled }) => enabled)?.player.name ?? "none";
+          },
+          { timeout: 30_000 },
+        )
+        .not.toBe("none");
+      const auctionRoller = (await host
+        .getByRole("button", { name: "Roll and advance" })
+        .isEnabled())
+        ? "host"
+        : "joiner";
+      const auctionRollerPage = auctionRoller === "host" ? host : joiner;
+      const auctionRollResponsePromise = auctionRollerPage.waitForResponse(
+        (response) =>
+          response.url().endsWith(`/api/games/${auctionCreated.gameId}/commands`) &&
+          response.request().method() === "POST",
+      );
+      await auctionRollerPage.getByRole("button", { name: "Roll and advance" }).click();
+      expect((await auctionRollResponsePromise).ok()).toBe(true);
+
+      let auctionParticipant: (typeof auctionPlayers)[number] | undefined;
+      for (let step = 0; step < 36 && auctionParticipant === undefined; step += 1) {
+        const states = await Promise.all(
+          auctionPlayers.map(async (player) => ({
+            player,
+            bootstrap: await bootstrap(player.page, auctionCreated.gameId),
+          })),
+        );
+        const auction = states.find(
+          ({ bootstrap: current }) =>
+            current.snapshot.phase === "AwaitAuction" &&
+            current.snapshot.auction !== undefined &&
+            current.snapshot.legalActions.some(
+              (action) => action.type === "PlaceAuctionBid" || action.type === "PassAuction",
+            ),
+        );
+        if (auction !== undefined) {
+          auctionParticipant = auction.player;
+          break;
+        }
+
+        const acquisition = states.find(({ bootstrap: current }) =>
+          current.snapshot.legalActions.some((action) => action.type === "DeclineAcquisition"),
+        );
+        if (acquisition !== undefined) {
+          const decline = acquisition.bootstrap.snapshot.legalActions.find(
+            (action) => action.type === "DeclineAcquisition",
+          );
+          expect(
+            decline,
+            "a declined acquisition should include its deed constraint",
+          ).toBeDefined();
+          if (decline === undefined)
+            throw new Error("DeclineAcquisition action was not advertised");
+          await expect(
+            acquisition.player.page.getByRole("button", { name: "Decline and open the auction" }),
+          ).toBeVisible();
+          await issueCommand(
+            acquisition.player.page,
+            acquisition.bootstrap.aggregateVersion,
+            commandForLegalAction(decline),
+            auctionCreated.gameId,
+          );
+          continue;
+        }
+
+        const actor = states
+          .map((state) => ({
+            ...state,
+            action: supportedProgressionAction(state.bootstrap.snapshot.legalActions),
+          }))
+          .find(({ action }) => action !== undefined);
+        expect(actor, "a live seat should advertise the next auction setup action").toBeDefined();
+        if (actor === undefined) throw new Error("No live action was advertised before auction");
+        if (actor.action === undefined) throw new Error("Unsupported live auction setup action");
+        await issueCommand(
+          actor.player.page,
+          actor.bootstrap.aggregateVersion,
+          commandForLegalAction(actor.action),
+          auctionCreated.gameId,
+        );
+      }
+
+      expect(
+        auctionParticipant,
+        "a declined Address should open an authoritative auction",
+      ).toBeDefined();
+      if (auctionParticipant !== undefined) {
+        await expect(
+          auctionParticipant.page
+            .getByLabel("Auction decision")
+            .getByRole("heading", { name: "Untimed Address auction" }),
+        ).toBeVisible();
+        await expect(auctionParticipant.page.getByLabel("Place bid")).toBeVisible();
+        await expect(
+          auctionParticipant.page.getByRole("button", { name: "Pass on this auction" }),
+        ).toBeVisible();
+
+        const auctionState = await bootstrap(auctionParticipant.page, auctionCreated.gameId);
+        const bid = auctionState.snapshot.legalActions.find(
+          (action) => action.type === "PlaceAuctionBid",
+        );
+        const minimum = bid?.constraints?.minBid;
+        expect(typeof minimum, "the auction should expose a server-provided bid floor").toBe(
+          "number",
+        );
+        if (typeof minimum !== "number") throw new Error("PlaceAuctionBid omitted minBid");
+        await auctionParticipant.page.getByLabel("Place bid").fill(String(minimum));
+        const bidResponsePromise = auctionParticipant.page.waitForResponse(
+          (response) =>
+            response.url().endsWith(`/api/games/${auctionCreated.gameId}/commands`) &&
+            response.request().method() === "POST",
+        );
+        await auctionParticipant.page.getByRole("button", { name: "Submit bid" }).click();
+        const bidResponse = await bidResponsePromise;
+        expect(bidResponse.ok()).toBe(true);
+        await expect(
+          auctionParticipant.page.getByText("Current bid", { exact: true }),
+        ).toBeVisible();
       }
 
       await joiner.setViewportSize({ width: 1280, height: 900 });
