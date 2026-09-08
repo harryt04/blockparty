@@ -567,3 +567,7 @@ Iteration 53 adds cross-browser duplicate-command evidence for the acquisition d
 same-task `AcquireDeed` activations emit one command, and the Chromium mutation run emits two
 when the synchronous submission lock is removed. Broader disconnect and live-release evidence
 remain assigned to CO-027 and CO-030–031.
+Iteration 55 adds the matching cross-browser duplicate-command evidence for the auction decision:
+two same-task `PlaceAuctionBid` activations emit one command with the authoritative minimum bid,
+and the Chromium mutation run emits two when the synchronous submission lock is removed. Broader
+disconnect and live-release evidence remain assigned to CO-027 and CO-030–031.

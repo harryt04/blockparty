@@ -909,6 +909,11 @@ accidental collapse in coverage.
       pass; removing the shared synchronous submission lock makes the
       regression emit two commands. Broader disconnect and release evidence
       remain outstanding.
+      Iteration 55 adds the matching same-task auction-bid regression: two
+      synchronous PlaceAuctionBid activations emit exactly one command for the
+      authoritative minimum bid. Chromium, Firefox, and WebKit pass; removing
+      the shared synchronous submission lock makes the regression emit two
+      commands. Broader disconnect and release evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

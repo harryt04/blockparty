@@ -490,6 +490,50 @@ test("same-task pending-trade acceptance submits a game command only once", asyn
   });
 });
 
+test("same-task auction bidding submits a game command only once", async ({ page }) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitAuction", 1, {
+      prioritySeatId: "seat-a",
+      auction: {
+        deedId: "d-sawhorse-lane",
+        minimumNextBid: 4_001,
+        prioritySeatId: "seat-a",
+        passedSeatIds: [],
+      },
+      legalActions: [
+        {
+          type: "PlaceAuctionBid",
+          constraints: { minBid: 4_001, maxBid: 145_000 },
+        },
+        { type: "PassAuction" },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const bid = page.getByRole("button", { name: "Submit bid" });
+  await bid.evaluate((element) => {
+    (element as HTMLButtonElement).click();
+    (element as HTMLButtonElement).click();
+  });
+
+  await expect.poll(() => commands.length).toBe(1);
+  expect((commands[0] as { payload: { type: string; amount: number } }).payload).toEqual({
+    type: "PlaceAuctionBid",
+    amount: 4_001,
+  });
+});
+
 test("a retry after a lost response reuses the command identity", async ({ page }) => {
   await mockLiveStream(page);
   const { commands } = await mockGameApi(page, { failFirstCommand: true });
