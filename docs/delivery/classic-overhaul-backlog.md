@@ -1192,6 +1192,13 @@ accidental collapse in coverage.
       control at 375px and 1280px. The full confirmed-bankruptcy, terminal
       summary, rematch, Firefox/WebKit runtime, and broader screenshot coverage
       remain open.
+      Iteration 96 adds a focused Chromium two-context journey that commits the
+      server-advertised EndNoContest command at the post-start safe boundary,
+      verifies both authenticated projections redirect to the read-only No
+      result summary at desktop and phone widths, and creates a fresh rematch
+      lobby with new participant choices. Mutating the terminal heading makes
+      the journey fail. Confirmed bankruptcy, Firefox/WebKit runtime, and the
+      remaining broader screenshot matrix remain open.
 
 - [~] **CO-031 — Complete accessibility and mobile-style failure evidence** (Codex, iteration 79)
       Blocked by: CO-030

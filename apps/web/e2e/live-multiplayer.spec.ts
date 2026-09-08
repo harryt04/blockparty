@@ -1080,4 +1080,173 @@ test.describe("live multiplayer authority", () => {
       await joinerContext.close();
     }
   });
+
+  test("ends at a safe boundary and opens the authorized summary rematch", async ({
+    browser,
+    page: host,
+  }) => {
+    test.setTimeout(120_000);
+    test.skip(
+      test.info().project.name !== "chromium",
+      "Terminal summary/rematch runtime is currently verified in Chromium; cross-browser live evidence remains open in CO-030.",
+    );
+    const joinerContext = await browser.newContext({
+      serviceWorkers: "block",
+      viewport: { width: 375, height: 900 },
+    });
+    const joiner = await joinerContext.newPage();
+
+    async function readBootstrap(target: Page, gameId: string): Promise<BootstrapResponse> {
+      const response = await target.evaluate(async (id) => {
+        const result = await fetch(`/api/games/${id}/bootstrap`);
+        return { status: result.status, body: await result.json() };
+      }, gameId);
+      expect(response.status).toBe(200);
+      return BootstrapResponse.parse(response.body);
+    }
+
+    async function issueCommand(
+      target: Page,
+      gameId: string,
+      expectedVersion: number,
+    ): Promise<void> {
+      const response = await target.evaluate(
+        async ({ gameId: id, expectedVersion: version }) => {
+          const csrf = document.cookie
+            .split("; ")
+            .find((entry) => entry.startsWith("bp_csrf="))
+            ?.slice("bp_csrf=".length);
+          if (csrf === undefined) return { status: 0 };
+          const result = await fetch(`/api/games/${id}/commands`, {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-csrf-token": csrf },
+            body: JSON.stringify({
+              protocolVersion: 1,
+              type: "game.command",
+              requestId: crypto.randomUUID(),
+              gameId: id,
+              commandId: crypto.randomUUID(),
+              expectedVersion: version,
+              payload: { type: "EndNoContest" },
+            }),
+          });
+          return { status: result.status };
+        },
+        { gameId, expectedVersion },
+      );
+      expect(response.status).toBe(202);
+    }
+
+    try {
+      await host.setViewportSize({ width: 1280, height: 900 });
+      await host.goto("/create", { waitUntil: "domcontentloaded" });
+      await host.getByRole("button", { name: "Keep analytics off" }).click();
+      await host.getByRole("textbox", { name: "Your pseudonym" }).fill("Summary Host");
+      await host.getByRole("radio", { name: "Lantern" }).check();
+      await host
+        .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
+        .check();
+      const createResponsePromise = host.waitForResponse(
+        (response) =>
+          response.url().endsWith("/api/games") && response.request().method() === "POST",
+      );
+      await host.getByRole("button", { name: "Create lobby" }).click();
+      const createResponse = await createResponsePromise;
+      expect(createResponse.status()).toBe(201);
+      const created = (await createResponse.json()) as {
+        gameId: string;
+        invitePath: string;
+      };
+      await expect(host).toHaveURL(new RegExp(`/game/${created.gameId}/lobby$`));
+
+      await joiner.goto(created.invitePath, { waitUntil: "domcontentloaded" });
+      await joiner.getByRole("button", { name: "Keep analytics off" }).click();
+      await joiner.getByRole("textbox", { name: "Name for this game" }).fill("Summary Joiner");
+      await joiner.getByRole("radio", { name: "Key" }).check();
+      await joiner
+        .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
+        .check();
+      const joinResponsePromise = joiner.waitForResponse(
+        (response) => response.url().includes("/join") && response.request().method() === "POST",
+      );
+      await joiner.getByRole("button", { name: "Join the lobby" }).click();
+      expect((await joinResponsePromise).status()).toBe(200);
+      await expect(host.getByText("Summary Joiner", { exact: true })).toBeVisible();
+
+      const startResponsePromise = host.waitForResponse(
+        (response) =>
+          response.url().endsWith(`/api/games/${created.gameId}/commands`) &&
+          response.request().method() === "POST",
+      );
+      await host.getByRole("button", { name: "Start game" }).click();
+      expect((await startResponsePromise).ok()).toBe(true);
+      await expect(host).toHaveURL(new RegExp(`/game/${created.gameId}$`));
+      await expect(joiner).toHaveURL(new RegExp(`/game/${created.gameId}$`));
+
+      const states = await Promise.all(
+        [host, joiner].map(async (target) => ({
+          target,
+          state: await readBootstrap(target, created.gameId),
+        })),
+      );
+      const safeBoundary = states.find(({ state }) =>
+        state.snapshot.legalActions.some((action) => action.type === "EndNoContest"),
+      );
+      expect(
+        safeBoundary,
+        "the active seat should advertise EndNoContest at AwaitRoll",
+      ).toBeDefined();
+      if (safeBoundary === undefined) throw new Error("No safe-boundary action was advertised");
+      await issueCommand(safeBoundary.target, created.gameId, safeBoundary.state.aggregateVersion);
+
+      await expect(host).toHaveURL(new RegExp(`/game/${created.gameId}/summary$`));
+      await expect(joiner).toHaveURL(new RegExp(`/game/${created.gameId}/summary$`));
+      await expect(host.getByRole("heading", { name: "No result" })).toBeVisible();
+      await expect(host.getByText("Read-only", { exact: true })).toBeVisible();
+      await expect(host.getByRole("heading", { name: "Final standings" })).toBeVisible();
+      await expect(host.getByRole("heading", { name: "Start a rematch" })).toBeVisible();
+      await expect(joiner.getByRole("heading", { name: "No result" })).toBeVisible();
+      await expect(joiner.getByRole("heading", { name: "Start a rematch" })).toBeVisible();
+
+      const summaryDimensions = await host.evaluate(() => ({
+        clientWidth: document.documentElement.clientWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      }));
+      expect(summaryDimensions.scrollWidth, "summary page overflow").toBeLessThanOrEqual(
+        summaryDimensions.clientWidth + 1,
+      );
+
+      await host.setViewportSize({ width: 375, height: 900 });
+      await expect(host.getByRole("heading", { name: "Start a rematch" })).toBeVisible();
+      const mobileSummaryDimensions = await host.evaluate(() => ({
+        clientWidth: document.documentElement.clientWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      }));
+      expect(
+        mobileSummaryDimensions.scrollWidth,
+        "mobile summary page overflow",
+      ).toBeLessThanOrEqual(mobileSummaryDimensions.clientWidth + 1);
+
+      await host.getByRole("textbox", { name: "Host pseudonym" }).fill("Fresh Host");
+      await host.getByRole("radio", { name: "Crescent" }).check();
+      await host
+        .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
+        .check();
+      const rematchResponsePromise = host.waitForResponse(
+        (response) =>
+          response.url().endsWith(`/api/games/${created.gameId}/rematch`) &&
+          response.request().method() === "POST",
+      );
+      await host.getByRole("button", { name: "Create rematch lobby" }).click();
+      const rematchResponse = await rematchResponsePromise;
+      expect(rematchResponse.ok()).toBe(true);
+      const rematch = (await rematchResponse.json()) as { gameId: string };
+      expect(rematch.gameId).not.toBe(created.gameId);
+      await expect(host).toHaveURL(new RegExp(`/game/${rematch.gameId}/lobby$`));
+      await expect(host.getByText("Fresh Host", { exact: true })).toBeVisible();
+      await expect(host.getByText("Open Human seat", { exact: true })).toBeVisible();
+    } finally {
+      await joinerContext.close();
+    }
+  });
 });
