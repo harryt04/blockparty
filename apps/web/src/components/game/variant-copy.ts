@@ -58,7 +58,7 @@ export const VARIANT_COPY: Record<
       "Complete Block ownership, unmortgaged deeds, maximum level, cost, and finite inventory still apply unless the inventory option is also enabled.",
   },
   unlimitedImprovementInventory: {
-    label: "Unlimited Stalls and Block Stages",
+    label: "Unlimited Houses and Hotels",
     effect: "Improvement purchases are not blocked by finite bank inventory.",
     warning: "Removes an important scarcity lever.",
     interaction:

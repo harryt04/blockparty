@@ -77,6 +77,8 @@ describe("property hand model", () => {
       categoryLabel: "Block",
       rent: deed.improvementLevels?.find((level) => level.level === 2)?.rent,
       rentIsVariable: false,
+      rentLevel: "2 Houses",
+      buildCost: deed.improvementCost,
       improvementLevel: 2,
       mortgaged: false,
     });

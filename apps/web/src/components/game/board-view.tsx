@@ -54,7 +54,7 @@ function stateLabel(space: BoardSpaceProjection, seats: readonly SeatProjection[
       ? ""
       : space.improvementLevel === 5
         ? " · Hotel"
-        : ` · House ${space.improvementLevel}`;
+        : ` · ${space.improvementLevel} ${space.improvementLevel === 1 ? "House" : "Houses"}`;
   return `${ownership}${mortgage}${improvement}`;
 }
 

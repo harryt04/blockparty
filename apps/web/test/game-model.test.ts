@@ -15,6 +15,7 @@ import {
   isManualSpaceInspection,
   latestDiceResult,
   managementDecisionContext,
+  managementActionLabel,
   detentionDecisionContext,
   obligationDecisionContext,
   orderedBoard,
@@ -302,23 +303,42 @@ describe("game presentation model", () => {
     expect(managementDecisionContext(value)).toMatchObject({
       inventoryKind: "stall",
       inventoryAvailable: 7,
+      inventory: [
+        { kind: "stall", label: "Stall", available: 7, demand: 0 },
+        { kind: "stage", label: "Stage", available: 2, demand: 0 },
+      ],
       inventoryUnlimited: false,
       balance: 150_000,
       deeds: [
         {
           deedId: "d-sawhorse-lane",
           categoryLabel: "Block",
+          spaceId: "s01",
           improvementLevel: 0,
           maximumImprovementLevel: 5,
+          rent: 1000,
+          rentIsVariable: false,
+          improvementLabel: "No Houses or Hotel",
+          mortgageStatus: "Not mortgaged",
           districtComplete: false,
           nextImprovementCost: 10_000,
           mortgageValue: 6_000,
           redemptionAmount: 12_600,
+          blockedReasons: ["This deed is not mortgaged."],
           actions: [{ type: "BuyImprovement" }, { type: "MortgageDeed" }],
         },
       ],
       blocked: [{ type: "RedeemMortgage", reasonCode: "DEED_NOT_MORTGAGED" }],
     });
+    expect(
+      managementActionLabel("BuyImprovement", { improvementLevel: 0, maximumImprovementLevel: 5 }),
+    ).toBe("Build a House");
+    expect(
+      managementActionLabel("BuyImprovement", { improvementLevel: 4, maximumImprovementLevel: 5 }),
+    ).toBe("Build a Hotel");
+    expect(
+      managementActionLabel("SellImprovement", { improvementLevel: 5, maximumImprovementLevel: 5 }),
+    ).toBe("Sell Hotel");
   });
 
   it("maps recovery authority without guessing from a disconnected badge", () => {

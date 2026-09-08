@@ -11,6 +11,8 @@ export interface PropertyHandDeed {
   readonly categoryLabel: string;
   readonly rent: number;
   readonly rentIsVariable: boolean;
+  readonly rentLevel: string;
+  readonly buildCost?: number;
   readonly improvementLevel: number;
   readonly mortgaged: boolean;
 }
@@ -58,6 +60,7 @@ export function propertyHandGroups(snapshot: GameSnapshotProjection): readonly P
     bundle.districts.map((district) => [district.districtId, district.name]),
   );
   const deedById = new Map(bundle.deeds.map((deed) => [deed.deedId, deed]));
+  const ownedDeedIds = new Set(self.deedIds);
   const groups = new Map<string, PropertyHandGroup>();
 
   for (const deedId of self.deedIds) {
@@ -67,9 +70,34 @@ export function propertyHandGroups(snapshot: GameSnapshotProjection): readonly P
 
     const group = groupFor(deed, districtNameById);
     const improvementLevel = space.improvementLevel ?? 0;
+    const district =
+      deed.districtId === undefined
+        ? undefined
+        : bundle.districts.find((candidate) => candidate.districtId === deed.districtId);
+    const districtComplete =
+      district !== undefined && district.deedIds.every((id) => ownedDeedIds.has(id));
+    const maximumImprovementLevel = deed.improvementLevels?.at(-1)?.level ?? 0;
+    const transitCount = bundle.deeds.filter(
+      (candidate) => candidate.category === "transit" && ownedDeedIds.has(candidate.deedId),
+    ).length;
+    const utilityCount = bundle.deeds.filter(
+      (candidate) => candidate.category === "utility" && ownedDeedIds.has(candidate.deedId),
+    ).length;
     const currentRent =
       deed.improvementLevels?.find((level) => level.level === improvementLevel)?.rent ??
-      deed.baseRent;
+      (deed.category === "district" && districtComplete
+        ? deed.baseRent * (deed.completeDistrictMultiplier ?? 1)
+        : deed.category === "transit"
+          ? (deed.transitRentByCount?.[transitCount] ?? 0)
+          : deed.category === "utility"
+            ? (deed.utilityMultiplierByCount?.[utilityCount] ?? 0)
+            : deed.baseRent);
+    const improvementLabel =
+      improvementLevel === 0
+        ? "No Houses or Hotel"
+        : improvementLevel === maximumImprovementLevel
+          ? "Hotel"
+          : `${improvementLevel} ${improvementLevel === 1 ? "House" : "Houses"}`;
     const handDeed: PropertyHandDeed = {
       deedId: deed.deedId,
       spaceId: deed.spaceId,
@@ -78,7 +106,9 @@ export function propertyHandGroups(snapshot: GameSnapshotProjection): readonly P
       groupName: group.label,
       categoryLabel: DEED_CATEGORY_DISPLAY[deed.category].label,
       rent: currentRent,
-      rentIsVariable: deed.category !== "district",
+      rentIsVariable: deed.category === "utility",
+      rentLevel: improvementLabel,
+      ...(deed.improvementCost === undefined ? {} : { buildCost: deed.improvementCost }),
       improvementLevel,
       mortgaged: space.mortgaged === true,
     };

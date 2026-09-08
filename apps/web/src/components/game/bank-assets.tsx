@@ -16,7 +16,10 @@ export function BankAssets({
     .filter((space) => space.deedId !== undefined && bank.deedIds.includes(space.deedId))
     .map((space) => space.name);
   const inventory = Object.entries(bank.improvementInventory)
-    .map(([kind, count]) => `${count} ${kind}`)
+    .map(([kind, count]) => {
+      const label = kind === "house" ? "House" : kind === "hotel" ? "Hotel" : kind;
+      return `${count} ${label}${count === 1 ? "" : "s"}`;
+    })
     .join(" · ");
 
   return (
@@ -30,7 +33,7 @@ export function BankAssets({
           <dd className="tabular">{formatMoney(bank.cash, currencyLabel)}</dd>
           <dt className="text-muted-ink">Unclaimed Addresses</dt>
           <dd>{bank.deedIds.length}</dd>
-          <dt className="text-muted-ink">Stalls and stages</dt>
+          <dt className="text-muted-ink">Houses and Hotels</dt>
           <dd>{inventory || "None"}</dd>
         </dl>
         {availableNames.length > 0 ? (

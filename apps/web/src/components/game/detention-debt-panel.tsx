@@ -122,7 +122,7 @@ export function DetentionDebtPanel({
                       {action.type === "MortgageDeed"
                         ? "Mortgage an Address"
                         : action.type === "SellImprovement"
-                          ? "Sell a Stall"
+                          ? "Sell a House or Hotel"
                           : "Propose a trade"}
                     </Button>
                   ))}

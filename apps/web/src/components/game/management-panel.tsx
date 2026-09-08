@@ -13,6 +13,7 @@ import { ModalDialog } from "@/components/ui/modal-dialog";
 import {
   actionLabel,
   managementDecisionContext,
+  managementActionLabel,
   type ManagementActionContext,
   type ManagementDeedContext,
 } from "./game-model";
@@ -34,7 +35,7 @@ function actionPreview(
     case "RequestScarceImprovement":
       return deed.nextImprovementCost === undefined
         ? "No next level is defined."
-        : `Request the next Stall for ${formatMoney(deed.nextImprovementCost, "Tabs")}; a contested request opens an untimed auction.`;
+        : `Request the next House or Hotel for ${formatMoney(deed.nextImprovementCost, "Tabs")}; a contested request opens an untimed auction.`;
     case "MortgageDeed":
       return `Receive ${formatMoney(deed.mortgageValue, "Tabs")}; balance becomes ${formatMoney(balance + deed.mortgageValue, "Tabs")}.`;
     case "RedeemMortgage":
@@ -46,8 +47,18 @@ function deedHeading(deed: ManagementDeedContext): string {
   return `${deed.spaceName} management`;
 }
 
-function improvementKindLabel(kind: string): string {
-  return kind === "stage" ? "Block Stage" : "Stall";
+function inventoryChangeLabel(
+  deltas: Readonly<Record<string, number>> | undefined,
+): string | undefined {
+  if (deltas === undefined) return undefined;
+  const changes = Object.entries(deltas).flatMap(([kind, delta]) => {
+    if (delta === 0) return [];
+    const label = kind === "house" ? "House" : kind === "hotel" ? "Hotel" : kind;
+    return [
+      `${delta > 0 ? "uses" : "returns"} ${Math.abs(delta)} ${label}${Math.abs(delta) === 1 ? "" : "s"}`,
+    ];
+  });
+  return changes.length === 0 ? undefined : changes.join(" and ");
 }
 
 export function ManagementPanel({
@@ -57,6 +68,7 @@ export function ManagementPanel({
   pending = false,
   onAction,
   onClose,
+  onTrade,
 }: {
   snapshot: GameSnapshotProjection;
   open: boolean;
@@ -64,6 +76,7 @@ export function ManagementPanel({
   pending?: boolean;
   onAction: (action: LegalAction) => void;
   onClose: () => void;
+  onTrade?: (spaceId: string) => void;
 }) {
   const context = managementDecisionContext(snapshot);
   const [confirmation, setConfirmation] = useState<
@@ -94,11 +107,27 @@ export function ManagementPanel({
           <p className="font-medium">Improvement inventory</p>
           <p className="mt-1 text-sm text-muted-ink">
             {context.inventoryUnlimited
-              ? "Unlimited improvement inventory is enabled."
-              : context.inventoryAvailable === undefined || context.inventoryKind === undefined
+              ? "Unlimited House and Hotel inventory is enabled."
+              : context.inventory.length === 0
                 ? "Inventory is not available in this projection."
-                : `${context.inventoryAvailable} ${improvementKindLabel(context.inventoryKind)} pieces remain in the bank.`}
+                : context.inventory
+                    .map((entry) =>
+                      entry.available === undefined
+                        ? `${entry.label}: unavailable`
+                        : `${entry.available} ${entry.label}${entry.available === 1 ? "" : "s"} remain`,
+                    )
+                    .join(" · ")}
           </p>
+          {context.inventory.some((entry) => entry.demand > 0) ? (
+            <p className="mt-1 text-sm text-muted-ink">
+              Scarcity demand:{" "}
+              {context.inventory
+                .filter((entry) => entry.demand > 0)
+                .map((entry) => `${entry.demand} ${entry.label}${entry.demand === 1 ? "" : "s"}`)
+                .join(" · ")}
+              .
+            </p>
+          ) : null}
         </div>
 
         {context.deeds.map((deed) => (
@@ -119,9 +148,13 @@ export function ManagementPanel({
 
             <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
               <dt className="text-muted-ink">Improvement level</dt>
+              <dd>{deed.improvementLabel}</dd>
+              <dt className="text-muted-ink">Current Rent</dt>
               <dd className="tabular">
-                {deed.improvementLevel} / {deed.maximumImprovementLevel}
+                {deed.rentIsVariable ? `${deed.rent} × roll` : formatMoney(deed.rent, "Tabs")}
               </dd>
+              <dt className="text-muted-ink">Mortgage</dt>
+              <dd>{deed.mortgageStatus}</dd>
               {deed.districtComplete === undefined ? null : (
                 <>
                   <dt className="text-muted-ink">Complete district</dt>
@@ -130,7 +163,7 @@ export function ManagementPanel({
               )}
               {deed.nextImprovementCost === undefined ? null : (
                 <>
-                  <dt className="text-muted-ink">Next improvement price</dt>
+                  <dt className="text-muted-ink">Build cost</dt>
                   <dd>{formatMoney(deed.nextImprovementCost, "Tabs")}</dd>
                 </>
               )}
@@ -160,10 +193,14 @@ export function ManagementPanel({
                       onClick={() => setConfirmation({ action, deed })}
                       disabled={disabled || pending}
                     >
-                      {actionLabel(action.type)}
+                      {managementActionLabel(action.type, deed)}
                     </Button>
                     <p className="text-xs text-muted-ink">
                       {actionPreview(action.type, deed, context.balance)}
+                      {action.type === "BuyImprovement" ||
+                      action.type === "RequestScarceImprovement"
+                        ? ` ${inventoryChangeLabel(deed.nextInventoryDeltas) ?? "No inventory change is declared."}.`
+                        : null}
                     </p>
                   </div>
                 ))}
@@ -177,7 +214,8 @@ export function ManagementPanel({
                 onClose={() => setConfirmation(undefined)}
               >
                 <h2 id={`confirm-${deed.deedId}`} className="font-medium">
-                  Confirm {actionLabel(selectedConfirmation.action.type).toLowerCase()}
+                  Confirm{" "}
+                  {managementActionLabel(selectedConfirmation.action.type, deed).toLowerCase()}
                 </h2>
                 <p className="mt-1 text-sm">
                   {actionPreview(selectedConfirmation.action.type, deed, context.balance)}
@@ -190,7 +228,7 @@ export function ManagementPanel({
                     }}
                     disabled={disabled || pending}
                   >
-                    Confirm {actionLabel(selectedConfirmation.action.type)}
+                    Confirm {managementActionLabel(selectedConfirmation.action.type, deed)}
                   </Button>
                   <Button
                     variant="secondary"
@@ -201,6 +239,19 @@ export function ManagementPanel({
                   </Button>
                 </div>
               </ModalDialog>
+            ) : null}
+            {context.tradeAction !== undefined && onTrade !== undefined ? (
+              <Button
+                variant="secondary"
+                className="w-full sm:w-auto"
+                onClick={() => onTrade(deed.spaceId)}
+                disabled={disabled || pending}
+              >
+                Open Trade for this Address
+              </Button>
+            ) : null}
+            {context.tradeAction === undefined && context.tradeBlocked !== undefined ? (
+              <p className="text-sm text-muted-ink">Trade blocked: {context.tradeBlocked.reason}</p>
             ) : null}
           </section>
         ))}

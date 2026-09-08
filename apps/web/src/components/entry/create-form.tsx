@@ -57,7 +57,7 @@ const VARIANT_COPY: Record<(typeof VARIANT_KEYS)[number], { label: string; warni
     warning: "Concentrated rent spikes. Shorter, swingier games.",
   },
   unlimitedImprovementInventory: {
-    label: "Unlimited Stalls and Block Stages",
+    label: "Unlimited Houses and Hotels",
     warning: "Removes a scarcity lever and may shorten the endgame.",
   },
 };

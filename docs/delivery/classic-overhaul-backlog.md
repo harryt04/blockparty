@@ -744,7 +744,7 @@ accidental collapse in coverage.
       orientation, axe, and manual assistive-technology evidence remains assigned to
       CO-030–031.
 
-- [ ] **CO-026 — Rebuild the property hand and management interactions**
+- [x] **CO-026 — Rebuild the property hand and management interactions**
       Blocked by: CO-025
       Requirements: UX-046, RULE-014, PRD-FUN-009–010
       Read: management panel/model, deed projections, House/Hotel legal actions
@@ -757,6 +757,13 @@ accidental collapse in coverage.
       no client preview is presented as confirmed state.
       Proves: action-availability tables, House/Hotel boundary tests, debt-mode
       management tests, and responsive/axe checks.
+      Evidence: the grouped hand now renders current Rent, Houses/Hotel, mortgage
+      status, build cost, blocked guidance, and server-gated Manage/Open Trade
+      entry. Management presents both House and Hotel bank quantities plus
+      scarcity demand, labels the target transition from the projected level, and
+      submits only the supplied LegalAction after confirmation. Focused model,
+      responsive, regression, typecheck, and Chromium 320/375/1280 checks pass;
+      the known repository lint blocker in `prettier.config.cjs` remains.
 
 - [ ] **CO-027 — Rebuild acquisition, auction, trade, detention, and debt decisions**
       Blocked by: CO-026

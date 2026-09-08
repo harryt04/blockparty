@@ -7,6 +7,6 @@ describe("scarce improvement action presentation", () => {
     // Found by /qa on 2026-09-04
     // Report: .gstack/qa-reports/qa-report-localhost-2026-09-04.md
     expect(MANAGEMENT_ACTION_TYPES).toContain("RequestScarceImprovement");
-    expect(actionLabel("RequestScarceImprovement")).toBe("Request a Stall");
+    expect(actionLabel("RequestScarceImprovement")).toBe("Request a House or Hotel");
   });
 });

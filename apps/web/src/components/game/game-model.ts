@@ -148,10 +148,8 @@ const ACTION_LABELS: Partial<Record<LegalAction["type"], string>> = {
   PassAuction: "Pass on this auction",
   PayObligation: "Pay what is Owed",
   MortgageDeed: "Mortgage this Address",
-  RedeemMortgage: "Buy Back this Address",
-  BuyImprovement: "Buy a Stall",
-  SellImprovement: "Sell a Stall",
-  RequestScarceImprovement: "Request a Stall",
+  RedeemMortgage: "Redeem this Mortgage",
+  RequestScarceImprovement: "Request a House or Hotel",
   ProposeTrade: "Propose a trade",
   DeclareBankruptcy: "Declare Packed Up",
   StartGame: "Start the game",
@@ -159,6 +157,12 @@ const ACTION_LABELS: Partial<Record<LegalAction["type"], string>> = {
 };
 
 export const actionLabel = (type: LegalAction["type"]): string => ACTION_LABELS[type] ?? type;
+
+function improvementKindLabel(kind: string): string {
+  if (kind === "house") return "House";
+  if (kind === "hotel") return "Hotel";
+  return kind.length === 0 ? "Improvement" : `${kind[0]!.toUpperCase()}${kind.slice(1)}`;
+}
 
 /**
  * Resolve the seat whose action is currently due for the turn heading. An
@@ -285,6 +289,22 @@ export function canManageInPhase(phase: GameSnapshotProjection["phase"]): boolea
 
 type ManagementActionType = (typeof MANAGEMENT_ACTION_TYPES)[number];
 
+/** The target piece is derived from the captured deed level, not guessed by the client. */
+export function managementActionLabel(
+  type: ManagementActionType,
+  deed: Pick<ManagementDeedContext, "improvementLevel" | "maximumImprovementLevel">,
+): string {
+  if (type === "BuyImprovement" || type === "RequestScarceImprovement") {
+    return deed.improvementLevel + 1 === deed.maximumImprovementLevel
+      ? "Build a Hotel"
+      : "Build a House";
+  }
+  if (type === "SellImprovement") {
+    return deed.improvementLevel === deed.maximumImprovementLevel ? "Sell Hotel" : "Sell House";
+  }
+  return actionLabel(type);
+}
+
 export interface ManagementActionContext {
   readonly type: ManagementActionType;
   readonly action: LegalAction;
@@ -292,14 +312,21 @@ export interface ManagementActionContext {
 
 export interface ManagementDeedContext {
   readonly deedId: string;
+  readonly spaceId: string;
   readonly spaceName: string;
   readonly categoryLabel: string;
   readonly districtName?: string;
   readonly improvementLevel: number;
   readonly maximumImprovementLevel: number;
+  readonly rent: number;
+  readonly rentIsVariable: boolean;
+  readonly improvementLabel: string;
+  readonly mortgageStatus: "Mortgaged" | "Not mortgaged";
   readonly districtComplete?: boolean;
   readonly nextImprovementCost?: number;
   readonly improvementResaleValue?: number;
+  readonly nextInventoryDeltas?: Readonly<Record<string, number>>;
+  readonly blockedReasons: readonly string[];
   readonly mortgageValue: number;
   readonly redemptionAmount: number;
   readonly actions: readonly ManagementActionContext[];
@@ -308,6 +335,14 @@ export interface ManagementDeedContext {
 export interface ManagementDecisionContext {
   readonly deeds: readonly ManagementDeedContext[];
   readonly blocked: readonly ActionAvailability[];
+  readonly tradeAction?: LegalAction;
+  readonly tradeBlocked?: ActionAvailability;
+  readonly inventory: readonly {
+    readonly kind: string;
+    readonly label: string;
+    readonly available?: number;
+    readonly demand: number;
+  }[];
   readonly inventoryKind?: string;
   readonly inventoryAvailable?: number;
   readonly inventoryUnlimited: boolean;
@@ -723,6 +758,13 @@ export function managementDecisionContext(
   );
   const districtById = new Map(bundle.districts.map((district) => [district.districtId, district]));
   const districtNameById = districtNames(snapshot);
+  const ownedDeedIds = new Set(self.deedIds);
+  const transitCount = bundle.deeds.filter(
+    (deed) => deed.category === "transit" && ownedDeedIds.has(deed.deedId),
+  ).length;
+  const utilityCount = bundle.deeds.filter(
+    (deed) => deed.category === "utility" && ownedDeedIds.has(deed.deedId),
+  ).length;
   const actions = snapshot.legalActions.filter(
     (action): action is LegalAction & { readonly type: ManagementActionType } =>
       isManagementAction(action.type) && managementDeedId(action) !== undefined,
@@ -731,8 +773,22 @@ export function managementDecisionContext(
   const blocked = snapshot.actionAvailability.filter((action) =>
     managementActionTypes.has(action.type),
   );
-  const inventoryKind = Object.keys(bundle.economy.improvementInventory)[0];
   const inventoryUnlimited = snapshot.configuration.unlimitedImprovementInventory;
+  const inventory = Object.entries(bundle.economy.improvementInventory).map(([kind]) => {
+    const demand = actions
+      .filter((action) => action.type === "RequestScarceImprovement")
+      .reduce((total, action) => total + Math.max(0, action.inventoryDeltas?.[kind] ?? 0), 0);
+    return {
+      kind,
+      label: improvementKindLabel(kind),
+      demand,
+      ...(inventoryUnlimited || snapshot.bank === undefined
+        ? {}
+        : { available: snapshot.bank.improvementInventory[kind] ?? 0 }),
+    };
+  });
+  const tradeAction = snapshot.legalActions.find((action) => action.type === "ProposeTrade");
+  const tradeBlocked = snapshot.actionAvailability.find((action) => action.type === "ProposeTrade");
 
   const deeds = self.deedIds.flatMap((deedId) => {
     const deed = deedById.get(deedId);
@@ -761,10 +817,25 @@ export function managementDecisionContext(
     const actionsForDeed = actions
       .filter((action) => managementDeedId(action) === deedId)
       .map((action) => ({ type: action.type, action }));
+    const currentRent =
+      deed.improvementLevels?.find((level) => level.level === improvementLevel)?.rent ??
+      (deed.category === "district" && districtComplete
+        ? deed.baseRent * (deed.completeDistrictMultiplier ?? 1)
+        : deed.category === "transit"
+          ? (deed.transitRentByCount?.[transitCount] ?? 0)
+          : deed.category === "utility"
+            ? (deed.utilityMultiplierByCount?.[utilityCount] ?? 0)
+            : deed.baseRent);
+    const mortgageStatus: ManagementDeedContext["mortgageStatus"] =
+      space.mortgaged === true ? "Mortgaged" : "Not mortgaged";
+    const blockedReasons = blocked
+      .filter((action) => !actionsForDeed.some((candidate) => candidate.type === action.type))
+      .map((action) => action.reason);
 
     return [
       {
         deedId,
+        spaceId: space.spaceId,
         spaceName: space.name,
         categoryLabel: DEED_CATEGORY_DISPLAY[deed.category].label,
         ...(deed.districtId === undefined
@@ -772,6 +843,15 @@ export function managementDecisionContext(
           : { districtName: districtNameById[deed.districtId] }),
         improvementLevel,
         maximumImprovementLevel,
+        rent: currentRent,
+        rentIsVariable: deed.category === "utility",
+        improvementLabel:
+          improvementLevel === 0
+            ? "No Houses or Hotel"
+            : improvementLevel === maximumImprovementLevel
+              ? "Hotel"
+              : `${improvementLevel} ${improvementLevel === 1 ? "House" : "Houses"}`,
+        mortgageStatus,
         ...(districtComplete === undefined ? {} : { districtComplete }),
         ...(nextLevel === undefined || deed.improvementCost === undefined
           ? {}
@@ -784,8 +864,10 @@ export function managementDecisionContext(
                   bundle.economy.improvementResaleRatio.denominator,
               ),
             }),
+        ...(nextLevel === undefined ? {} : { nextInventoryDeltas: nextLevel.inventoryDeltas }),
         mortgageValue: deed.mortgageValue,
         redemptionAmount: deed.mortgageValue + deed.redemptionCharge,
+        blockedReasons,
         actions: actionsForDeed,
       },
     ];
@@ -795,10 +877,13 @@ export function managementDecisionContext(
   return {
     deeds,
     blocked,
-    ...(inventoryKind === undefined ? {} : { inventoryKind }),
-    ...(inventoryKind === undefined || inventoryUnlimited || snapshot.bank === undefined
+    ...(inventory[0] === undefined ? {} : { inventoryKind: inventory[0].kind }),
+    ...(inventory[0]?.available === undefined
       ? {}
-      : { inventoryAvailable: snapshot.bank.improvementInventory[inventoryKind] ?? 0 }),
+      : { inventoryAvailable: inventory[0].available }),
+    inventory,
+    ...(tradeAction === undefined ? {} : { tradeAction }),
+    ...(tradeBlocked === undefined ? {} : { tradeBlocked }),
     inventoryUnlimited,
     balance: self.balance ?? 0,
   };

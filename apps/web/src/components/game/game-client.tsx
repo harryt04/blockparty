@@ -358,6 +358,17 @@ export function GameClient({ gameId }: { gameId: string }) {
     });
   }
 
+  function openManagementFor(spaceId: string): void {
+    setSelectedSpaceId(spaceId);
+    setManagementOpen(true);
+  }
+
+  function openTradeFor(spaceId: string): void {
+    setSelectedSpaceId(spaceId);
+    setManagementOpen(false);
+    navigateMobileSection("trade-section");
+  }
+
   return (
     <div className="game-shell mx-auto flex max-w-7xl flex-col gap-5" data-responsive-shell>
       <LiveAnnouncements
@@ -539,6 +550,15 @@ export function GameClient({ gameId }: { gameId: string }) {
               snapshot={snapshot}
               selectedSpaceId={selectedSpace?.spaceId}
               onSelect={setSelectedSpaceId}
+              management={management}
+              canManage={
+                management !== undefined &&
+                canManageInPhase(snapshot.phase) &&
+                state.connection === "live" &&
+                !snapshot.paused
+              }
+              onManage={openManagementFor}
+              onTrade={openTradeFor}
             />
           </section>
 
@@ -617,6 +637,7 @@ export function GameClient({ gameId }: { gameId: string }) {
             pending={pendingAction !== undefined}
             onAction={(action) => void submitAction(action)}
             onClose={() => setManagementOpen(false)}
+            onTrade={openTradeFor}
           />
 
           <section id="trade-section" aria-label="Trade">
