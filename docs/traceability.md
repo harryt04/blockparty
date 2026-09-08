@@ -357,6 +357,10 @@ evidence remain planned. Iteration 69 adds visibility-resume recovery coverage
 in `apps/web/test/sync-client.test.ts`: hidden tabs do not resync, while a visible
 tab requests `/sync` from its last confirmed sequence/version, applies the newer
 authoritative snapshot, and reopens the authenticated stream.
+Iteration 70 adds `apps/web/test/sse.test.ts` coverage for overlapping seat and
+reclaim browser contexts: closing either context alone does not emit a
+disconnected presence edge or trigger recovery, while closing the final context
+emits exactly one edge. Browser-level multi-context journeys remain planned.
 
 No self-hosted font files are present because licensed, provenanced faces have
 not yet been approved. The PWA shell caches only versioned public/app-shell

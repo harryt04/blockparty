@@ -118,6 +118,40 @@ describe("authenticated SSE delivery", () => {
     }
   });
 
+  it("keeps a seat live while its seat and reclaim browser contexts overlap", () => {
+    vi.useFakeTimers();
+    const changes: string[] = [];
+    const gameId = "presence-multi-context-test";
+    setPresenceRecoveryHandler((change) => {
+      changes.push(`${change.state}:${change.seatId}`);
+    });
+    try {
+      const seatContext = subscribe(subscriber(gameId, "seat-a", []));
+      const reclaimContext = subscribe({
+        ...subscriber(gameId, "seat-a", []),
+        capabilityKind: "reclaim" as const,
+      });
+
+      expect(changes).toEqual(["connected:seat-a"]);
+      expect(subscribedSeatAccess(gameId)).toEqual([
+        { seatId: "seat-a", capabilityKind: "seat" },
+        { seatId: "seat-a", capabilityKind: "reclaim" },
+      ]);
+
+      seatContext();
+      vi.advanceTimersByTime(PRESENCE_DISCONNECT_GRACE_MS);
+      expect(changes).toEqual(["connected:seat-a"]);
+
+      reclaimContext();
+      vi.advanceTimersByTime(PRESENCE_DISCONNECT_GRACE_MS);
+      expect(changes).toEqual(["connected:seat-a", "disconnected:seat-a"]);
+    } finally {
+      setPresenceRecoveryHandler(() => undefined);
+      closeSseConnections("SERVER_SHUTDOWN");
+      vi.useRealTimers();
+    }
+  });
+
   it("builds a separate allowlisted projection for every subscribed seat", async () => {
     const documents: GameDocument[] = [];
     const request = CreateGameRequest.parse({

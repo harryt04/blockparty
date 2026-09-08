@@ -1004,6 +1004,11 @@ accidental collapse in coverage.
       confirmed sequence/version, applies the newer authoritative snapshot, and
       reopens delivery. Multi-context disconnect/reclaim evidence remains
       outstanding.
+      Iteration 70 adds `apps/web/test/sse.test.ts` coverage for overlapping seat
+      and reclaim browser contexts: closing either context alone does not emit a
+      disconnected presence edge or trigger recovery, while closing the final
+      context emits exactly one edge. Browser-level multi-context journeys remain
+      outstanding.
 
 - [~] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
