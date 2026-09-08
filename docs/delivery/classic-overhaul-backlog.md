@@ -867,6 +867,10 @@ accidental collapse in coverage.
       after a rejection acknowledgement whose newer snapshot is delayed, retrying the still-visible
       rejection reuses both request and command identity. The Chromium mutation run fails when
       identity reuse is removed; the focused Chromium, Firefox, and WebKit run passes.
+      Iteration 47 adds a cross-browser acquisition foreground-surface regression: an AwaitPurchase
+      card keeps Acquire/Decline visible while excluding an unrelated RollDice primary action even
+      when it appears in the projection. The Chromium mutation run fails when the phase filter is
+      bypassed; Chromium, Firefox, and WebKit pass with the filter restored.
       broader disconnect, axe, and live-release evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**

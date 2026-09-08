@@ -306,6 +306,37 @@ test("a player can roll and acquire the current Address", async ({ page }) => {
   });
 });
 
+test("acquisition decision exposes only its foreground choices", async ({ page }) => {
+  await mockLiveStream(page);
+  await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitPurchase", 1, {
+      legalActions: [
+        { type: "AcquireDeed", constraints: { deedId: "d-sawhorse-lane" } },
+        { type: "DeclineAcquisition", constraints: { deedId: "d-sawhorse-lane" } },
+        // A malformed projection must not let an unrelated primary action leak
+        // into the foreground decision surface.
+        { type: "RollDice" },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("Acquire an Address");
+  await expect(dialog.getByRole("button", { name: "Acquire this Address" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Decline and open the auction" })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Roll and advance" })).toHaveCount(0);
+});
+
 test("decision sheet returns focus after its command finishes", async ({ page }) => {
   await mockLiveStream(page);
   const { commands } = await mockGameApi(page);

@@ -539,3 +539,8 @@ rejection acknowledgement arrives without a newer authoritative snapshot, retryi
 rejection reuses the original request and command identity. The focused Chromium, Firefox, and
 WebKit run passes, and the Chromium mutation run fails when identity reuse is removed. Broader
 disconnect, axe, and live-release evidence remain assigned to CO-027 and CO-030–031.
+Iteration 47 adds a cross-browser acquisition foreground-surface regression: an AwaitPurchase card
+keeps Acquire/Decline visible while excluding an unrelated RollDice primary action even when it
+appears in the projection. The Chromium mutation run fails when the phase filter is bypassed;
+Chromium, Firefox, and WebKit pass with the filter restored. Broader disconnect, axe, and live-release
+evidence remain assigned to CO-027 and CO-030–031.
