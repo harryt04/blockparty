@@ -1445,6 +1445,71 @@ test("pending trade keeps unrelated turn actions out of the generic sheet", asyn
   await expect(dialog.getByRole("button", { name: "Roll and advance" })).toHaveCount(0);
 });
 
+test("detention keeps unrelated turn actions out of the generic sheet", async ({ page }) => {
+  await mockLiveStream(page);
+  await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitChoice", 1, {
+      seats: snapshot("AwaitChoice", 1).seats.map((seat) =>
+        seat.seatId === "seat-a" ? { ...seat, detained: true, detentionTurnsRemaining: 2 } : seat,
+      ),
+      legalActions: [
+        { type: "ChoosePendingOption", constraints: { choiceId: "choice-foreground-1" } },
+        { type: "RollDice" },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  await expect(
+    page.getByRole("heading", { name: "Noise Complaint: choose your exit" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Open action sheet" }).click();
+  const dialog = page.getByRole("dialog", { name: "Your actions" });
+  await expect(dialog.getByText("No action is required from you right now.")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Roll and advance" })).toHaveCount(0);
+});
+
+test("debt keeps unrelated turn actions out of the generic sheet", async ({ page }) => {
+  await mockLiveStream(page);
+  await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitChoice", 1, {
+      obligation: {
+        debtorSeatId: "seat-a",
+        creditorSeatId: "seat-b",
+        amount: 200_000,
+        reasonCode: "RENT_DUE",
+        reason: "Rent is due to Side Street.",
+      },
+      legalActions: [{ type: "DeclareBankruptcy" }, { type: "RollDice" }],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  await expect(page.getByRole("heading", { name: "Owed: payment required" })).toBeVisible();
+  await page.getByRole("button", { name: "Open action sheet" }).click();
+  const dialog = page.getByRole("dialog", { name: "Your actions" });
+  await expect(dialog.getByText("No action is required from you right now.")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Roll and advance" })).toHaveCount(0);
+});
+
 test("authoritative decision events produce one live announcement", async ({ page }) => {
   await mockLiveStream(page);
   await mockGameApi(page);

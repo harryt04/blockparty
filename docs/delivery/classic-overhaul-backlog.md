@@ -891,6 +891,12 @@ accidental collapse in coverage.
       Chromium, Firefox, and WebKit; modal-backed states also assert their dialog name, and mutation
       of the dialog title reference fails both modal cases. Broader disconnect
       and release evidence remain outstanding.
+      Iteration 52 adds browser regressions for the two dedicated non-modal
+      decision panels: detention and debt keep unrelated RollDice actions out
+      of the generic action sheet even when those actions appear in the
+      projection. The detention and debt foreground-filter scenarios pass in
+      Chromium, Firefox, and WebKit; broader disconnect and release evidence
+      remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

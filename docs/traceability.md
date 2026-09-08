@@ -558,3 +558,8 @@ quiet, and the existing authoritative sync returns the status to Connected. The 
 `apps/web/test/live-announcements.test.ts` model assertion fails if reconnecting churn is announced
 again; focused Chromium, Firefox, and WebKit runs pass. Broader disconnect, axe, and live-release
 evidence remain assigned to CO-027 and CO-030–031.
+Iteration 52 adds browser evidence for the dedicated detention and debt panels: each keeps an
+unrelated projected `RollDice` action out of the generic action sheet while its own foreground
+decision remains visible. The new detention and debt filtering scenarios pass in Chromium,
+Firefox, and WebKit; broader disconnect and live-release evidence remain assigned to CO-027 and
+CO-030–031.
