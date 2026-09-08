@@ -1035,11 +1035,16 @@ accidental collapse in coverage.
       history: contiguous events from one aggregate update appear under one
       update heading, sequence numbers remain visible and ordered, and the
       next aggregate starts a separate group at both 375px and 1280px. The
-      Chromium mutation run fails when aggregate-version grouping is removed;
-      broader live multiplayer, real replica-set, and release evidence remain
-      outstanding.
+      Chromium mutation run fails when aggregate-version grouping is removed.
+      Iteration 76 closes this ticket: the focused model, sync, SSE, and
+      cross-browser evidence covers confirmed-only motion, reduced motion,
+      monotonic reconnect convergence, visibility resume, paused/offline
+      command safety, duplicate recovery announcements, safe bot replacement,
+      seat reclaim, host recovery, and ordered event history at 375px and
+      1280px. Broader live multiplayer, real replica-set, visual, and release
+      evidence remains assigned to CO-030–031.
 
-- [~] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
+- [x] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
       Requirements: UX-044–046, PRD-FUN-006, PRD-FUN-014
       Read: sync client, live announcements, event feed, recovery panel

@@ -390,7 +390,13 @@ sequence numbers remain visible and ordered, and the next aggregate starts a
 separate group at both 375px and 1280px in
 `apps/web/e2e/iteration4-gameplay.spec.ts`. The Chromium mutation run fails
 when aggregate-version grouping is removed. Broader multiplayer and release
-evidence remain planned.
+evidence remain planned. Iteration 76 closes CO-028: the focused model, sync,
+SSE, and cross-browser evidence now covers confirmed-only motion, reduced
+motion, monotonic reconnect convergence, visibility resume, paused/offline
+command safety, duplicate recovery announcements, safe bot replacement, seat
+reclaim, host recovery, and ordered event history at 375px and 1280px. Broader
+live multiplayer, real replica-set, visual, and release evidence remains
+assigned to CO-030–031.
 
 No self-hosted font files are present because licensed, provenanced faces have
 not yet been approved. The PWA shell caches only versioned public/app-shell
