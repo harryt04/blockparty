@@ -140,6 +140,28 @@ describe("live announcement model", () => {
     expect(announcementForSnapshot(current, current)).toBeUndefined();
   });
 
+  it("announces authoritative recovery transitions with the affected seat", () => {
+    expect(
+      announcementForEvent(
+        event("HostTransferred", 6, { fromSeatId: "seat-a", toSeatId: "seat-b" }),
+        seats,
+      ),
+    ).toEqual({
+      key: "event:6",
+      message: "Noah now has host controls.",
+      priority: "assertive",
+    });
+    expect(
+      announcementForEvent(event("SeatReplacedWithBot", 7, { seatId: "seat-a" }), seats),
+    ).toMatchObject({ message: "Maya is now represented by a Computer.", priority: "polite" });
+    expect(
+      announcementForEvent(event("SeatReclaimRequested", 8, { seatId: "seat-a" }), seats),
+    ).toMatchObject({ message: "Maya requested to reclaim their seat.", priority: "assertive" });
+    expect(
+      announcementForEvent(event("SeatReclaimApproved", 9, { seatId: "seat-a" }), seats),
+    ).toMatchObject({ message: "Maya's seat reclaim was approved.", priority: "polite" });
+  });
+
   it("announces reconnect transitions but ignores ordinary live/resync churn", () => {
     expect(announcementForConnection(undefined, "live")).toBeUndefined();
     expect(announcementForConnection("live", "resyncing")).toBeUndefined();

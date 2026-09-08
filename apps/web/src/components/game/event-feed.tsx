@@ -39,6 +39,10 @@ const EVENT_LABELS: Partial<Record<DomainEvent["type"], string>> = {
   SeatEliminated: "Seat eliminated",
   GameCompleted: "Game completed",
   GameEndedNoContest: "Game ended without a result",
+  SeatReplacedWithBot: "Seat replaced by Computer",
+  SeatReclaimRequested: "Seat reclaim requested",
+  SeatReclaimApproved: "Seat reclaim approved",
+  HostTransferred: "Host controls transferred",
   PlayPaused: "Play paused",
   PlayResumed: "Play resumed",
 };

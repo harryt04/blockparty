@@ -162,6 +162,32 @@ export function announcementForEvent(
       );
     case "PlayResumed":
       return announcement(event, "Play has resumed.", "polite");
+    case "HostTransferred": {
+      const toSeatId = payloadString(event, "toSeatId");
+      return announcement(
+        event,
+        `${seatName(seats, toSeatId)} now has host controls.`,
+        "assertive",
+      );
+    }
+    case "SeatReplacedWithBot":
+      return announcement(
+        event,
+        `${seatName(seats, payloadString(event, "seatId"))} is now represented by a Computer.`,
+        "polite",
+      );
+    case "SeatReclaimRequested":
+      return announcement(
+        event,
+        `${seatName(seats, payloadString(event, "seatId"))} requested to reclaim their seat.`,
+        "assertive",
+      );
+    case "SeatReclaimApproved":
+      return announcement(
+        event,
+        `${seatName(seats, payloadString(event, "seatId"))}'s seat reclaim was approved.`,
+        "polite",
+      );
     case "SeatEliminated":
       return announcement(
         event,

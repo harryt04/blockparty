@@ -347,7 +347,13 @@ admitted. Iteration 67 adds `GameSyncClient` recovery evidence in
 snapshot advances both delivery cursors and reopens the stream, while a late
 older snapshot cannot regress the confirmed state. The focused regression is
 mutation-sensitive to the monotonic snapshot guards. Multi-context disconnect
-and reclaim evidence remain planned.
+and reclaim evidence remain planned. Iteration 68 adds authoritative recovery
+transition announcements and event-feed labels for host transfer, Computer
+replacement, and seat reclaim request/approval in
+`apps/web/src/components/game/live-announcements-model.ts` and
+`apps/web/src/components/game/event-feed.tsx`, with focused assertions in
+`apps/web/test/live-announcements.test.ts`. Multi-context disconnect and reclaim
+evidence remain planned.
 
 No self-hosted font files are present because licensed, provenanced faces have
 not yet been approved. The PWA shell caches only versioned public/app-shell
