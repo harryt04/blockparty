@@ -622,7 +622,7 @@ accidental collapse in coverage.
       error; the full coverage suite again entered the known silent
       long-running soak and was stopped.
 
-- [ ] **CO-021 — Rebuild join admission around available pieces**
+- [x] **CO-021 — Rebuild join admission around available pieces**
       Blocked by: CO-020
       Requirements: UX-042, ENG-029, PRD-FUN-003
       Read: invite status, join gate/model/route, capability policy
@@ -634,6 +634,13 @@ accidental collapse in coverage.
       retain safe form values, refresh availability, and request another choice.
       Proves: two-context race test, name collision tests, invite-state tests, axe,
       and capability-leak assertions.
+      Evidence: the join form refreshes the invite status in place after a generic
+      stale-claim response, disables the claimed piece, focuses the first remaining
+      choice, and retains name/age values. `apps/web/e2e/entry.spec.ts` proves the
+      recovery at 375px and 1280px; existing join-game and join-route tests prove
+      atomic race rejection, name normalization, invite states, and cookie-only
+      capability issuance. Mutation testing confirmed the browser test fails when
+      the refresh call is removed.
 
 - [ ] **CO-022 — Rebuild the lobby as a table preview**
       Blocked by: CO-021

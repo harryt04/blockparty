@@ -60,10 +60,12 @@ function JoinForm({
   inviteId,
   gameName,
   availablePieces,
+  onSeatConflict,
 }: {
   inviteId: string;
   gameName?: string;
   availablePieces: InviteStatusResponse["availablePieces"];
+  onSeatConflict: () => Promise<boolean>;
 }) {
   const router = useRouter();
   const { track } = useAnalytics();
@@ -71,6 +73,7 @@ function JoinForm({
   const [pending, setPending] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<JoinField, string>>>({});
   const [apiError, setApiError] = useState<string>();
+  const [focusPiecePicker, setFocusPiecePicker] = useState(false);
 
   useEffect(() => {
     setHydrated(true);
@@ -102,7 +105,18 @@ function JoinForm({
       const body: unknown = await response.json();
       if (!response.ok) {
         if (response.status === 404) {
-          setApiError("This invite is no longer available. Nothing was changed.");
+          setErrors((current) => ({
+            ...current,
+            token: "That piece was just claimed. Choose another available piece.",
+          }));
+          setApiError("Refreshing the available pieces…");
+          const refreshed = await onSeatConflict();
+          setApiError(
+            refreshed
+              ? "That piece was just claimed. Choose another available piece."
+              : "That piece was just claimed. Check your connection, then choose another piece.",
+          );
+          setFocusPiecePicker(refreshed);
         } else {
           const parsed = ErrorEnvelope.safeParse(body);
           setApiError(
@@ -180,6 +194,15 @@ function JoinForm({
               availablePieceIds={availablePieces?.map((piece) => piece.pieceId) ?? []}
               errorId={errors.token === undefined ? undefined : fieldErrorId("token")}
               aria-invalid={errors.token !== undefined}
+              focusFirstAvailable={focusPiecePicker}
+              onChange={() => {
+                setFocusPiecePicker(false);
+                setErrors((current) => {
+                  if (current.token === undefined) return current;
+                  const { token: _token, ...rest } = current;
+                  return rest;
+                });
+              }}
             />
             {errors.token === undefined ? null : (
               <p id={fieldErrorId("token")} className="text-sm text-danger">
@@ -230,33 +253,35 @@ export function JoinGate({ inviteId }: { inviteId: string }) {
   const [state, setState] = useState<GateState>({ kind: "checking" });
   const [attempt, setAttempt] = useState(0);
 
-  const checkInvite = useCallback(async () => {
-    if (!InviteId.safeParse(inviteId).success) {
-      setState({ kind: "unavailable" });
-      return;
-    }
-    setState({ kind: "checking" });
-    try {
-      const response = await fetch(`/api/invites/${encodeURIComponent(inviteId)}`, {
-        credentials: "include",
-        cache: "no-store",
-        headers: { accept: "application/json" },
-      });
-      const body: unknown = await response.json();
-      const parsed = InviteStatusResponse.safeParse(body);
-      if (!response.ok || !parsed.success) {
-        setState({ kind: "error" });
-        return;
+  const checkInvite = useCallback(
+    async (preserveOpen = false): Promise<boolean> => {
+      if (!InviteId.safeParse(inviteId).success) {
+        setState({ kind: "unavailable" });
+        return false;
       }
-      setState(
-        parsed.data.status === "OPEN"
-          ? { kind: "open", invite: parsed.data }
-          : { kind: "unavailable" },
-      );
-    } catch {
-      setState({ kind: "error" });
-    }
-  }, [inviteId]);
+      if (!preserveOpen) setState({ kind: "checking" });
+      try {
+        const response = await fetch(`/api/invites/${encodeURIComponent(inviteId)}`, {
+          credentials: "include",
+          cache: "no-store",
+          headers: { accept: "application/json" },
+        });
+        const body: unknown = await response.json();
+        const parsed = InviteStatusResponse.safeParse(body);
+        if (!response.ok || !parsed.success) {
+          if (!preserveOpen) setState({ kind: "error" });
+          return false;
+        }
+        const isOpen = parsed.data.status === "OPEN";
+        setState(isOpen ? { kind: "open", invite: parsed.data } : { kind: "unavailable" });
+        return isOpen;
+      } catch {
+        if (!preserveOpen) setState({ kind: "error" });
+        return false;
+      }
+    },
+    [inviteId],
+  );
 
   useEffect(() => {
     void checkInvite();
@@ -286,6 +311,7 @@ export function JoinGate({ inviteId }: { inviteId: string }) {
       inviteId={inviteId}
       gameName={state.invite.gameName}
       availablePieces={state.invite.availablePieces}
+      onSeatConflict={() => checkInvite(true)}
     />
   );
 }

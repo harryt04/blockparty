@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChangeEvent } from "react";
+import { useEffect, useRef, type ChangeEvent } from "react";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { PlayerToken } from "../game/player-token";
@@ -20,6 +20,7 @@ export interface PiecePickerProps {
   readonly errorId?: string;
   readonly "aria-invalid"?: boolean;
   readonly onChange?: (pieceId: PieceOptionId) => void;
+  readonly focusFirstAvailable?: boolean;
 }
 
 function changeHandler(
@@ -40,10 +41,21 @@ export function PiecePicker({
   errorId,
   "aria-invalid": ariaInvalid,
   onChange,
+  focusFirstAvailable = false,
 }: PiecePickerProps) {
-  const controlled = value !== undefined || onChange !== undefined;
+  const fieldsetRef = useRef<HTMLFieldSetElement>(null);
+  const controlled = value !== undefined;
+
+  useEffect(() => {
+    if (!focusFirstAvailable) return;
+    fieldsetRef.current
+      ?.querySelector<HTMLInputElement>('input[type="radio"]:not(:disabled)')
+      ?.focus();
+  }, [availablePieceIds, focusFirstAvailable]);
+
   return (
     <fieldset
+      ref={fieldsetRef}
       className="flex min-w-0 flex-col gap-3"
       aria-invalid={ariaInvalid === true ? true : undefined}
       aria-describedby={errorId}

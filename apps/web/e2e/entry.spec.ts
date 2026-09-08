@@ -72,6 +72,85 @@ test.describe("entry actions remain reachable with first-visit notices", () => {
     ).toBeVisible();
   });
 
+  test("refreshes open pieces after a concurrent claimant wins without clearing the form", async ({
+    page,
+  }) => {
+    const inviteId = "b".repeat(32);
+    let statusRequests = 0;
+    const standardConfiguration = {
+      schemaVersion: "1.0.0",
+      preset: "standard",
+      restSpaceJackpot: false,
+      doubleStartOnExactLanding: false,
+      noAuctionAfterDeclinedAcquisition: false,
+      noIncomeWhileDetained: false,
+      bonusForMatchingOnes: false,
+      startingAssetsDealt: false,
+      relaxedEvenBuilding: false,
+      unlimitedImprovementInventory: false,
+    };
+
+    await page.route(`**/api/invites/${inviteId}`, async (route) => {
+      statusRequests += 1;
+      await route.fulfill({
+        json: {
+          status: "OPEN",
+          openSeatCount: 2,
+          seatCount: 3,
+          availablePieces:
+            statusRequests === 1
+              ? [
+                  { colorIndex: 1, pieceId: "piece-lantern", pattern: "solid" },
+                  { colorIndex: 2, pieceId: "piece-key", pattern: "stripe" },
+                ]
+              : [{ colorIndex: 2, pieceId: "piece-key", pattern: "stripe" }],
+          configuration: standardConfiguration,
+        },
+      });
+    });
+    await page.route(`**/api/invites/${inviteId}/join`, async (route) => {
+      await route.fulfill({
+        status: 404,
+        json: {
+          protocolVersion: 1,
+          type: "game.error",
+          serverTime: "2026-09-07T16:00:00.000Z",
+          error: {
+            code: "NOT_FOUND",
+            message: "That game or invite is not available.",
+            retryable: false,
+          },
+        },
+      });
+    });
+
+    for (const width of [375, 1280]) {
+      statusRequests = 0;
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`/join/${inviteId}`);
+      await page.getByRole("textbox", { name: "Name for this game" }).fill("  Ada   Lovelace  ");
+      await page.getByRole("radio", { name: "Lantern" }).check();
+      await page
+        .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
+        .check();
+      await page.getByRole("button", { name: "Join the lobby" }).click();
+
+      await expect(
+        page.getByRole("alert").filter({ hasText: "That piece was just claimed" }),
+      ).toBeVisible();
+      await expect(page.getByRole("textbox", { name: "Name for this game" })).toHaveValue(
+        "  Ada   Lovelace  ",
+      );
+      await expect(
+        page.getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." }),
+      ).toBeChecked();
+      await expect(page.getByRole("radio", { name: "Lantern" })).toBeDisabled();
+      await expect(page.getByRole("radio", { name: "Key" })).toBeEnabled();
+      await expect(page.getByRole("radio", { name: "Key" })).toBeFocused();
+      expect(statusRequests).toBe(2);
+    }
+  });
+
   test("can submit the create form while analytics consent is pending", async ({ page }) => {
     await page.goto("/create");
     await page.getByRole("textbox", { name: "Your pseudonym" }).fill("Host");
