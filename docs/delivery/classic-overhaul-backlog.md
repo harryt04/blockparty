@@ -832,6 +832,11 @@ accidental collapse in coverage.
       one authoritative PlaceAuctionBid command is emitted. Chromium, Firefox,
       and WebKit pass; the full disconnect matrix and release evidence remain
       outstanding.
+      Iteration 39 adds pending-trade recovery: accept and reject remain disabled
+      while the proposer is disconnected and the game is paused, then an
+      authoritative connected, unpaused snapshot enables exactly one AcceptTrade
+      command. Chromium, Firefox, and WebKit pass; the broader disconnect matrix,
+      accessibility, and release evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

@@ -503,3 +503,9 @@ bid and pass remain disabled while the priority seat is disconnected and the gam
 is paused, then an authoritative connected, unpaused snapshot enables exactly one
 `PlaceAuctionBid` command. Chromium, Firefox, and WebKit pass; broader disconnect
 matrices, axe, and live-release evidence remain assigned to CO-027 and CO-030–031.
+Iteration 39 adds pending-trade recovery: accept and reject remain disabled while
+the proposer is disconnected and the game is paused, then the authoritative
+connected, unpaused snapshot enables exactly one `AcceptTrade` command. Chromium,
+Firefox, and WebKit pass, and mutating the shared trade pause guard makes the new
+regression fail as expected; broader disconnect matrices, axe, and live-release
+evidence remain assigned to CO-027 and CO-030–031.
