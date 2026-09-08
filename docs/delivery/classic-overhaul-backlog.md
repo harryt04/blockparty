@@ -903,6 +903,12 @@ accidental collapse in coverage.
       Chromium mutation run emits two commands when the synchronous submission
       lock is removed. Broader disconnect and release evidence remain
       outstanding.
+      Iteration 54 adds the matching same-task pending-trade acceptance
+      regression: two synchronous AcceptTrade activations emit exactly one
+      command for the authoritative trade ID. Chromium, Firefox, and WebKit
+      pass; removing the shared synchronous submission lock makes the
+      regression emit two commands. Broader disconnect and release evidence
+      remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
