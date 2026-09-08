@@ -417,6 +417,35 @@ test("same-task activation submits a game command only once", async ({ page }) =
   expect((commands[0] as { payload: { type: string } }).payload.type).toBe("RollDice");
 });
 
+test("same-task acquisition activation submits a game command only once", async ({ page }) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitPurchase", 1);
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const acquire = page.getByRole("button", { name: "Acquire this Address" });
+  await acquire.evaluate((element) => {
+    (element as HTMLButtonElement).click();
+    (element as HTMLButtonElement).click();
+  });
+
+  await expect.poll(() => commands.length).toBe(1);
+  expect((commands[0] as { payload: { type: string; deedId: string } }).payload).toEqual({
+    type: "AcquireDeed",
+    deedId: "d-sawhorse-lane",
+  });
+});
+
 test("a retry after a lost response reuses the command identity", async ({ page }) => {
   await mockLiveStream(page);
   const { commands } = await mockGameApi(page, { failFirstCommand: true });

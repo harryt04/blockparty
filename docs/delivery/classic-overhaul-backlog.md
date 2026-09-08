@@ -897,6 +897,12 @@ accidental collapse in coverage.
       projection. The detention and debt foreground-filter scenarios pass in
       Chromium, Firefox, and WebKit; broader disconnect and release evidence
       remain outstanding.
+      Iteration 53 adds a same-task acquisition activation regression: two
+      synchronous AcquireDeed activations emit exactly one command with the
+      authoritative deed constraint. Chromium, Firefox, and WebKit pass; the
+      Chromium mutation run emits two commands when the synchronous submission
+      lock is removed. Broader disconnect and release evidence remain
+      outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
