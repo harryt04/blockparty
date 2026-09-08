@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import {
   GameSnapshotProjection,
   STANDARD_CONFIGURATION,
+  type DomainEvent,
   type GameSnapshotProjection as GameSnapshotProjectionType,
 } from "@blockparty/contracts";
 import { PLACEHOLDER_BUNDLE } from "@blockparty/game-content";
@@ -13,7 +14,11 @@ const GAME_ID = "00000000-0000-4000-8000-000000000054";
 // otherwise let a previously registered service worker bypass page routes.
 test.use({ serviceWorkers: "block" });
 
-function snapshot(phase: GameSnapshotProjectionType["phase"], sequence: number) {
+function snapshot(
+  phase: GameSnapshotProjectionType["phase"],
+  sequence: number,
+  overrides: Partial<GameSnapshotProjectionType> = {},
+) {
   const deeds = new Map(PLACEHOLDER_BUNDLE.deeds.map((deed) => [deed.deedId, deed]));
   const category = {
     start: "start",
@@ -113,10 +118,29 @@ function snapshot(phase: GameSnapshotProjectionType["phase"], sequence: number) 
     paused: false,
     expiresAt: "2026-10-03T15:00:00.000Z",
     configuration: STANDARD_CONFIGURATION,
+    ...overrides,
   } satisfies GameSnapshotProjectionType;
   const parsed = GameSnapshotProjection.safeParse(projected);
   if (!parsed.success) throw new Error(parsed.error.message);
   return projected;
+}
+
+function event(
+  type: DomainEvent["type"],
+  sequence: number,
+  payload: Record<string, unknown> = {},
+  actorSeatId?: string,
+): DomainEvent {
+  return {
+    gameId: GAME_ID,
+    sequence,
+    aggregateVersion: sequence,
+    type,
+    eventVersion: 1,
+    ...(actorSeatId === undefined ? {} : { actorSeatId }),
+    occurredAt: "2026-09-03T15:00:00.000Z",
+    payload,
+  };
 }
 
 async function mockLiveStream(page: Page): Promise<void> {
@@ -226,6 +250,27 @@ async function mockGameApi(page: Page): Promise<{ commands: unknown[] }> {
   return { commands };
 }
 
+async function emitSnapshot(page: Page, projected: GameSnapshotProjectionType): Promise<void> {
+  await page.evaluate(
+    (envelope) => {
+      (
+        window as unknown as {
+          __emitGameEnvelope?: (value: unknown) => void;
+        }
+      ).__emitGameEnvelope?.(envelope);
+    },
+    {
+      protocolVersion: 1,
+      type: "game.snapshot",
+      gameId: GAME_ID,
+      serverTime: "2026-09-03T15:00:00.000Z",
+      aggregateVersion: projected.aggregateVersion,
+      sequence: projected.sequence,
+      snapshot: projected,
+    },
+  );
+}
+
 test("a player can roll and acquire the current Address", async ({ page }) => {
   await mockLiveStream(page);
   const { commands } = await mockGameApi(page);
@@ -262,6 +307,255 @@ test("same-task activation submits a game command only once", async ({ page }) =
   await expect.poll(() => commands.length).toBe(1);
   await expect(page.getByText("Await Purchase · 2 players ·", { exact: false })).toBeVisible();
   expect((commands[0] as { payload: { type: string } }).payload.type).toBe("RollDice");
+});
+
+test("auction decision exposes context, bounds bids, and prevents duplicate submission", async ({
+  page,
+}) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitAuction", 1, {
+      prioritySeatId: "seat-a",
+      auction: {
+        deedId: "d-sawhorse-lane",
+        minimumNextBid: 4_001,
+        prioritySeatId: "seat-a",
+        passedSeatIds: [],
+      },
+      legalActions: [
+        {
+          type: "PlaceAuctionBid",
+          constraints: { minBid: 4_001, maxBid: 145_000 },
+        },
+        { type: "PassAuction" },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("Untimed Address auction");
+  await expect(dialog).toContainText("Minimum next bid");
+  await expect(dialog).toContainText("40.01 Tabs");
+  await expect(dialog.getByLabel("Place bid")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Pass on this auction" })).toBeVisible();
+
+  const bid = dialog.getByRole("button", { name: "Submit bid" });
+  await bid.evaluate((element) => {
+    (element as HTMLButtonElement).click();
+    (element as HTMLButtonElement).click();
+  });
+  await expect.poll(() => commands.length).toBe(1);
+  expect((commands[0] as { payload: { type: string; amount: number } }).payload).toEqual({
+    type: "PlaceAuctionBid",
+    amount: 4_001,
+  });
+});
+
+test("paused auction keeps the decision visible and disables bid or pass", async ({ page }) => {
+  await mockLiveStream(page);
+  await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitAuction", 1, {
+      prioritySeatId: "seat-b",
+      paused: true,
+      seats: snapshot("AwaitAuction", 1).seats.map((seat) =>
+        seat.seatId === "seat-b" ? { ...seat, connected: false } : seat,
+      ),
+      auction: {
+        deedId: "d-sawhorse-lane",
+        highBid: 4_000,
+        highBidderSeatId: "seat-b",
+        minimumNextBid: 4_001,
+        prioritySeatId: "seat-b",
+        passedSeatIds: [],
+      },
+      legalActions: [
+        {
+          type: "PlaceAuctionBid",
+          constraints: { minBid: 4_001, maxBid: 145_000 },
+        },
+        { type: "PassAuction" },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText("Auction paused while Side Street reconnects.")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Submit bid" })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Pass on this auction" })).toBeDisabled();
+  await expect(page.getByRole("note").filter({ hasText: "Play is paused" })).toBeVisible();
+});
+
+test("detention decision focuses its heading and submits only an advertised route", async ({
+  page,
+}) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitChoice", 1, {
+      seats: snapshot("AwaitChoice", 1).seats.map((seat) =>
+        seat.seatId === "seat-a" ? { ...seat, detained: true, detentionTurnsRemaining: 2 } : seat,
+      ),
+      legalActions: [
+        {
+          type: "ChoosePendingOption",
+          constraints: { choiceId: "choice-1", optionId: "attempt-roll" },
+        },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  const heading = page.getByRole("heading", { name: "Noise Complaint: choose your exit" });
+  await expect(heading).toBeFocused();
+  await expect(page.getByText("2 of 3 failed matching attempts used.")).toBeVisible();
+  await page.getByRole("button", { name: "Attempt a matching roll" }).click();
+  await expect.poll(() => commands.length).toBe(1);
+  expect((commands[0] as { payload: unknown }).payload).toEqual({
+    type: "ChoosePendingOption",
+    choiceId: "choice-1",
+    optionId: "attempt-roll",
+  });
+});
+
+test("debt decision shows payment context and confirms bankruptcy destructively", async ({
+  page,
+}) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("AwaitChoice", 1, {
+      obligation: {
+        debtorSeatId: "seat-a",
+        creditorSeatId: "seat-b",
+        amount: 200_000,
+        reasonCode: "RENT_DUE",
+        reason: "Rent is due to Side Street.",
+      },
+      legalActions: [{ type: "DeclareBankruptcy" }],
+      actionAvailability: [
+        {
+          type: "MortgageDeed",
+          available: false,
+          reasonCode: "DEBT_MODE_ONLY",
+          reason: "Liquidate assets before paying this Owed.",
+        },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  await expect(page.getByRole("heading", { name: "Owed: payment required" })).toBeFocused();
+  await expect(page.getByText("Amount due").locator("..")).toContainText("2,000 Tabs");
+  await expect(page.getByText("Liquidate assets before paying this Owed.")).toBeVisible();
+  await page.getByRole("button", { name: "Declare bankruptcy" }).click();
+  await expect(page.getByRole("dialog")).toContainText("This cannot be undone");
+  await page.getByRole("button", { name: "Confirm bankruptcy" }).click();
+  await expect.poll(() => commands.length).toBe(1);
+  expect((commands[0] as { payload: unknown }).payload).toEqual({
+    type: "DeclareBankruptcy",
+  });
+});
+
+test("pending trade focuses the offer and accepts only for its named counterparty", async ({
+  page,
+}) => {
+  await mockLiveStream(page);
+  const { commands } = await mockGameApi(page);
+  await page.route(`**/api/games/${GAME_ID}/bootstrap`, async (route) => {
+    const projected = snapshot("TurnStart", 1, {
+      pendingTrade: {
+        tradeId: "trade-1",
+        proposerSeatId: "seat-b",
+        counterpartySeatId: "seat-a",
+        offered: { cash: 2_000, deedIds: [], detentionReleaseCardIds: [] },
+        requested: { cash: 0, deedIds: ["d-sawhorse-lane"], detentionReleaseCardIds: [] },
+        proposerBalance: 153_000,
+        counterpartyBalance: 145_000,
+        aggregateVersion: 1,
+      },
+      legalActions: [
+        { type: "AcceptTrade", constraints: { tradeId: "trade-1" } },
+        { type: "RejectTrade", constraints: { tradeId: "trade-1" } },
+      ],
+    });
+    await route.fulfill({
+      json: {
+        snapshot: projected,
+        aggregateVersion: 1,
+        sequence: 1,
+        serverTime: "2026-09-03T15:00:00.000Z",
+      },
+    });
+  });
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+
+  await expect(page.getByRole("heading", { name: "Pending trade" })).toBeFocused();
+  await expect(page.getByText("Side Street sent you an offer.")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "You receive" }).locator("..").getByText("20 Tabs", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Accept this trade" }).click();
+  await expect.poll(() => commands.length).toBe(1);
+  expect((commands[0] as { payload: unknown }).payload).toEqual({
+    type: "AcceptTrade",
+    tradeId: "trade-1",
+  });
+});
+
+test("authoritative decision events produce one live announcement", async ({ page }) => {
+  await mockLiveStream(page);
+  await mockGameApi(page);
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("Connected", { exact: true })).toBeVisible();
+
+  await emitSnapshot(
+    page,
+    snapshot("AwaitPurchase", 2, {
+      publicEvents: [event("PendingChoiceCreated", 2, { choiceId: "choice-2" }, "seat-a")],
+    }),
+  );
+  const announcement = page.getByRole("group", { name: "Game announcements" }).getByRole("alert");
+  await expect(announcement).toContainText("A decision is required before play can continue.");
+  await expect(announcement).toHaveCount(1);
 });
 
 test("desktop keeps the board anchor, player rail, hand, and decision reachable", async ({

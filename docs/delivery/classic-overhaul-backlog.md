@@ -786,10 +786,13 @@ accidental collapse in coverage.
       production build pass. Iteration 28 adds a synchronous in-flight command
       lock so same-task activations cannot duplicate an authoritative command,
       with a Chromium regression in `apps/web/e2e/iteration4-gameplay.spec.ts`;
-      the five-test Chromium gameplay file passes. Browser coverage for every
-      blocking phase, disconnect cases, duplicate-command behavior beyond
-      same-task activation, live-announcement assertions, and full cross-browser
-      evidence remain outstanding before this ticket can be marked complete.
+      the eleven-test Chromium gameplay file passes. Iteration 29 adds browser
+      scenarios for auction context and bid bounds, a paused disconnected auction,
+      detention route focus and submission, debt context and bankruptcy
+      confirmation, named-party trade acceptance, and one authoritative decision
+      announcement. Full disconnect matrices, duplicate-command behavior beyond
+      same-task activation, and cross-browser evidence remain outstanding before
+      this ticket can be marked complete.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027
