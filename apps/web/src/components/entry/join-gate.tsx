@@ -16,7 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { joinRequestFromForm, JOIN_TOKENS, type JoinField } from "./join-form-model";
+import { PiecePicker } from "./piece-picker";
+import { joinRequestFromForm, type JoinField } from "./join-form-model";
 
 type GateState =
   | { readonly kind: "checking" }
@@ -165,34 +166,27 @@ function JoinForm({
             )}
           </div>
 
-          <fieldset
+          <div
             className="flex flex-col gap-2"
             aria-invalid={errors.token === undefined ? undefined : true}
             aria-describedby={describedBy("token")}
           >
-            <legend className="text-sm font-medium">Open seat token</legend>
             <p className="text-sm text-muted-ink">
               A token already claimed by someone else cannot be used.
             </p>
-            <div className="flex flex-wrap gap-2">
-              {JOIN_TOKENS.filter((candidate) =>
-                availablePieces?.some((piece) => piece.pieceId === candidate.token.pieceId),
-              ).map((token) => (
-                <label
-                  key={token.token.pieceId}
-                  className="flex min-h-11 items-center gap-2 rounded-(--radius-md) border border-line px-3"
-                >
-                  <input type="radio" name="token" value={token.token.pieceId} />
-                  {token.label}
-                </label>
-              ))}
-            </div>
+            <PiecePicker
+              name="token"
+              legend="Open seat token"
+              availablePieceIds={availablePieces?.map((piece) => piece.pieceId) ?? []}
+              errorId={errors.token === undefined ? undefined : fieldErrorId("token")}
+              aria-invalid={errors.token !== undefined}
+            />
             {errors.token === undefined ? null : (
               <p id={fieldErrorId("token")} className="text-sm text-danger">
                 {errors.token}
               </p>
             )}
-          </fieldset>
+          </div>
 
           <div>
             <label className="flex min-h-11 items-start gap-3 text-sm">

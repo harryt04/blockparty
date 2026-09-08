@@ -20,7 +20,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CREATE_PIECES, createRequestFromForm, type CreateField } from "./create-form-model";
+import { PiecePicker } from "./piece-picker";
+import { SeatStepper } from "./seat-stepper";
+import { SeatTray, setupSeatTrayEntries } from "./seat-tray";
+import { createRequestFromForm, type CreateField } from "./create-form-model";
+import { PIECE_OPTIONS } from "./piece-options";
+import type { PieceId } from "@blockparty/contracts";
 
 const VARIANT_COPY: Record<(typeof VARIANT_KEYS)[number], { label: string; warning: string }> = {
   restSpaceJackpot: {
@@ -108,6 +113,9 @@ export function CreateGameForm() {
   const [pending, setPending] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<CreateField, string>>>({});
   const [apiError, setApiError] = useState<string>();
+  const [hostPieceId, setHostPieceId] = useState<PieceId>();
+  const [humanSeatCount, setHumanSeatCount] = useState(2);
+  const [botSeatCount, setBotSeatCount] = useState(0);
   const [preset, setPreset] = useState<"standard" | "short-game">("standard");
   const [variants, setVariants] = useState<Record<VariantKey, boolean>>(
     () =>
@@ -136,7 +144,10 @@ export function CreateGameForm() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setApiError(undefined);
-    const result = createRequestFromForm(new FormData(event.currentTarget));
+    const form = new FormData(event.currentTarget);
+    form.set("humanSeatCount", String(humanSeatCount));
+    form.set("botSeatCount", String(botSeatCount));
+    const result = createRequestFromForm(form);
     if (!result.ok) {
       setErrors(result.errors);
       return;
@@ -194,6 +205,12 @@ export function CreateGameForm() {
     }
   }
 
+  const hostToken = PIECE_OPTIONS.find((piece) => piece.token.pieceId === hostPieceId)?.token;
+  const totalSeatError =
+    humanSeatCount + botSeatCount < 2 || humanSeatCount + botSeatCount > 6
+      ? "Choose between 2 and 6 total players."
+      : undefined;
+
   return (
     <form className="flex flex-col gap-6" onSubmit={submit} noValidate>
       <Card>
@@ -227,51 +244,46 @@ export function CreateGameForm() {
             />
             <FieldError field="hostName" errors={errors} />
           </div>
-          <fieldset className="flex flex-col gap-2" {...fieldProps("hostToken", errors)}>
-            <legend className="text-sm font-medium">Your piece</legend>
-            <div className="flex flex-wrap gap-2">
-              {CREATE_PIECES.map((piece) => (
-                <label
-                  key={piece.token.pieceId}
-                  className="flex min-h-11 items-center gap-2 rounded-(--radius-md) border border-line px-3"
-                >
-                  <input type="radio" name="hostToken" value={piece.token.pieceId} />
-                  {piece.label}
-                </label>
-              ))}
-            </div>
+          <div>
+            <PiecePicker
+              name="hostToken"
+              legend="Your piece"
+              value={hostPieceId}
+              onChange={setHostPieceId}
+              errorId={errors.hostToken === undefined ? undefined : errorId("hostToken")}
+              aria-invalid={errors.hostToken !== undefined}
+            />
             <FieldError field="hostToken" errors={errors} />
-          </fieldset>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="human-seats">Human players</Label>
-              <Input
-                id="human-seats"
-                name="humanSeatCount"
-                type="number"
-                min={1}
-                max={6}
-                defaultValue={2}
-                className="tabular mt-1"
-                {...fieldProps("humanSeatCount", errors)}
-              />
-              <FieldError field="humanSeatCount" errors={errors} />
-            </div>
-            <div>
-              <Label htmlFor="bot-seats">Bot seats</Label>
-              <Input
-                id="bot-seats"
-                name="botSeatCount"
-                type="number"
-                min={0}
-                max={5}
-                defaultValue={0}
-                className="tabular mt-1"
-                {...fieldProps("botSeatCount", errors)}
-              />
-              <FieldError field="botSeatCount" errors={errors} />
-            </div>
           </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SeatStepper
+              id="human-seats"
+              label="Human players"
+              value={humanSeatCount}
+              min={1}
+              max={6}
+              description="You are included in this count."
+              error={errors.humanSeatCount}
+              onChange={setHumanSeatCount}
+            />
+            <SeatStepper
+              id="bot-seats"
+              label="Computer players"
+              value={botSeatCount}
+              min={0}
+              max={5}
+              description="Computer seats fill the table."
+              error={errors.botSeatCount ?? totalSeatError}
+              onChange={setBotSeatCount}
+            />
+          </div>
+          <SeatTray
+            seats={setupSeatTrayEntries({
+              humanSeatCount,
+              botSeatCount,
+              hostToken,
+            })}
+          />
         </CardContent>
       </Card>
 

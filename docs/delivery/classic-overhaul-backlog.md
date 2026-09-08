@@ -571,7 +571,7 @@ accidental collapse in coverage.
 
 ## Phase E — Rebuild creation, admission, and lobby
 
-- [ ] **CO-019 — Build reusable piece picker and seat-stepper primitives**
+- [x] **CO-019 — Build reusable piece picker and seat-stepper primitives**
       Blocked by: CO-018
       Requirements: CONTENT-016, UX-041, UX-042, DS-071–073
       Read: design system, UI primitives, presentation-preference code
@@ -583,6 +583,19 @@ accidental collapse in coverage.
       touch, and screen reader; wheel scrolling cannot change a count.
       Proves: component/model tests, explicit wheel regression, axe, focus order,
       and forced-color snapshots.
+      Evidence: shared `PiecePicker`, `SeatStepper`, and `SeatTray` components
+      centralize the six original pieces, render shape/pattern/text cues, expose
+      native keyboard radios and 44px stepper buttons, disable bounds, announce
+      live values, retain unavailable choices, and keep setup seat counts in
+      non-numeric controls. Model coverage is in
+      `apps/web/test/seat-setup-components.test.ts`; a deliberate mutation of
+      the delta application failed the boundary test. Browser checks at 320,
+      375, and 1280 px plus forced-colors/reduced-motion confirmed zero page
+      overflow, six piece cards, zero numeric inputs, and 44px stepper targets.
+      Formatting, typecheck, build, and targeted web tests pass. Full CI remains
+      blocked by the pre-existing `prettier.config.cjs` ESLint `module`
+      `no-undef` error; the full suite was stopped after the known long-running
+      soak produced no output.
 
 - [ ] **CO-020 — Rebuild the one-page create flow**
       Blocked by: CO-019

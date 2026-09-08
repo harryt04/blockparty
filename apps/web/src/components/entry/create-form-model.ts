@@ -2,21 +2,14 @@
 import {
   CreateGameRequest,
   DisplayName,
-  type SeatToken,
   SHORT_GAME_CONFIGURATION,
   STANDARD_CONFIGURATION,
   VARIANT_KEYS,
   type RulesConfiguration,
 } from "@blockparty/contracts";
+import { PIECE_OPTIONS } from "./piece-options";
 
-export const CREATE_PIECES = [
-  { token: { colorIndex: 1, pieceId: "piece-lantern", pattern: "solid" }, label: "Lantern" },
-  { token: { colorIndex: 2, pieceId: "piece-key", pattern: "stripe" }, label: "Key" },
-  { token: { colorIndex: 3, pieceId: "piece-crescent", pattern: "dot" }, label: "Crescent" },
-  { token: { colorIndex: 4, pieceId: "piece-tower", pattern: "cross" }, label: "Tower" },
-  { token: { colorIndex: 5, pieceId: "piece-fox", pattern: "chevron" }, label: "Fox" },
-  { token: { colorIndex: 6, pieceId: "piece-teapot", pattern: "grid" }, label: "Teapot" },
-] satisfies readonly { token: SeatToken; label: string }[];
+export const CREATE_PIECES = PIECE_OPTIONS;
 
 export type CreateField =
   | "name"
