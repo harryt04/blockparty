@@ -498,6 +498,10 @@
       max(var(--game-gutter), env(safe-area-inset-right));
   }
 
+  .game-action-inline {
+    display: none;
+  }
+
   @media (max-width: 47.99rem) {
     .game-desktop-header {
       display: none;
@@ -580,7 +584,17 @@
       position: sticky;
       inset-inline: auto;
       bottom: 0;
-      padding: 0.75rem 0;
+      border: 0;
+      padding: 0;
+      background: transparent;
+    }
+
+    .game-action-inline {
+      display: block;
+    }
+
+    .game-action-sheet-trigger {
+      display: none;
     }
   }
 

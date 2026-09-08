@@ -200,6 +200,7 @@ export function ActionBar({
   onAction?: (action: LegalAction, amount?: number) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [desktopActions, setDesktopActions] = useState(false);
   const submit = onAction ?? (() => undefined);
   const blockingKind =
     decisionSnapshot === undefined ? undefined : blockingDecisionKind(decisionSnapshot);
@@ -214,6 +215,14 @@ export function ActionBar({
   const autoOpenedKey = useRef<string | undefined>(undefined);
   const actionSheetTriggerRef = useRef<HTMLButtonElement>(null);
   const restoreTriggerAfterPending = useRef(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 48rem)");
+    const update = () => setDesktopActions(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   useEffect(() => {
     if (
@@ -238,13 +247,13 @@ export function ActionBar({
   }
 
   useEffect(() => {
-    if (autoOpen && autoOpenedKey.current !== decisionKey) {
+    if (!desktopActions && autoOpen && autoOpenedKey.current !== decisionKey) {
       setOpen(true);
       autoOpenedKey.current = decisionKey;
     } else if (!autoOpen) {
       autoOpenedKey.current = undefined;
     }
-  }, [autoOpen, decisionKey]);
+  }, [autoOpen, decisionKey, desktopActions]);
 
   return (
     <section
@@ -258,11 +267,31 @@ export function ActionBar({
         </p>
       ) : null}
 
+      <div className="game-action-inline rounded-(--radius-lg) border-2 border-brand bg-surface-raised p-4">
+        <h2 className="font-serif text-xl">Your decision</h2>
+        <p className="mt-1 text-sm text-muted-ink">Available from the current server state.</p>
+        <div className="mt-4">
+          {decisionSnapshot === undefined ? null : (
+            <AcquisitionAuctionSummary snapshot={decisionSnapshot} compact />
+          )}
+          <div className={decisionSnapshot === undefined ? undefined : "mt-4"}>
+            <ActionOptions
+              legalActions={legalActions}
+              actionAvailability={actionAvailability}
+              decisionSnapshot={decisionSnapshot}
+              blockingKind={blockingKind}
+              disabled={disabled || pending}
+              onAction={submit}
+            />
+          </div>
+        </div>
+      </div>
+
       <Button
         ref={actionSheetTriggerRef}
         id="game-action-sheet-trigger"
         variant="primary"
-        className="w-full sm:w-auto"
+        className="game-action-sheet-trigger w-full sm:w-auto"
         onClick={() => setOpen(true)}
         disabled={disabled}
         aria-expanded={open}

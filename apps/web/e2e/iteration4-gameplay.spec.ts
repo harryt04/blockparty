@@ -2494,7 +2494,7 @@ test("desktop keeps the board anchor, player rail, hand, and decision reachable"
   await expect(page.locator('[data-responsive-region="board"]')).toBeVisible();
   await expect(page.locator('[data-property-hand="local"]')).toBeVisible();
   await expect(page.locator('[data-responsive-region="context-panel"]')).toBeVisible();
-  await expect(page.getByRole("button", { name: "Open action sheet" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your decision" })).toBeVisible();
 
   const board = await page.locator('[data-responsive-region="board"]').boundingBox();
   const playerRail = await page.locator('[data-responsive-region="player-rail"]').boundingBox();
