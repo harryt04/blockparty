@@ -140,6 +140,7 @@ describe("live announcement model", () => {
   it("announces reconnect transitions but ignores ordinary live/resync churn", () => {
     expect(announcementForConnection(undefined, "live")).toBeUndefined();
     expect(announcementForConnection("live", "resyncing")).toBeUndefined();
+    expect(announcementForConnection("reconnecting", "reconnecting")).toBeUndefined();
     expect(announcementForConnection("live", "reconnecting")).toMatchObject({
       message: "Connection lost. Reconnecting to the live game.",
       priority: "assertive",

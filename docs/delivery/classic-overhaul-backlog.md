@@ -875,7 +875,11 @@ accidental collapse in coverage.
       AwaitAuction card keeps bid/pass visible while excluding unrelated RollDice and acquisition
       actions even when they appear in the projection. The Chromium mutation run fails when the
       phase filter admits RollDice; the restored scenario passes in Chromium, Firefox, and WebKit.
-      Broader disconnect, axe, and live-release evidence remain outstanding.
+      Iteration 49 adds a reconnect-announcement regression: the first transport loss announces
+      the recovery state, a repeated error while retry is already scheduled stays quiet, and the
+      existing sync path returns the UI to Connected. The matching model assertion is mutation-
+      sensitive; focused Chromium, Firefox, and WebKit runs pass. Broader disconnect, axe, and
+      live-release evidence remain outstanding.
 
 - [ ] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

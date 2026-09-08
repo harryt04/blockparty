@@ -168,6 +168,10 @@ async function mockLiveStream(page: Page): Promise<void> {
       },
       configurable: true,
     });
+    Object.defineProperty(window, "__emitGameConnectionError", {
+      value: () => sources.at(-1)?.onerror?.(new Event("error")),
+      configurable: true,
+    });
     Object.defineProperty(window, "EventSource", { value: FakeEventSource });
   });
 }
@@ -1417,6 +1421,29 @@ test("authoritative decision events produce one live announcement", async ({ pag
   const announcement = page.getByRole("group", { name: "Game announcements" }).getByRole("alert");
   await expect(announcement).toContainText("A decision is required before play can continue.");
   await expect(announcement).toHaveCount(1);
+});
+
+test("reconnect transitions announce once and stay quiet through transport churn", async ({
+  page,
+}) => {
+  await mockLiveStream(page);
+  await mockGameApi(page);
+  await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("Connected", { exact: true })).toBeVisible();
+
+  const announcement = page.getByRole("group", { name: "Game announcements" }).getByRole("alert");
+  await page.evaluate(() => {
+    (window as unknown as { __emitGameConnectionError?: () => void }).__emitGameConnectionError?.();
+  });
+  await expect(announcement).toHaveText("Connection lost. Reconnecting to the live game.");
+
+  // A second transport error while the retry is already scheduled must not
+  // create another announcement or replace the actionable recovery message.
+  await page.evaluate(() => {
+    (window as unknown as { __emitGameConnectionError?: () => void }).__emitGameConnectionError?.();
+  });
+  await expect(announcement).toHaveText("Connection lost. Reconnecting to the live game.");
+  await expect(page.getByText("Connected", { exact: true })).toBeVisible({ timeout: 5_000 });
 });
 
 test("desktop keeps the board anchor, player rail, hand, and decision reachable", async ({

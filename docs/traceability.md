@@ -550,3 +550,9 @@ excluding unrelated RollDice and acquisition actions even when they appear in th
 The Chromium mutation run fails when the phase filter admits RollDice; the restored scenario passes
 in Chromium, Firefox, and WebKit. Broader disconnect, axe, and live-release evidence remain
 assigned to CO-027 and CO-030–031.
+Iteration 49 adds reconnect-announcement evidence in `apps/web/e2e/iteration4-gameplay.spec.ts`:
+the first transport loss announces recovery, repeated errors during the scheduled retry remain
+quiet, and the existing authoritative sync returns the status to Connected. The corresponding
+`apps/web/test/live-announcements.test.ts` model assertion fails if reconnecting churn is announced
+again; focused Chromium, Firefox, and WebKit runs pass. Broader disconnect, axe, and live-release
+evidence remain assigned to CO-027 and CO-030–031.
