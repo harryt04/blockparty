@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { BootstrapResponse, type Command, type LegalAction } from "@blockparty/contracts";
 
 function commandForLegalAction(action: LegalAction): Command {
@@ -9,6 +9,7 @@ function commandForLegalAction(action: LegalAction): Command {
   switch (action.type) {
     case "EndTurn":
     case "PayObligation":
+    case "DeclareBankruptcy":
     case "PassAuction":
     case "RollDice":
       return { type: action.type };
@@ -289,6 +290,7 @@ test.describe("live multiplayer authority", () => {
             "AcceptTrade",
             "RejectTrade",
             "CancelTrade",
+            "DeclareBankruptcy",
           ].includes(action.type),
         );
       }
@@ -667,6 +669,210 @@ test.describe("live multiplayer authority", () => {
       await joiner.setViewportSize({ width: 1280, height: 900 });
       await assertNoHorizontalOverflow(host, "host game");
       await assertNoHorizontalOverflow(joiner, "joiner game");
+    } finally {
+      await joinerContext.close();
+    }
+  });
+
+  test("drives authoritative detention entry and exposes an untimed release choice", async ({
+    browser,
+    page: host,
+  }) => {
+    test.setTimeout(180_000);
+    const joinerContext = await browser.newContext({
+      serviceWorkers: "block",
+      viewport: { width: 375, height: 900 },
+    });
+    const joiner = await joinerContext.newPage();
+
+    async function assertNoHorizontalOverflow(target: Page, label: string): Promise<void> {
+      const dimensions = await target.evaluate(() => ({
+        clientWidth: document.documentElement.clientWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      }));
+      expect(dimensions.scrollWidth, `${label} page overflow`).toBeLessThanOrEqual(
+        dimensions.clientWidth + 1,
+      );
+    }
+
+    async function readBootstrap(target: Page, gameId: string): Promise<BootstrapResponse> {
+      const response = await target.evaluate(async (id) => {
+        const result = await fetch(`/api/games/${id}/bootstrap`);
+        return { status: result.status, body: await result.json() };
+      }, gameId);
+      expect(response.status).toBe(200);
+      return BootstrapResponse.parse(response.body);
+    }
+
+    async function issueCommand(
+      target: Page,
+      gameId: string,
+      expectedVersion: number,
+      payload: Command,
+    ): Promise<void> {
+      const response = await target.evaluate(
+        async ({ gameId: id, expectedVersion: version, payload: command }) => {
+          const csrf = document.cookie
+            .split("; ")
+            .find((entry) => entry.startsWith("bp_csrf="))
+            ?.slice("bp_csrf=".length);
+          if (csrf === undefined) return { status: 0 };
+          const result = await fetch(`/api/games/${id}/commands`, {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-csrf-token": csrf },
+            body: JSON.stringify({
+              protocolVersion: 1,
+              type: "game.command",
+              requestId: crypto.randomUUID(),
+              gameId: id,
+              commandId: crypto.randomUUID(),
+              expectedVersion: version,
+              payload: command,
+            }),
+          });
+          return { status: result.status };
+        },
+        { gameId, expectedVersion, payload },
+      );
+      expect(response.status).toBe(202);
+    }
+
+    function nextProgressionAction(actions: readonly LegalAction[]): LegalAction | undefined {
+      const priority = [
+        "RollDice",
+        "EndTurn",
+        "DeclineAcquisition",
+        "PassAuction",
+        "PlaceAuctionBid",
+        "ChoosePendingOption",
+        "PayObligation",
+        "DeclareBankruptcy",
+      ] as const;
+      return priority.flatMap((type) => actions.filter((action) => action.type === type))[0];
+    }
+
+    try {
+      let detention: { page: Page; state: BootstrapResponse } | undefined;
+      let detentionGameId: string | undefined;
+      await host.setViewportSize({ width: 375, height: 900 });
+      await host.goto("/create", { waitUntil: "domcontentloaded" });
+      await host.getByRole("button", { name: "Keep analytics off" }).click();
+      await host.getByRole("textbox", { name: "Your pseudonym" }).fill("Detention Host");
+      await host.getByRole("radio", { name: "Lantern" }).check();
+      await host
+        .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
+        .check();
+      const createResponsePromise = host.waitForResponse(
+        (response) =>
+          response.url().endsWith("/api/games") && response.request().method() === "POST",
+      );
+      await host.getByRole("button", { name: "Create lobby" }).click();
+      const created = (await (await createResponsePromise).json()) as {
+        gameId: string;
+        invitePath: string;
+      };
+      await expect(host).toHaveURL(new RegExp(`/game/${created.gameId}/lobby$`));
+
+      await joiner.goto(created.invitePath, { waitUntil: "domcontentloaded" });
+      await joiner.getByRole("button", { name: "Keep analytics off" }).click();
+      await joiner.getByRole("textbox", { name: "Name for this game" }).fill("Detention Joiner");
+      await joiner.getByRole("radio", { name: "Key" }).check();
+      await joiner
+        .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
+        .check();
+      const joinResponsePromise = joiner.waitForResponse(
+        (response) => response.url().includes("/join") && response.request().method() === "POST",
+      );
+      await joiner.getByRole("button", { name: "Join the lobby" }).click();
+      expect((await joinResponsePromise).status()).toBe(200);
+      await expect(host.getByText("Detention Joiner", { exact: true })).toBeVisible();
+
+      const startResponsePromise = host.waitForResponse(
+        (response) =>
+          response.url().endsWith(`/api/games/${created.gameId}/commands`) &&
+          response.request().method() === "POST",
+      );
+      await host.getByRole("button", { name: "Start game" }).click();
+      expect((await startResponsePromise).ok()).toBe(true);
+      await expect(host).toHaveURL(new RegExp(`/game/${created.gameId}$`));
+      await expect(joiner).toHaveURL(new RegExp(`/game/${created.gameId}$`));
+
+      const players = [host, joiner];
+      for (let step = 0; step < 40 && detention === undefined; step += 1) {
+        const states = await Promise.all(
+          players.map(async (page) => ({
+            page,
+            state: await readBootstrap(page, created.gameId),
+          })),
+        );
+        detention = states.find(({ state }) =>
+          state.snapshot.legalActions.some(
+            (action) =>
+              action.type === "ChoosePendingOption" &&
+              typeof action.constraints?.choiceId === "string" &&
+              action.constraints.choiceId.startsWith("detention:"),
+          ),
+        );
+        if (detention !== undefined) break;
+
+        const actor = states
+          .map(({ page, state }) => ({
+            page,
+            state,
+            action: nextProgressionAction(state.snapshot.legalActions),
+          }))
+          .find(({ action }) => action !== undefined);
+        expect(actor, "a live seat should advertise the next detention setup action").toBeDefined();
+        if (actor === undefined || actor.action === undefined)
+          throw new Error("No live action was advertised before detention");
+        await issueCommand(
+          actor.page,
+          created.gameId,
+          actor.state.aggregateVersion,
+          commandForLegalAction(actor.action),
+        );
+      }
+      if (detention !== undefined) detentionGameId = created.gameId;
+
+      expect(detention, "a live player should eventually enter Detention").toBeDefined();
+      if (detention !== undefined) {
+        await expect(
+          detention.page.getByRole("heading", { name: "Noise Complaint: choose your exit" }),
+        ).toBeVisible();
+        await expect(detention.page.getByText(/There is no timer/)).toBeVisible();
+        await expect(
+          detention.page.getByRole("button", { name: /matching roll|release fee|Use / }).first(),
+        ).toBeVisible();
+        await assertNoHorizontalOverflow(host, "detention host mobile");
+        await assertNoHorizontalOverflow(joiner, "detention joiner mobile");
+
+        await host.setViewportSize({ width: 1280, height: 900 });
+        await joiner.setViewportSize({ width: 1280, height: 900 });
+        await assertNoHorizontalOverflow(host, "detention host desktop");
+        await assertNoHorizontalOverflow(joiner, "detention joiner desktop");
+
+        const detentionAction = detention.state.snapshot.legalActions.find(
+          (action) => action.type === "ChoosePendingOption",
+        );
+        expect(
+          detentionAction,
+          "Detention should expose an authoritative release command",
+        ).toBeDefined();
+        if (detentionAction !== undefined) {
+          await issueCommand(
+            detention.page,
+            detentionGameId as string,
+            detention.state.aggregateVersion,
+            commandForLegalAction(detentionAction),
+          );
+          await expect
+            .poll(async () => {
+              const state = await readBootstrap(detention.page, detentionGameId as string);
+              return state.snapshot.phase;
+            })
+            .not.toBe("AwaitChoice");
+        }
+      }
     } finally {
       await joinerContext.close();
     }

@@ -1149,6 +1149,16 @@ accidental collapse in coverage.
       surfaces; no capability values are captured. The wider detention, debt,
       completion, rematch, cross-browser live, and manual accessibility evidence
       remain open.
+      Iteration 88 adds a deterministic two-context Chromium journey for a fresh
+      classic game: real commands drive the captured seed into the Detention
+      choice, the owning projection exposes the untimed release routes, both
+      375px and 1280px views pass overflow checks, and one advertised release
+      command commits. The live-only development server accepts the fixed seed
+      and elevated command budget; production creation continues to use a fresh
+      random 256-bit seed. The new journey fails under a mutated Detention
+      heading and passes after restoration. Debt, bankruptcy, completion,
+      rematch, Firefox/WebKit runtime, and broader screenshot coverage remain
+      open.
 
 - [~] **CO-031 — Complete accessibility and mobile-style failure evidence** (Codex, iteration 79)
       Blocked by: CO-030

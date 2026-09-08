@@ -35,6 +35,25 @@ import type { CapturedVersions, GameId, GameStatus, SeatId } from "@blockparty/c
 
 const RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
+function creationSeed(request: CreateGameRequest): Uint8Array {
+  const configured = process.env.BLOCKPARTY_E2E_SEED;
+  // This seam exists only for the opt-in local live browser journey. Production
+  // creation always takes the fresh random path, even if a stale test variable
+  // is present in the process environment.
+  if (
+    env.NODE_ENV !== "production" &&
+    process.env.BLOCKPARTY_E2E_LIVE === "1" &&
+    request.hostName === "Detention Host" &&
+    configured !== undefined
+  ) {
+    if (!/^[0-9a-f]{64}$/i.test(configured)) {
+      throw new Error("BLOCKPARTY_E2E_SEED must be exactly 32 bytes of hexadecimal.");
+    }
+    return Uint8Array.from(configured.match(/.{2}/g)!.map((pair) => Number.parseInt(pair, 16)));
+  }
+  return randomBytes(32);
+}
+
 export interface GameSeatRecord {
   readonly seatId: SeatId;
   readonly kind: "human" | "bot" | "open";
@@ -344,7 +363,7 @@ export async function createGameInTransaction(
   const host = generateCapability();
   const reclaim = generateCapability();
   const lobby = projectLobby(gameId, inviteId, request, versions, seats, hostSeatId, expiresAt);
-  const seed = randomBytes(32);
+  const seed = creationSeed(request);
 
   const game: GameDocument = {
     _id: gameId,
