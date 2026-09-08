@@ -1011,7 +1011,14 @@ accidental collapse in coverage.
       recovery journey in `apps/web/e2e/iteration4-gameplay.spec.ts`: after
       transport loss, the browser applies the newer `/sync` snapshot and ignores
       a late stale SSE snapshot, with the monotonic guard mutation-checked.
-      Browser-level multi-context disconnect/reclaim journeys remain outstanding.
+      Iteration 72 adds a Chromium/Firefox/WebKit browser journey using separate
+      host, disconnected-player, and reclaim browser contexts: the host replaces
+      the disconnected human only after the authoritative edge, the returning
+      reclaim context requests recovery, and the host approves it at the safe
+      boundary. The journey asserts the ordered recovery commands, restored seat
+      projection, and no horizontal overflow at 375px and 1280px; mutation of
+      reclaim authority fails the Chromium scenario. Broader live multiplayer,
+      real replica-set, and release evidence remain outstanding.
 
 - [~] **CO-028 — Rebuild event history, reconnect, and authoritative motion**
       Blocked by: CO-027

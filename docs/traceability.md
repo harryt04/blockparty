@@ -365,7 +365,13 @@ emits exactly one edge. Iteration 71 adds the cross-browser recovery journey in
 authoritative `/sync` snapshot and a late stale SSE snapshot cannot regress the
 visible phase or delivery sequence. Chromium, Firefox, and WebKit pass; removing
 the monotonic snapshot guard makes the Chromium regression fail. Browser-level
-multi-context disconnect/reclaim journeys remain planned.
+multi-context disconnect/reclaim coverage is added in iteration 72: separate
+host, disconnected-player, and reclaim browser contexts drive ordered bot
+replacement, reclaim request, and host approval against an authoritative mock
+boundary. Chromium, Firefox, and WebKit pass at 375px and 1280px, and mutation
+of the reclaim authority makes the Chromium scenario fail. Real replica-set
+multiplayer and release-wide recovery evidence remain assigned to CO-028 and
+CO-030–031.
 
 No self-hosted font files are present because licensed, provenanced faces have
 not yet been approved. The PWA shell caches only versioned public/app-shell

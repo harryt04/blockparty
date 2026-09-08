@@ -294,6 +294,145 @@ async function emitSnapshot(page: Page, projected: GameSnapshotProjectionType): 
   );
 }
 
+type RecoveryJourneyStage = "live" | "disconnected" | "replaced" | "requested" | "reclaimed";
+
+type RecoveryJourney = {
+  stage: RecoveryJourneyStage;
+  sequence: number;
+  readonly pages: { readonly page: Page; readonly viewerSeatId: "seat-a" | "seat-b" }[];
+  readonly commands: { readonly viewerSeatId: string; readonly payload: unknown }[];
+};
+
+function recoveryJourneySnapshot(
+  viewerSeatId: "seat-a" | "seat-b",
+  journey: RecoveryJourney,
+): GameSnapshotProjectionType {
+  const base = snapshot("AwaitRoll", journey.sequence);
+  const seatBIsReplaced = ["replaced", "requested"].includes(journey.stage);
+  const seatBIsReclaimed = journey.stage === "reclaimed";
+  const pendingSeatReclaimId = journey.stage === "requested" ? "seat-b" : undefined;
+  const publicEvents = [
+    journey.stage === "disconnected"
+      ? event("PlayPaused", 2, { requiredSeatId: "seat-b", phase: "AwaitRoll" })
+      : undefined,
+    seatBIsReplaced ? event("SeatReplacedWithBot", 2, { seatId: "seat-b" }, "seat-a") : undefined,
+    pendingSeatReclaimId === undefined
+      ? undefined
+      : event("SeatReclaimRequested", 3, { seatId: "seat-b" }, "seat-b"),
+    seatBIsReclaimed ? event("SeatReclaimApproved", 4, { seatId: "seat-b" }, "seat-a") : undefined,
+  ].filter((candidate): candidate is DomainEvent => candidate !== undefined);
+  const seats = base.seats.map((seat) => {
+    if (seat.seatId !== "seat-b") {
+      return { ...seat, isSelf: seat.seatId === viewerSeatId };
+    }
+    return {
+      ...seat,
+      kind: seatBIsReplaced
+        ? seatBIsReclaimed
+          ? ("human" as const)
+          : ("bot" as const)
+        : seat.kind,
+      status: seatBIsReplaced && !seatBIsReclaimed ? ("replaced" as const) : ("active" as const),
+      connected:
+        seatBIsReclaimed || (viewerSeatId === "seat-b" && journey.stage !== "disconnected"),
+      isSelf: viewerSeatId === "seat-b",
+    };
+  });
+  const projected = {
+    ...base,
+    seats,
+    viewerSeatId,
+    publicEvents,
+    recovery: {
+      safeBoundary: true,
+      replacementSeatIds: journey.stage === "disconnected" ? ["seat-b"] : [],
+      ...(pendingSeatReclaimId === undefined ? {} : { pendingSeatReclaimId }),
+      viewerCanRequestReclaim:
+        viewerSeatId === "seat-b" &&
+        (journey.stage === "replaced" || journey.stage === "requested"),
+      viewerCanClaimHost: false,
+    },
+  } satisfies GameSnapshotProjectionType;
+  const parsed = GameSnapshotProjection.safeParse(projected);
+  if (!parsed.success) throw new Error(parsed.error.message);
+  return projected;
+}
+
+async function mockRecoveryJourneyApi(
+  page: Page,
+  viewerSeatId: "seat-a" | "seat-b",
+  journey: RecoveryJourney,
+): Promise<void> {
+  journey.pages.push({ page, viewerSeatId });
+  await page.route(`**/api/games/${GAME_ID}/**`, async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/bootstrap") || path.endsWith("/sync")) {
+      const projected = recoveryJourneySnapshot(viewerSeatId, journey);
+      await route.fulfill({
+        json: path.endsWith("/bootstrap")
+          ? {
+              snapshot: projected,
+              aggregateVersion: journey.sequence,
+              sequence: journey.sequence,
+              serverTime: "2026-09-03T15:00:00.000Z",
+            }
+          : {
+              protocolVersion: 1,
+              type: "game.snapshot",
+              gameId: GAME_ID,
+              serverTime: "2026-09-03T15:00:00.000Z",
+              aggregateVersion: journey.sequence,
+              sequence: journey.sequence,
+              snapshot: projected,
+            },
+      });
+      return;
+    }
+    if (path.endsWith("/commands")) {
+      const command = route.request().postDataJSON() as { payload: { type: string } };
+      journey.commands.push({ viewerSeatId, payload: command.payload });
+      if (viewerSeatId === "seat-a" && command.payload.type === "ReplaceSeatWithBot") {
+        expect(journey.stage).toBe("disconnected");
+        journey.stage = "replaced";
+      } else if (viewerSeatId === "seat-b" && command.payload.type === "RequestSeatReclaim") {
+        expect(journey.stage).toBe("replaced");
+        journey.stage = "requested";
+      } else if (viewerSeatId === "seat-a" && command.payload.type === "ApproveSeatReclaim") {
+        expect(journey.stage).toBe("requested");
+        journey.stage = "reclaimed";
+      } else {
+        throw new Error(`Unexpected recovery command: ${command.payload.type}`);
+      }
+      journey.sequence += 1;
+      await route.fulfill({
+        json: {
+          protocolVersion: 1,
+          type: "game.commandAck",
+          gameId: GAME_ID,
+          serverTime: "2026-09-03T15:00:00.000Z",
+          commandId: (route.request().postDataJSON() as { commandId: string }).commandId,
+          accepted: true,
+          aggregateVersion: journey.sequence,
+          firstSequence: journey.sequence,
+          lastSequence: journey.sequence,
+        },
+      });
+      await Promise.all(
+        journey.pages
+          .filter(({ page: candidate }) => !candidate.isClosed())
+          .map(async ({ page: candidate, viewerSeatId: candidateSeatId }) =>
+            emitSnapshot(candidate, recoveryJourneySnapshot(candidateSeatId, journey)),
+          ),
+      );
+      return;
+    }
+    await route.fulfill({
+      status: 404,
+      json: { error: { code: "NOT_FOUND", message: "Not found" } },
+    });
+  });
+}
+
 test("a player can roll and acquire the current Address", async ({ page }) => {
   await mockLiveStream(page);
   const { commands } = await mockGameApi(page);
@@ -2165,6 +2304,94 @@ test("reconnect keeps the newer authoritative snapshot against a late stale fram
   await expect(page.getByText("Turn Start · 2 players · sequence 1", { exact: true })).toHaveCount(
     0,
   );
+});
+
+test("separate browser contexts can replace and reclaim one disconnected seat", async ({
+  browser,
+  page: hostPage,
+}) => {
+  const journey: RecoveryJourney = { stage: "live", sequence: 1, pages: [], commands: [] };
+  const playerContext = await browser.newContext({ serviceWorkers: "block" });
+  const playerPage = await playerContext.newPage();
+  await mockLiveStream(hostPage);
+  await mockLiveStream(playerPage);
+  await mockRecoveryJourneyApi(hostPage, "seat-a", journey);
+  await mockRecoveryJourneyApi(playerPage, "seat-b", journey);
+  await Promise.all([
+    hostPage.setViewportSize({ width: 375, height: 900 }),
+    playerPage.setViewportSize({ width: 375, height: 900 }),
+  ]);
+
+  try {
+    await Promise.all([
+      hostPage.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" }),
+      playerPage.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" }),
+    ]);
+    await expect(hostPage.getByText("Connected", { exact: true })).toBeVisible();
+    await expect(playerPage.getByText("Connected", { exact: true })).toBeVisible();
+
+    // The test server has received the authenticated presence edge after the
+    // returning player's context disappears. The host must act at this safe
+    // boundary; no browser-side context may replace the seat implicitly.
+    await playerPage.close();
+    journey.stage = "disconnected";
+    journey.sequence = 2;
+    await emitSnapshot(hostPage, recoveryJourneySnapshot("seat-a", journey));
+    await expect(
+      hostPage.getByRole("button", { name: "Replace Side Street with the bot" }),
+    ).toBeVisible();
+    await hostPage.getByRole("button", { name: "Replace Side Street with the bot" }).click();
+    await hostPage.getByRole("button", { name: "Confirm bot replacement" }).click();
+    await expect.poll(() => journey.commands.length).toBe(1);
+
+    const reclaimContext = await browser.newContext({ serviceWorkers: "block" });
+    const reclaimPage = await reclaimContext.newPage();
+    await mockLiveStream(reclaimPage);
+    await mockRecoveryJourneyApi(reclaimPage, "seat-b", journey);
+    await reclaimPage.setViewportSize({ width: 375, height: 900 });
+    try {
+      await reclaimPage.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
+      await expect(reclaimPage.getByRole("button", { name: "Request seat reclaim" })).toBeVisible();
+      await reclaimPage.getByRole("button", { name: "Request seat reclaim" }).click();
+      await expect(hostPage.getByText("Side Street requested reclaim.")).toBeVisible();
+      await hostPage.getByRole("button", { name: "Approve Side Street's reclaim" }).click();
+      await expect.poll(() => journey.commands.length).toBe(3);
+      await expect(
+        reclaimPage.getByText("Your seat is currently represented by the bot."),
+      ).toHaveCount(0);
+      await expect(reclaimPage.getByRole("button", { name: "Request seat reclaim" })).toHaveCount(
+        0,
+      );
+      await expect(hostPage.getByText("Recovery and host controls")).toHaveCount(0);
+
+      expect(journey.commands.map(({ payload }) => (payload as { type: string }).type)).toEqual([
+        "ReplaceSeatWithBot",
+        "RequestSeatReclaim",
+        "ApproveSeatReclaim",
+      ]);
+      for (const width of [375, 1280]) {
+        await Promise.all(
+          [hostPage, reclaimPage].map((candidate) =>
+            candidate.setViewportSize({ width, height: 900 }),
+          ),
+        );
+        for (const candidate of [hostPage, reclaimPage]) {
+          const dimensions = await candidate.evaluate(() => ({
+            clientWidth: document.documentElement.clientWidth,
+            scrollWidth: document.documentElement.scrollWidth,
+          }));
+          expect(
+            dimensions.scrollWidth,
+            `${width}px recovery journey page overflow`,
+          ).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+        }
+      }
+    } finally {
+      await reclaimContext.close();
+    }
+  } finally {
+    await playerContext.close();
+  }
 });
 
 test("desktop keeps the board anchor, player rail, hand, and decision reachable", async ({
