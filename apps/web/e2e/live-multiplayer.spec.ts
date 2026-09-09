@@ -66,6 +66,7 @@ test.describe("live multiplayer authority", () => {
     test.setTimeout(180_000);
     const joinerContext = await browser.newContext({
       serviceWorkers: "block",
+      colorScheme: "dark",
       viewport: { width: 375, height: 900 },
     });
     const joiner = await joinerContext.newPage();
@@ -90,7 +91,9 @@ test.describe("live multiplayer authority", () => {
       // the trigger click. The trigger's handler is idempotent, so force the
       // same click through that narrow overlay race rather than waiting for a
       // modal that may only exist on the next render.
-      await target.getByRole("button", { name: "Open action sheet" }).click({ force: true });
+      const trigger = target.getByRole("button", { name: "Open action sheet" });
+      await expect(trigger).toBeEnabled({ timeout: 30_000 });
+      await trigger.click({ force: true });
       await expect(modal).toBeVisible();
     }
 
@@ -699,6 +702,7 @@ test.describe("live multiplayer authority", () => {
     const captureVisualBaseline = ["chromium", "firefox"].includes(test.info().project.name);
     const joinerContext = await browser.newContext({
       serviceWorkers: "block",
+      colorScheme: "dark",
       viewport: { width: 375, height: 900 },
     });
     const joiner = await joinerContext.newPage();
@@ -1124,6 +1128,7 @@ test.describe("live multiplayer authority", () => {
     );
     const joinerContext = await browser.newContext({
       serviceWorkers: "block",
+      colorScheme: "dark",
       viewport: { width: 375, height: 900 },
     });
     const joiner = await joinerContext.newPage();
