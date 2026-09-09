@@ -6,6 +6,23 @@ test.describe("entry actions remain reachable with first-visit notices", () => {
   // authoritative. See TEST-002 and the E6 browser matrix.
   test.use({ serviceWorkers: "block" });
 
+  test("keeps piece selection controlled from its first render", async ({ page }) => {
+    const controlledWarnings: string[] = [];
+    page.on("console", (message) => {
+      if (
+        message.type() === "error" &&
+        /changing an uncontrolled input to be controlled/i.test(message.text())
+      ) {
+        controlledWarnings.push(message.text());
+      }
+    });
+
+    await page.goto("/create");
+    await page.getByRole("radio", { name: "Lantern" }).check();
+
+    expect(controlledWarnings).toEqual([]);
+  });
+
   test("keeps mutation submits disabled until the client form hydrates", async ({ page }) => {
     await page.context().route("**/_next/static/**/*.js", async (route) => {
       await route.abort();
@@ -153,7 +170,7 @@ test.describe("entry actions remain reachable with first-visit notices", () => {
 
   test("can submit the create form while analytics consent is pending", async ({ page }) => {
     await page.goto("/create");
-    await page.getByRole("textbox", { name: "Your pseudonym" }).fill("Host");
+    await page.getByRole("textbox", { name: "Display name" }).fill("Host");
     await page.getByRole("radio", { name: "Lantern" }).check();
     await page
       .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
@@ -192,7 +209,7 @@ test.describe("entry actions remain reachable with first-visit notices", () => {
       });
     });
     await page.goto("/create");
-    await page.getByRole("textbox", { name: "Your pseudonym" }).fill("Host");
+    await page.getByRole("textbox", { name: "Display name" }).fill("Host");
     await page.getByRole("radio", { name: "Lantern" }).check();
     await page
       .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })

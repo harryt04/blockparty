@@ -8,9 +8,12 @@ service worker is generated at `/sw.js` so the server-side `PWA_CACHE_VERSION`
 controls the versioned cache name.
 
 Only the public app shell, manifest/icons, and versioned `/_next/static/` assets
-are cached. API, SSE, game, capability, and other dynamic responses are never
-cached. An offline navigation falls back to `/offline`, which says that live
-play requires reconnection; no queued gameplay action is claimed or stored.
+are cached in production. The development worker leaves Next static assets on
+the network because the development compiler reuses their URLs while changing
+the module graph. API, SSE, game, capability, and other dynamic responses are
+never cached. An offline navigation falls back to `/offline`, which says that
+live play requires reconnection; no queued gameplay action is claimed or
+stored.
 
 The client coordinator registers updates, offers a non-modal install prompt
 after engagement, remembers dismissal in device-local preferences, and shows

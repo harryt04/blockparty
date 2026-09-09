@@ -21,7 +21,7 @@ describe("wire primitives", () => {
     expect(result.success).toBe(false);
   });
 
-  it("normalizes pseudonyms and counts Unicode grapheme clusters", () => {
+  it("normalizes display names and counts Unicode grapheme clusters", () => {
     expect(DisplayName.parse("  👩‍💻   Rivera ")).toBe("👩‍💻 Rivera");
     expect(DisplayName.safeParse("👩‍💻".repeat(24)).success).toBe(true);
     expect(DisplayName.safeParse("👩‍💻".repeat(25)).success).toBe(false);
@@ -30,7 +30,7 @@ describe("wire primitives", () => {
     expect(DisplayName.safeParse("admin").success).toBe(false);
   });
 
-  it("supports a deployment-specific pseudonym denylist", () => {
+  it("supports a deployment-specific display-name denylist", () => {
     const schema = createDisplayNameSchema(["Reserved House"]);
 
     expect(schema.parse("  Friendly   House ")).toBe("Friendly House");

@@ -248,7 +248,7 @@ export function CreateGameForm() {
             <FieldError field="name" errors={errors} />
           </div>
           <div>
-            <Label htmlFor="host-name">Your pseudonym</Label>
+            <Label htmlFor="host-name">Display name</Label>
             <Input
               id="host-name"
               name="hostName"
@@ -263,7 +263,7 @@ export function CreateGameForm() {
             <PiecePicker
               name="hostToken"
               legend="Your piece"
-              value={hostPieceId}
+              value={hostPieceId ?? null}
               onChange={setHostPieceId}
               errorId={errors.hostToken === undefined ? undefined : errorId("hostToken")}
               aria-invalid={errors.hostToken !== undefined}

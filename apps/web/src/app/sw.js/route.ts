@@ -2,10 +2,11 @@ import { env } from "@/server/env";
 
 export const dynamic = "force-dynamic";
 
-function serviceWorkerSource(cacheVersion: string): string {
+function serviceWorkerSource(cacheVersion: string, cacheNextAssets: boolean): string {
   const cacheName = JSON.stringify(`blockparty-app-shell-${cacheVersion}`);
   return `
 const CACHE_NAME = ${cacheName};
+const CACHE_NEXT_ASSETS = ${cacheNextAssets};
 const OFFLINE_URL = "/offline";
 const SHELL_URLS = [
   "/",
@@ -33,7 +34,18 @@ self.addEventListener("activate", (event) => {
           .filter((key) => key.startsWith("blockparty-app-shell-") && key !== CACHE_NAME)
           .map((key) => caches.delete(key)),
       ),
-    ).then(() => self.clients.claim()),
+    ).then(() => {
+      if (CACHE_NEXT_ASSETS) return;
+      return caches.open(CACHE_NAME).then((cache) =>
+        cache.keys().then((requests) =>
+          Promise.all(
+            requests
+              .filter((request) => new URL(request.url).pathname.startsWith("/_next/static/"))
+              .map((request) => cache.delete(request)),
+          ),
+        ),
+      );
+    }).then(() => self.clients.claim()),
   );
 });
 
@@ -70,6 +82,7 @@ self.addEventListener("fetch", (event) => {
   const isVersionedNextAsset = url.pathname.startsWith("/_next/static/");
   const isPublicShellAsset = PUBLIC_ASSETS.has(url.pathname);
   if (!isVersionedNextAsset && !isPublicShellAsset) return;
+  if (isVersionedNextAsset && !CACHE_NEXT_ASSETS) return;
 
   event.respondWith(
     caches.match(request).then((cached) => {
@@ -88,11 +101,18 @@ self.addEventListener("fetch", (event) => {
 }
 
 export function GET(): Response {
-  return new Response(serviceWorkerSource(env.PWA_CACHE_VERSION), {
-    headers: {
-      "Cache-Control": "no-store, no-cache, must-revalidate",
-      "Content-Type": "application/javascript; charset=utf-8",
-      "Service-Worker-Allowed": "/",
+  // Next's development compiler reuses static asset URLs while their module
+  // graph changes. Caching those URLs can pair an old Webpack runtime with a
+  // new RSC payload (`options.factory(...).call`), so only production workers
+  // cache Next assets. PRD-FUN-017 / TEST-005.
+  return new Response(
+    serviceWorkerSource(env.PWA_CACHE_VERSION, process.env.NODE_ENV !== "development"),
+    {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "Content-Type": "application/javascript; charset=utf-8",
+        "Service-Worker-Allowed": "/",
+      },
     },
-  });
+  );
 }

@@ -2,7 +2,7 @@
  * `/join/[inviteId]` - the join gate. See UX section 2 and UX-011.
  *
  * Validates the invitation, then lets the joiner choose a game-scoped
- * pseudonym and a token, and acknowledge the 13+ notice.
+ * display name and a token, and acknowledge the 13+ notice.
  *
  * Expired, invalid, full, and ended states give a safe exit and reveal nothing
  * about the private room. Never request a real name. See PRD-FUN-003.

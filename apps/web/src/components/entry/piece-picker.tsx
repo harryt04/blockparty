@@ -14,7 +14,8 @@ import {
 export interface PiecePickerProps {
   readonly name: string;
   readonly legend: string;
-  readonly value?: PieceOptionId;
+  /** Use null for a controlled picker with no current selection. */
+  readonly value?: PieceOptionId | null;
   readonly defaultValue?: PieceOptionId;
   readonly availablePieceIds?: readonly PieceOptionId[];
   readonly errorId?: string;

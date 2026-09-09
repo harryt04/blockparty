@@ -78,6 +78,7 @@ export function PwaClient() {
     let removeControllerChange: (() => void) | undefined;
     let removeRegistrationListeners: (() => void) | undefined;
     if ("serviceWorker" in navigator) {
+      const isDevelopment = process.env.NODE_ENV === "development";
       const onControllerChange = () => {
         if (updateRequested.current) window.location.reload();
       };
@@ -89,7 +90,13 @@ export function PwaClient() {
         .register("/sw.js", { scope: "/" })
         .then((registration) => {
           const inspectWaiting = () => {
-            if (registration.waiting && navigator.serviceWorker.controller) {
+            if (registration.waiting && isDevelopment) {
+              // Development static URLs are intentionally network-only. If a
+              // previous worker cached them, replace it immediately so it
+              // cannot keep serving a stale module graph.
+              updateRequested.current = true;
+              registration.waiting.postMessage({ type: "SKIP_WAITING" });
+            } else if (registration.waiting && navigator.serviceWorker.controller) {
               setUpdateAvailable(true);
             }
           };

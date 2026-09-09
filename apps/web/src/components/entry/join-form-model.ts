@@ -27,7 +27,7 @@ export function joinRequestFromForm(form: FormData): JoinFormResult {
   const errors: Partial<Record<JoinField, string>> = {};
 
   if (!nameResult.success) {
-    errors.name = fieldError("name", "Choose a pseudonym with 1–24 characters for this game.");
+    errors.name = fieldError("name", "Choose a display name with 1–24 characters for this game.");
   }
   if (token === undefined) errors.token = fieldError("token", "");
   if (!acknowledged13Plus) errors.acknowledged13Plus = fieldError("acknowledged13Plus", "");
@@ -41,7 +41,7 @@ export function joinRequestFromForm(form: FormData): JoinFormResult {
   if (!request.success) {
     return {
       ok: false,
-      errors: { name: "Check the pseudonym and token, then try again." },
+      errors: { name: "Check the display name and token, then try again." },
     };
   }
   return { ok: true, request: request.data };

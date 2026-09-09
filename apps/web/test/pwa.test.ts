@@ -27,6 +27,17 @@ describe("PWA shell policy", () => {
     expect(source).not.toContain("EventSource");
   });
 
+  it("does not cache Next development assets", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const response = GET();
+    const source = await response.text();
+
+    expect(source).toContain("const CACHE_NEXT_ASSETS = false");
+    expect(source).toContain('pathname.startsWith("/_next/static/")');
+
+    vi.unstubAllEnvs();
+  });
+
   it("only shows install after engagement and keeps dismissal device-local", () => {
     expect(PWA_DISMISSAL_KEY).toBe("blockparty.pwa-install-dismissed.v1");
     expect(

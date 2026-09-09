@@ -59,7 +59,7 @@ export interface GameSeatRecord {
   readonly kind: "human" | "bot" | "open";
   readonly status: "active" | "replaced";
   readonly name?: string;
-  /** The pseudonym to restore if a bot is later reclaimed. */
+  /** The display name to restore if a bot is later reclaimed. */
   readonly replacedName?: string;
   readonly token: SeatToken;
 }

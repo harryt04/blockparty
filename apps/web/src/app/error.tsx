@@ -22,7 +22,9 @@ export default function RouteError({
   useEffect(() => {
     // TODO(SEC-004): report the digest and the error class to the structured
     // logger. Never the message, the stack, or any payload.
-    console.error("Route error", error.digest);
+    const digest =
+      typeof error.digest === "string" && error.digest.length > 0 ? error.digest : "unknown";
+    console.error("Route error", digest);
   }, [error]);
 
   return (

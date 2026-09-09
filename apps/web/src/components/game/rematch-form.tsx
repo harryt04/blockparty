@@ -134,13 +134,13 @@ export function RematchForm({ gameId }: { gameId: string }) {
             <Input id="rematch-name" name="name" maxLength={48} className="mt-1" />
           </div>
           <div>
-            <Label htmlFor="rematch-host-name">Host pseudonym</Label>
+            <Label htmlFor="rematch-host-name">Host display name</Label>
             <Input id="rematch-host-name" name="hostName" maxLength={24} className="mt-1" />
           </div>
           <PiecePicker
             name="hostToken"
             legend="Host piece"
-            value={hostPieceId}
+            value={hostPieceId ?? null}
             onChange={setHostPieceId}
           />
           <div className="grid gap-4 sm:grid-cols-2">

@@ -106,7 +106,7 @@ function hasUnsafeCharacter(value: string): boolean {
   return false;
 }
 
-/** Reserved pseudonyms are configuration, not a new wire field. PRD-FUN-003. */
+/** Reserved display names are configuration, not a new wire field. PRD-FUN-003. */
 export const DEFAULT_DISPLAY_NAME_DENYLIST = [
   "admin",
   "administrator",
@@ -121,7 +121,7 @@ function graphemeCount(value: string): number {
 }
 
 /**
- * Normalizes a game-scoped pseudonym. Never a real name, email, or account.
+ * Normalizes a game-scoped display name. Never a real name, email, or account.
  * The denylist is injectable so deployments can add local reserved names
  * without changing the wire shape. See PRD-FUN-003.
  */
@@ -145,7 +145,7 @@ export function createDisplayNameSchema(
       message: "Names must contain 1-24 Unicode grapheme clusters",
     })
     .refine((value) => !normalizedDenylist.has(value.toLowerCase()), {
-      message: "That pseudonym is reserved",
+      message: "That display name is reserved",
     });
 }
 

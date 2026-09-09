@@ -74,7 +74,7 @@ export function createRequestFromForm(form: FormData): CreateFormResult {
 
   if (name.length > 48) errors.name = "Keep the game name to 48 characters or fewer.";
   if (!hostName.success) {
-    errors.hostName = "Choose a pseudonym with 1–24 characters for this game.";
+    errors.hostName = "Choose a display name with 1–24 characters for this game.";
   }
   if (hostToken === undefined) {
     errors.hostToken = "Choose a piece for your seat.";

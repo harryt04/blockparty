@@ -155,12 +155,13 @@ function JoinForm({
         <CardHeader>
           <CardTitle>{gameName === undefined ? "Join this game" : `Join ${gameName}`}</CardTitle>
           <CardDescription>
-            Choose an open seat, a name for this game only, and a token. This is not an account.
+            Choose an open seat, a display name for this game only, and a token. This is not an
+            account.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div>
-            <Label htmlFor="player-name">Name for this game</Label>
+            <Label htmlFor="player-name">Display name</Label>
             <Input
               id="player-name"
               name="name"
@@ -171,7 +172,7 @@ function JoinForm({
               className="mt-1"
             />
             <p id="player-name-help" className="mt-1 text-sm text-muted-ink">
-              Use a pseudonym, not your real name. Up to 24 Unicode characters.
+              Use a display name, not your real name. Up to 24 Unicode characters.
             </p>
             {errors.name === undefined ? null : (
               <p id={fieldErrorId("name")} className="mt-1 text-sm text-danger">

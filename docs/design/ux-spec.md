@@ -49,8 +49,8 @@ logs, or analytics.
 | Route/screen | Required experience |
 | --- | --- |
 | `/` — Landing | Open with the Blockparty city/table promise and a non-interactive classic-table preview. Make **Set up the table** the primary action and **Join with link** the secondary action. Use the compact top navigation; include the 13+ notice, accessibility/settings links, install education, and no account wall. |
-| `/create` — Create | One page for the host pseudonym, host piece, optional table name, Human count, Computer count, collapsed house-rule summary, and age acknowledgement. Show the resulting seat tray before submission. |
-| `/join/[inviteId]` — Join | Validate the invite before collecting input. Show only server-reported open Human seats and available pieces. Collect a game-scoped pseudonym, one remaining piece, and age acknowledgement. |
+| `/create` — Create | One page for the host display name, host piece, optional table name, Human count, Computer count, collapsed house-rule summary, and age acknowledgement. Show the resulting seat tray before submission. |
+| `/join/[inviteId]` — Join | Validate the invite before collecting input. Show only server-reported open Human seats and available pieces. Collect a game-scoped display name, one remaining piece, and age acknowledgement. |
 | `/game/[gameId]/lobby` — Lobby | Show a miniature classic board, seat tray, claimed/open Human seats, Computer seats, selected Standard/Custom summary, invite/share action, and host-only start or seat controls. Explain the exact unmet start condition. |
 | `/game/[gameId]` — Table | Show the authoritative board, player rail, current decision, local property hand, event history, connection state, and contextual inspection/management surfaces. |
 | `/game/[gameId]/summary` — Summary | Show the authoritative winner, standings, key events, no-contest or retired-game explanation, read-only board/history, and a fresh rematch action. Never silently reuse an invite, balance, capability, or identity. |
@@ -70,7 +70,7 @@ authoritative event log, never inferred from animation.
 
 The host completes creation without a multi-step wizard:
 
-1. Enter a required game-scoped pseudonym and choose one of the six available
+1. Enter a required game-scoped display name and choose one of the six available
    pieces: Lantern, Key, Crescent, Tower, Fox, or Teapot. Render each piece
    with its distinct color and pattern as redundant cues.
 2. Optionally enter a length-limited table name.
@@ -91,7 +91,7 @@ The host completes creation without a multi-step wizard:
 
 Error, empty, and recovery behavior:
 
-- Missing or invalid pseudonym, piece, count, or acknowledgement is marked at
+- Missing or invalid display name, piece, count, or acknowledgement is marked at
   the field and summarized at the form heading; safe values remain entered.
 - If the server rejects a stale piece or contract version, preserve the safe
   form values, refresh availability, and require a new piece selection.
@@ -108,11 +108,11 @@ or retired invitations receive a plain-language explanation and a safe route
 home without revealing private room details.
 
 For an open invite, the server supplies the available Human seats and pieces.
-The player enters a normalized pseudonym, chooses one available piece, and
+The player enters a normalized display name, chooses one available piece, and
 acknowledges the 13+ notice. Occupied seats and pieces are visibly unavailable;
 the client does not guess availability from an earlier projection.
 
-On a concurrent claim conflict, keep the pseudonym and acknowledgement, refresh
+On a concurrent claim conflict, keep the display name and acknowledgement, refresh
 the authoritative availability, identify the unavailable piece, move focus to
 the new piece choices, and require another selection. Never displace an
 occupied Human or Computer seat. On success, issue the secure seat capability
@@ -123,7 +123,7 @@ and focus the lobby heading with a textual joined announcement.
 ### UX-043 — Table-preview lobby
 
 The lobby is a preview of the shared table, not a second configuration wizard.
-The miniature board and seat tray show seat order, pseudonym, piece, Human or
+The miniature board and seat tray show seat order, display name, piece, Human or
 Computer kind, open Human slots, and connection/readiness status. A host may
 copy/share the invite, remove or replace a Computer, and start when every
 planned Human seat is claimed. A non-host can inspect the preview and copy the
@@ -149,7 +149,7 @@ connection, or version must be repaired.
 ### UX-044 — Desktop classic table and digital hand
 
 At desktop widths, center the complete 40-space board as the visual anchor.
-Place the ordered player rail at the left with pseudonym, piece shape/color/
+Place the ordered player rail at the left with display name, piece shape/color/
 pattern, cash, connectivity, elimination status, and turn marker. Place the
 current decision and active-space detail at the right. Place the local property
 hand below the board, grouped by Color Set, with deed-level and management

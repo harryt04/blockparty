@@ -111,7 +111,7 @@ test.describe("live multiplayer authority", () => {
       await host.setViewportSize({ width: 375, height: 900 });
       await host.goto("/create", { waitUntil: "domcontentloaded" });
       await host.getByRole("button", { name: "Keep analytics off" }).click();
-      await host.getByRole("textbox", { name: "Your pseudonym" }).fill("Live Host");
+      await host.getByRole("textbox", { name: "Display name" }).fill("Live Host");
       await host.getByRole("radio", { name: "Lantern" }).check();
       await host
         .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
@@ -494,7 +494,7 @@ test.describe("live multiplayer authority", () => {
       }
 
       await host.goto("/create", { waitUntil: "domcontentloaded" });
-      await host.getByRole("textbox", { name: "Your pseudonym" }).fill("Auction Host");
+      await host.getByRole("textbox", { name: "Display name" }).fill("Auction Host");
       await host.getByRole("radio", { name: "Lantern" }).check();
       await host
         .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
@@ -824,7 +824,7 @@ test.describe("live multiplayer authority", () => {
       await host.setViewportSize({ width: 375, height: 900 });
       await host.goto("/create", { waitUntil: "domcontentloaded" });
       await host.getByRole("button", { name: "Keep analytics off" }).click();
-      await host.getByRole("textbox", { name: "Your pseudonym" }).fill("Detention Host");
+      await host.getByRole("textbox", { name: "Display name" }).fill("Detention Host");
       await host.getByRole("radio", { name: "Lantern" }).check();
       await host
         .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
@@ -1141,7 +1141,7 @@ test.describe("live multiplayer authority", () => {
       await host.setViewportSize({ width: 1280, height: 900 });
       await host.goto("/create", { waitUntil: "domcontentloaded" });
       await host.getByRole("button", { name: "Keep analytics off" }).click();
-      await host.getByRole("textbox", { name: "Your pseudonym" }).fill("Summary Host");
+      await host.getByRole("textbox", { name: "Display name" }).fill("Summary Host");
       await host.getByRole("radio", { name: "Lantern" }).check();
       await host
         .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
@@ -1227,7 +1227,7 @@ test.describe("live multiplayer authority", () => {
         "mobile summary page overflow",
       ).toBeLessThanOrEqual(mobileSummaryDimensions.clientWidth + 1);
 
-      await host.getByRole("textbox", { name: "Host pseudonym" }).fill("Fresh Host");
+      await host.getByRole("textbox", { name: "Host display name" }).fill("Fresh Host");
       await host.getByRole("radio", { name: "Crescent" }).check();
       await host
         .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })

@@ -115,8 +115,8 @@ export function AnalyticsConsentBanner() {
         <CardHeader className="p-0">
           <CardTitle>Help improve Blockparty?</CardTitle>
           <CardDescription>
-            Allow optional, pseudonymous product analytics. Game operation never depends on this
-            choice. No session replay is enabled.
+            Allow optional product analytics using a random identifier. Game operation never depends
+            on this choice. No session replay is enabled.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2 p-0 pt-4">
