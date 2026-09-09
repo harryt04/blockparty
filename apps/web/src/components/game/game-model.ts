@@ -277,6 +277,8 @@ export const MANAGEMENT_ACTION_TYPES = [
   "RedeemMortgage",
 ] as const satisfies readonly LegalAction["type"][];
 
+const OWNERSHIP_BLOCKED_REASON_CODES = new Set(["DEED_NOT_OWNED", "IMPROVEMENT_NOT_OWNED"]);
+
 /**
  * The engine exposes deed management only during the management window or an
  * unresolved debt. Keep the detail action aligned with that authoritative
@@ -830,6 +832,10 @@ export function managementDecisionContext(
       space.mortgaged === true ? "Mortgaged" : "Not mortgaged";
     const blockedReasons = blocked
       .filter((action) => !actionsForDeed.some((candidate) => candidate.type === action.type))
+      // The local hand is already derived from the viewer's owned deed IDs.
+      // These generic advisories describe an unowned target, not this deed;
+      // attaching them to every hand card produces a false ownership warning.
+      .filter((action) => !OWNERSHIP_BLOCKED_REASON_CODES.has(action.reasonCode))
       .map((action) => action.reason);
 
     return [
