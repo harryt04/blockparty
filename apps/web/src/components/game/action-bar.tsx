@@ -14,7 +14,7 @@ import type {
   GameSnapshotProjection,
   LegalAction,
 } from "@blockparty/contracts";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import { AcquisitionAuctionSummary } from "./acquisition-auction-summary";
@@ -89,6 +89,7 @@ function ActionOptions({
   );
   const [bidAmount, setBidAmount] = useState<string>();
   const [bidError, setBidError] = useState<string>();
+  const bidInputId = useId();
   const bidAction = visibleLegalActions.find((action) => action.type === "PlaceAuctionBid");
   const bidMinimum = bidAction?.constraints?.minBid;
   const bidMaximum = bidAction?.constraints?.maxBid;
@@ -127,13 +128,13 @@ function ActionOptions({
               key={actionRenderKey(action, "legal", index)}
               className="rounded-(--radius-md) border border-line p-3"
             >
-              <label htmlFor="auction-bid" className="font-medium">
+              <label htmlFor={bidInputId} className="font-medium">
                 {actionLabel(action.type)}
               </label>
               <p className="mt-1 text-sm text-muted-ink">{constraintText(action)}</p>
               <div className="mt-2 flex flex-wrap items-end gap-2">
                 <input
-                  id="auction-bid"
+                  id={bidInputId}
                   className="min-h-11 w-36 rounded-(--radius-md) border border-line bg-surface px-3 tabular"
                   type="number"
                   inputMode="numeric"
@@ -143,14 +144,14 @@ function ActionOptions({
                   value={bidAmount ?? ""}
                   onChange={(event) => setBidAmount(event.target.value)}
                   disabled={disabled}
-                  aria-describedby={bidError === undefined ? undefined : "auction-bid-error"}
+                  aria-describedby={bidError === undefined ? undefined : `${bidInputId}-error`}
                 />
                 <Button onClick={submitBid} disabled={disabled}>
                   Submit bid
                 </Button>
               </div>
               {bidError === undefined ? null : (
-                <p id="auction-bid-error" className="mt-2 text-sm text-danger" role="alert">
+                <p id={`${bidInputId}-error`} className="mt-2 text-sm text-danger" role="alert">
                   {bidError}
                 </p>
               )}

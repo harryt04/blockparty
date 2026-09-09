@@ -69,6 +69,8 @@ test.describe("live multiplayer authority", () => {
       viewport: { width: 375, height: 900 },
     });
     const joiner = await joinerContext.newPage();
+    await host.emulateMedia({ reducedMotion: "reduce" });
+    await joiner.emulateMedia({ reducedMotion: "reduce" });
     const captureVisualBaseline = ["chromium", "firefox"].includes(test.info().project.name);
 
     async function assertNoHorizontalOverflow(target: typeof host, label: string): Promise<void> {
@@ -89,6 +91,12 @@ test.describe("live multiplayer authority", () => {
       // same click through that narrow overlay race rather than waiting for a
       // modal that may only exist on the next render.
       await target.getByRole("button", { name: "Open action sheet" }).click({ force: true });
+      await expect(modal).toBeVisible();
+    }
+
+    async function skipPresentationToLiveIfNeeded(target: typeof host): Promise<void> {
+      const skipToLive = target.getByRole("button", { name: "Skip to live" });
+      if (await skipToLive.isVisible()) await skipToLive.click();
     }
 
     async function dismissIdleActionSheet(target: typeof host): Promise<void> {
@@ -138,7 +146,7 @@ test.describe("live multiplayer authority", () => {
 
       await joiner.goto(created.invitePath, { waitUntil: "domcontentloaded" });
       await joiner.getByRole("button", { name: "Keep analytics off" }).click();
-      await joiner.getByRole("textbox", { name: "Name for this game" }).fill("Live Joiner");
+      await joiner.getByRole("textbox", { name: "Display name" }).fill("Live Joiner");
       await joiner.getByRole("radio", { name: "Key" }).check();
       await joiner
         .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
@@ -182,7 +190,7 @@ test.describe("live multiplayer authority", () => {
           animations: "disabled",
           caret: "hide",
           maxDiffPixels: 100,
-          mask: [gameBoard.getByRole("img")],
+          mask: [gameBoard.locator(".game-board-overlay-token"), gameBoard.getByText(/turn$/)],
         });
       }
 
@@ -196,9 +204,23 @@ test.describe("live multiplayer authority", () => {
         state.snapshot.legalActions.some((action) => action.type === "RollDice"),
       );
       expect(initialTurnPlayers, "one live seat should own the opening roll").toHaveLength(1);
+      await initialTurnPlayers[0]!.page.reload({ waitUntil: "domcontentloaded" });
+      await expect(
+        initialTurnPlayers[0]!.page.getByLabel("Connection status: Connected").first(),
+      ).toBeVisible();
+      await expect(
+        initialTurnPlayers[0]!.page
+          .getByLabel("Your turn")
+          .getByRole("heading", { name: "Your turn" }),
+      ).toBeVisible();
       await openActionSheetIfNeeded(initialTurnPlayers[0]!.page);
-      const hostRoll = host.getByRole("button", { name: "Roll and advance" });
-      const joinerRoll = joiner.getByRole("button", { name: "Roll and advance" });
+      await skipPresentationToLiveIfNeeded(initialTurnPlayers[0]!.page);
+      const hostRoll = host
+        .locator("#game-action-sheet")
+        .getByRole("button", { name: "Roll and advance" });
+      const joinerRoll = joiner
+        .locator("#game-action-sheet")
+        .getByRole("button", { name: "Roll and advance" });
       await expect
         .poll(
           async () =>
@@ -216,7 +238,10 @@ test.describe("live multiplayer authority", () => {
           response.url().endsWith(`/api/games/${created.gameId}/commands`) &&
           response.request().method() === "POST",
       );
-      await activePlayer.getByRole("button", { name: "Roll and advance" }).click();
+      await activePlayer
+        .locator("#game-action-sheet")
+        .getByRole("button", { name: "Roll and advance" })
+        .click();
       const rollResponse = await rollResponsePromise;
       expect(rollResponse.ok()).toBe(true);
       await expect
@@ -511,7 +536,7 @@ test.describe("live multiplayer authority", () => {
       await expect(host).toHaveURL(new RegExp(`/game/${auctionCreated.gameId}/lobby$`));
 
       await joiner.goto(auctionCreated.invitePath, { waitUntil: "domcontentloaded" });
-      await joiner.getByRole("textbox", { name: "Name for this game" }).fill("Auction Joiner");
+      await joiner.getByRole("textbox", { name: "Display name" }).fill("Auction Joiner");
       await joiner.getByRole("radio", { name: "Key" }).check();
       await joiner
         .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
@@ -635,14 +660,14 @@ test.describe("live multiplayer authority", () => {
         "a declined Address should open an authoritative auction",
       ).toBeDefined();
       if (auctionParticipant !== undefined) {
+        await openActionSheetIfNeeded(auctionParticipant.page);
+        const auctionActionSheet = auctionParticipant.page.locator("#game-action-sheet");
         await expect(
-          auctionParticipant.page
-            .getByLabel("Auction decision")
-            .getByRole("heading", { name: "Untimed Address auction" }),
+          auctionActionSheet.getByRole("heading", { name: "Untimed Address auction" }),
         ).toBeVisible();
-        await expect(auctionParticipant.page.getByLabel("Place bid")).toBeVisible();
+        await expect(auctionActionSheet.getByLabel("Place bid")).toBeVisible();
         await expect(
-          auctionParticipant.page.getByRole("button", { name: "Pass on this auction" }),
+          auctionActionSheet.getByRole("button", { name: "Pass on this auction" }),
         ).toBeVisible();
 
         const auctionState = await bootstrap(auctionParticipant.page, auctionCreated.gameId);
@@ -654,13 +679,13 @@ test.describe("live multiplayer authority", () => {
           "number",
         );
         if (typeof minimum !== "number") throw new Error("PlaceAuctionBid omitted minBid");
-        await auctionParticipant.page.getByLabel("Place bid").fill(String(minimum));
+        await auctionActionSheet.getByLabel("Place bid").fill(String(minimum));
         const bidResponsePromise = auctionParticipant.page.waitForResponse(
           (response) =>
             response.url().endsWith(`/api/games/${auctionCreated.gameId}/commands`) &&
             response.request().method() === "POST",
         );
-        await auctionParticipant.page.getByRole("button", { name: "Submit bid" }).click();
+        await auctionActionSheet.getByRole("button", { name: "Submit bid" }).click();
         const bidResponse = await bidResponsePromise;
         expect(bidResponse.ok()).toBe(true);
         await expect(
@@ -842,7 +867,7 @@ test.describe("live multiplayer authority", () => {
 
       await joiner.goto(created.invitePath, { waitUntil: "domcontentloaded" });
       await joiner.getByRole("button", { name: "Keep analytics off" }).click();
-      await joiner.getByRole("textbox", { name: "Name for this game" }).fill("Detention Joiner");
+      await joiner.getByRole("textbox", { name: "Display name" }).fill("Detention Joiner");
       await joiner.getByRole("radio", { name: "Key" }).check();
       await joiner
         .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
@@ -1161,7 +1186,7 @@ test.describe("live multiplayer authority", () => {
 
       await joiner.goto(created.invitePath, { waitUntil: "domcontentloaded" });
       await joiner.getByRole("button", { name: "Keep analytics off" }).click();
-      await joiner.getByRole("textbox", { name: "Name for this game" }).fill("Summary Joiner");
+      await joiner.getByRole("textbox", { name: "Display name" }).fill("Summary Joiner");
       await joiner.getByRole("radio", { name: "Key" }).check();
       await joiner
         .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
