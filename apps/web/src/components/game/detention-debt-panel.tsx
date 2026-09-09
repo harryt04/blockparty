@@ -11,7 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import { actionLabel } from "./action-bar";
 import { actionRenderKey } from "./action-bar-model";
-import { detentionDecisionContext, obligationDecisionContext } from "./game-model";
+import {
+  detentionDecisionContext,
+  obligationActionLabel,
+  obligationDecisionContext,
+} from "./game-model";
 
 function commandTarget(action: LegalAction): string {
   const deedId = action.constraints?.deedId;
@@ -135,11 +139,7 @@ export function DetentionDebtPanel({
                       onClick={() => onAction(action)}
                       disabled={disabled || pending}
                     >
-                      {action.type === "MortgageDeed"
-                        ? "Mortgage an Address"
-                        : action.type === "SellImprovement"
-                          ? "Sell a House or Hotel"
-                          : "Propose a trade"}
+                      {obligationActionLabel(snapshot, action)}
                     </Button>
                   ))}
                 </div>

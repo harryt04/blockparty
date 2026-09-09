@@ -17,6 +17,7 @@ import {
   managementDecisionContext,
   managementActionLabel,
   detentionDecisionContext,
+  obligationActionLabel,
   obligationDecisionContext,
   orderedBoard,
   recoveryDecisionContext,
@@ -519,6 +520,21 @@ describe("game presentation model", () => {
       },
     });
     expect(latestTradeOutcome(value)).toBe("stale");
+  });
+
+  it("keeps debt liquidation controls tied to their deed target", () => {
+    const debt = snapshot({
+      phase: "AwaitDebt",
+      legalActions: [
+        { type: "MortgageDeed", constraints: { deedId: "d-sawhorse-lane" } },
+        { type: "SellImprovement", constraints: { deedId: "d-sawhorse-lane" } },
+      ],
+    });
+
+    expect(obligationActionLabel(debt, debt.legalActions[0]!)).toBe("Mortgage Sawhorse Lane");
+    expect(obligationActionLabel(debt, debt.legalActions[1]!)).toBe(
+      "Sell an improvement at Sawhorse Lane",
+    );
   });
 
   it("exposes only current owned assets to the compose context", () => {

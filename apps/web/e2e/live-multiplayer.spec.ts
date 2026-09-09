@@ -57,7 +57,7 @@ test.describe("live multiplayer authority", () => {
     process.env.BLOCKPARTY_E2E_LIVE !== "1",
     "Set BLOCKPARTY_E2E_LIVE=1 to run against the live local replica-set server.",
   );
-  test.use({ serviceWorkers: "block" });
+  test.use({ serviceWorkers: "block", colorScheme: "dark" });
 
   test("creates, joins, starts, and syncs authoritative play across two seats", async ({
     browser,
@@ -183,6 +183,7 @@ test.describe("live multiplayer authority", () => {
       await expect(host).toHaveURL(new RegExp(`/game/${created.gameId}$`));
       await expect(joiner).toHaveURL(new RegExp(`/game/${created.gameId}$`));
       await expect(host.getByLabel("Connection status: Connected").first()).toBeVisible();
+      await expect(joiner.getByLabel("Connection status: Connected").first()).toBeVisible();
       await host.setViewportSize({ width: 1280, height: 900 });
       if (captureVisualBaseline) {
         const gameBoard = host.locator(".game-board-viewport");
@@ -688,9 +689,11 @@ test.describe("live multiplayer authority", () => {
         await auctionActionSheet.getByRole("button", { name: "Submit bid" }).click();
         const bidResponse = await bidResponsePromise;
         expect(bidResponse.ok()).toBe(true);
-        await expect(
-          auctionParticipant.page.getByText("Current bid", { exact: true }),
-        ).toBeVisible();
+        const afterBid = await bootstrap(auctionParticipant.page, auctionCreated.gameId);
+        const bidEvent = [...(afterBid.snapshot.publicEvents ?? [])]
+          .reverse()
+          .find((event) => event.type === "AuctionBidPlaced");
+        expect(bidEvent?.payload).toMatchObject({ amount: minimum });
       }
 
       await joiner.setViewportSize({ width: 1280, height: 900 });
@@ -1019,9 +1022,26 @@ test.describe("live multiplayer authority", () => {
           await expect(
             debt.page.getByRole("heading", { name: "Ways to raise the payment" }),
           ).toBeVisible();
-          await expect(
-            debt.page.getByRole("button", { name: "Mortgage an Address" }).first(),
-          ).toBeVisible();
+          const firstMortgageAction = debt.state.snapshot.legalActions.find(
+            (action) => action.type === "MortgageDeed",
+          );
+          const firstMortgageDeedId = firstMortgageAction?.constraints?.deedId;
+          const firstMortgageDeed =
+            typeof firstMortgageDeedId === "string"
+              ? debt.state.snapshot.board.find((space) => space.deedId === firstMortgageDeedId)
+              : undefined;
+          expect(
+            firstMortgageDeed,
+            "each mortgage action should identify a public deed",
+          ).toBeDefined();
+          if (firstMortgageDeed !== undefined) {
+            await expect(
+              debt.page.getByRole("button", {
+                name: `Mortgage ${firstMortgageDeed.name}`,
+                exact: true,
+              }),
+            ).toBeVisible();
+          }
           await expect(
             debt.page.getByText("A legal liquidation action can still settle the debt.", {
               exact: true,

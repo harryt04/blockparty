@@ -307,6 +307,22 @@ export function managementActionLabel(
   return actionLabel(type);
 }
 
+/** Keep debt liquidation controls tied to the deed they will affect. See UX-046 and UX-047. */
+export function obligationActionLabel(
+  snapshot: GameSnapshotProjection,
+  action: LegalAction,
+): string {
+  const deedId = managementDeedId(action);
+  const deedName =
+    deedId === undefined
+      ? undefined
+      : snapshot.board.find((space) => space.deedId === deedId)?.name;
+  if (deedName === undefined) return actionLabel(action.type);
+  if (action.type === "MortgageDeed") return `Mortgage ${deedName}`;
+  if (action.type === "SellImprovement") return `Sell an improvement at ${deedName}`;
+  return actionLabel(action.type);
+}
+
 export interface ManagementActionContext {
   readonly type: ManagementActionType;
   readonly action: LegalAction;

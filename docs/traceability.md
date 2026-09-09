@@ -319,6 +319,15 @@ terminal heading assertion was mutation-checked and failed under mutation; the
 focused WebKit run reproduces the documented local live-server stall before a
 product assertion, and confirmed-bankruptcy coverage remains open in CO-030.
 
+Iteration 17 hardens the same live evidence with an explicit dark browser color
+scheme for the checked-in visual baselines, waits for both joined contexts to
+report connected before the opening roll, and validates an accepted auction bid
+from the authoritative `AuctionBidPlaced` event. The Owed decision now labels
+each deed-specific liquidation control with its public Address name, covered by
+`apps/web/test/game-model.test.ts`; Chromium detention, debt, and rematch runs
+and the Firefox create/join/start/auction and detention/debt/rematch runs pass
+with the refreshed responsive baselines.
+
 ### CO-016 bot and classic simulation evidence
 
 `packages/game-engine/src/bot.ts` now consumes public classic district membership
