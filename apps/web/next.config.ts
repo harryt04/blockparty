@@ -39,7 +39,10 @@ const contentSecurityPolicy = [
   "form-action 'self'",
   "frame-ancestors 'none'",
   "manifest-src 'self'",
-  ...(isLocalHttpTest ? [] : ["upgrade-insecure-requests"]),
+  // The development server is intentionally HTTP. WebKit upgrades local
+  // subresources under this directive and then fails TLS, leaving the app
+  // server-rendered instead of hydrated.
+  ...(isDevelopment || isLocalHttpTest ? [] : ["upgrade-insecure-requests"]),
 ].join("; ");
 
 const securityHeaders = [
