@@ -8,10 +8,18 @@ import {
 
 const baseUrl = (process.env.BASE_URL ?? "http://localhost:3000").replace(/\/$/u, "");
 const requestIds = new Set<string>();
+let commandAttempts = 0;
 const maxSteps = Number.parseInt(process.env.SMOKE_STEPS ?? "64", 10);
 const humanSeatCount = Number.parseInt(process.env.SMOKE_HUMAN_SEATS ?? "1", 10);
 const botSeatCount = Number.parseInt(process.env.SMOKE_BOT_SEATS ?? "1", 10);
 const botTurnWaitMs = Number.parseInt(process.env.SMOKE_BOT_TURN_WAIT_MS ?? "15000", 10);
+
+class StaleVersionError extends Error {
+  constructor() {
+    super("STALE_VERSION");
+    this.name = "StaleVersionError";
+  }
+}
 
 class CookieJar {
   private readonly values = new Map<string, string>();
@@ -58,6 +66,7 @@ async function json(response: Response): Promise<unknown> {
 
 function nextRequestId(): string {
   const requestId = randomUUID();
+  commandAttempts += 1;
   requestIds.add(requestId);
   return requestId;
 }
@@ -203,7 +212,19 @@ async function command(
     },
     cookies,
   );
-  await json(response);
+  const body: unknown = await response.json();
+  if (!response.ok) {
+    const code =
+      typeof body === "object" &&
+      body !== null &&
+      "error" in body &&
+      typeof body.error === "object" &&
+      body.error !== null &&
+      "code" in body.error &&
+      body.error.code;
+    if (response.status === 409 && code === "STALE_VERSION") throw new StaleVersionError();
+    throw new Error(`HTTP ${response.status}: ${JSON.stringify(body)}`);
+  }
   if (response.status !== 202) throw new Error(`Expected command ACK, got ${response.status}`);
 }
 
@@ -250,7 +271,8 @@ async function main(): Promise<void> {
   let accepted = 1;
   let tradeProposed = false;
   let tradeResolved = false;
-  for (let step = 0; step < maxSteps; step += 1) {
+  let step = 0;
+  while (step < maxSteps) {
     current = await waitForHumanAction(cookies, created.gameId);
     for (const event of current.snapshot.publicEvents ?? []) observedEvents.add(event.type);
     if (current.snapshot.status !== "ACTIVE" || current.snapshot.phase === "Finished") break;
@@ -261,12 +283,22 @@ async function main(): Promise<void> {
       );
     }
     const selectedAction = chooseAction(current.snapshot.legalActions);
+    const payload = payloadForLegalAction(selectedAction);
+    try {
+      await command(cookies, created.gameId, current.aggregateVersion, payload);
+    } catch (error) {
+      // Bot continuation can commit immediately after this bootstrap. The
+      // command path correctly rejects the old version; refresh and choose
+      // from the next authoritative human snapshot instead of treating this
+      // expected race as a gameplay failure. See ENG-015 and TEST-008.
+      if (error instanceof StaleVersionError) continue;
+      throw error;
+    }
     observedActions.add(selectedAction.type);
     tradeProposed ||= selectedAction.type === "ProposeTrade";
     tradeResolved ||= ["AcceptTrade", "RejectTrade", "CancelTrade"].includes(selectedAction.type);
-    const payload = payloadForLegalAction(selectedAction);
-    await command(cookies, created.gameId, current.aggregateVersion, payload);
     accepted += 1;
+    step += 1;
   }
 
   current = await bootstrap(cookies, created.gameId);
@@ -284,7 +316,7 @@ async function main(): Promise<void> {
       )}`,
     );
   }
-  if (requestIds.size !== accepted) throw new Error("Agent request IDs were not unique");
+  if (requestIds.size !== commandAttempts) throw new Error("Agent request IDs were not unique");
 
   console.log(
     JSON.stringify({
