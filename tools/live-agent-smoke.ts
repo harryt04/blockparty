@@ -9,6 +9,8 @@ import {
 const baseUrl = (process.env.BASE_URL ?? "http://localhost:3000").replace(/\/$/u, "");
 const requestIds = new Set<string>();
 const maxSteps = Number.parseInt(process.env.SMOKE_STEPS ?? "64", 10);
+const humanSeatCount = Number.parseInt(process.env.SMOKE_HUMAN_SEATS ?? "1", 10);
+const botSeatCount = Number.parseInt(process.env.SMOKE_BOT_SEATS ?? "1", 10);
 
 class CookieJar {
   private readonly values = new Map<string, string>();
@@ -209,8 +211,8 @@ async function main(): Promise<void> {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        humanSeatCount: 1,
-        botSeatCount: 1,
+        humanSeatCount,
+        botSeatCount,
         hostName: "Smoke Host",
         hostToken: { colorIndex: 1, pieceId: "piece-lantern", pattern: "solid" },
         preset: "standard",
