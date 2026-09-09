@@ -216,24 +216,11 @@ test.describe("live multiplayer authority", () => {
       ).toBeVisible();
       await openActionSheetIfNeeded(initialTurnPlayers[0]!.page);
       await skipPresentationToLiveIfNeeded(initialTurnPlayers[0]!.page);
-      const hostRoll = host
+      const activePlayer = initialTurnPlayers[0]!.page;
+      const activeRoll = activePlayer
         .locator("#game-action-sheet")
         .getByRole("button", { name: "Roll and advance" });
-      const joinerRoll = joiner
-        .locator("#game-action-sheet")
-        .getByRole("button", { name: "Roll and advance" });
-      await expect
-        .poll(
-          async () =>
-            (await hostRoll.isEnabled())
-              ? "host"
-              : (await joinerRoll.isEnabled())
-                ? "joiner"
-                : "none",
-          { timeout: 30_000 },
-        )
-        .not.toBe("none");
-      const activePlayer = (await hostRoll.isEnabled()) ? host : joiner;
+      await expect(activeRoll).toBeEnabled({ timeout: 30_000 });
       const rollResponsePromise = activePlayer.waitForResponse(
         (response) =>
           response.url().endsWith(`/api/games/${created.gameId}/commands`) &&
