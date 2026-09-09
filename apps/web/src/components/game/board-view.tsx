@@ -5,7 +5,11 @@
  * BoardList remains available as the equivalent route-order inspection
  * surface; neither surface invents state beyond the authorized projection.
  */
-import type { BoardSpaceProjection, SeatProjection } from "@blockparty/contracts";
+import type {
+  BoardSpaceProjection,
+  GameSnapshotProjection,
+  SeatProjection,
+} from "@blockparty/contracts";
 import {
   DEED_CATEGORY_DISPLAY,
   SPACE_CATEGORY_DISPLAY,
@@ -15,7 +19,9 @@ import { cn } from "@/lib/utils";
 import { boardStopAccessibleLabel } from "./game-model";
 import { PlayerToken } from "./player-token";
 import { boardCellCoordinates, type BoardCellCoordinates, type LayoutMap } from "./board-model";
-import type { AuthoritativeMovement } from "./movement-model";
+import type { PresentedMovement } from "./turn-presentation/turn-presentation-model";
+import { TurnStage } from "./turn-presentation/turn-stage";
+import type { PresentationStage } from "./turn-presentation/turn-presentation-model";
 
 const DISTRICT_BAND_CLASSES: Readonly<Record<string, string>> = {
   "district-ash": "border-t-asset-district-ash",
@@ -63,58 +69,15 @@ function stateLabel(space: BoardSpaceProjection, seats: readonly SeatProjection[
   return `${ownership}${mortgage}${improvement}`;
 }
 
-function OccupantStack({
-  space,
-  seats,
-  movement,
-}: {
-  space: BoardSpaceProjection;
-  seats: readonly SeatProjection[];
-  movement?: AuthoritativeMovement;
-}) {
-  const occupants = space.occupantSeatIds
-    .map((seatId) => seats.find((seat) => seat.seatId === seatId))
-    .filter((seat): seat is SeatProjection => seat !== undefined);
-
-  if (occupants.length === 0) return null;
-
-  return (
-    <span className="flex min-w-0 -space-x-1 overflow-hidden" aria-hidden="true">
-      {occupants.map((seat) =>
-        seat.token === undefined ? (
-          <span
-            key={seat.seatId}
-            className="inline-flex size-5 shrink-0 items-center justify-center rounded-full border border-ink bg-surface text-[0.6rem] font-bold"
-          >
-            {(seat.name ?? "?").trim().charAt(0).toUpperCase() || "?"}
-          </span>
-        ) : (
-          <PlayerToken
-            key={`${seat.seatId}-${
-              movement?.seatId === seat.seatId && movement.toPosition === space.routeIndex
-                ? movement.eventSequence
-                : "stable"
-            }`}
-            token={seat.token}
-            name={seat.name}
-            className={
-              movement?.seatId === seat.seatId && movement.toPosition === space.routeIndex
-                ? "game-token-arrival"
-                : undefined
-            }
-            dataMovementSequence={
-              movement?.seatId === seat.seatId && movement.toPosition === space.routeIndex
-                ? movement.eventSequence
-                : undefined
-            }
-          />
-        ),
-      )}
-    </span>
-  );
+function collisionOffset(index: number, count: number): { x: string; y: string } {
+  if (count <= 1) return { x: "0px", y: "0px" };
+  if (count <= 3) return { x: `${(index - (count - 1) / 2) * 0.7}rem`, y: "0px" };
+  const angle = (index / count) * Math.PI * 2 - Math.PI / 2;
+  return { x: `${Math.cos(angle) * 0.8}rem`, y: `${Math.sin(angle) * 0.8}rem` };
 }
 
 export function BoardView({
+  snapshot,
   spaces,
   layout,
   seats,
@@ -124,8 +87,17 @@ export function BoardView({
   onSelect,
   zoom = 1,
   movement,
+  movementStep = 0,
+  activeSeatId,
+  presentationStage,
+  presentationQueueLength = 0,
+  canReplayPresentation = false,
+  onSkipPresentation,
+  onSkipToLive,
+  onReplayPresentation,
   className,
 }: {
+  snapshot: GameSnapshotProjection;
   spaces: readonly BoardSpaceProjection[];
   layout: LayoutMap;
   seats: readonly SeatProjection[];
@@ -135,14 +107,34 @@ export function BoardView({
   onSelect: (spaceId: string) => void;
   /** Presentation-only zoom, scoped to the board viewport. See UX-045. */
   zoom?: 1 | 1.25 | 1.5;
-  movement?: AuthoritativeMovement;
+  movement?: PresentedMovement;
+  movementStep?: number;
+  activeSeatId?: string;
+  presentationStage?: PresentationStage;
+  presentationQueueLength?: number;
+  canReplayPresentation?: boolean;
+  onSkipPresentation?: () => void;
+  onSkipToLive?: () => void;
+  onReplayPresentation?: () => void;
   className?: string;
 }) {
+  const seatsByPosition = new Map<number, SeatProjection[]>();
+  for (const seat of seats) {
+    const position =
+      movement?.seatId === seat.seatId
+        ? (movement.path[movementStep ?? 0] ?? movement.toPosition)
+        : seat.position;
+    if (position === undefined || seat.token === undefined) continue;
+    const occupants = seatsByPosition.get(position) ?? [];
+    occupants.push(seat);
+    seatsByPosition.set(position, occupants);
+  }
+
   return (
     <div className={cn("flex min-h-0 flex-col overflow-hidden rounded-(--radius-md)", className)}>
       <div className="game-board-pan-viewport" tabIndex={0} aria-label="Board viewport">
         <div
-          className="classic-board-frame game-board-zoom-frame"
+          className="classic-board-frame game-board-zoom-frame relative"
           style={{ width: `${zoom * 100}%`, minHeight: `${zoom * 100}%` }}
           data-board-zoom={zoom}
         >
@@ -156,10 +148,15 @@ export function BoardView({
               className="classic-board-center flex items-center justify-center border p-3 text-center"
               style={{ gridColumn: "2 / span 9", gridRow: "2 / span 9" }}
             >
-              <div>
-                <p className="font-serif text-lg">Blockparty</p>
-                <p className="classic-board-muted mt-1 text-xs">The city is yours to build</p>
-              </div>
+              <TurnStage
+                snapshot={snapshot}
+                stage={presentationStage}
+                onSkip={onSkipPresentation ?? (() => undefined)}
+                onReplay={onReplayPresentation ?? (() => undefined)}
+                canReplay={canReplayPresentation ?? false}
+                queueLength={presentationQueueLength ?? 0}
+                onSkipToLive={onSkipToLive ?? (() => undefined)}
+              />
             </div>
 
             {spaces.map((space) => {
@@ -216,13 +213,40 @@ export function BoardView({
                       ? (districtName ?? category.label)
                       : formatMoney(space.price, currencyLabel)}
                   </span>
-                  <span className="mt-auto flex min-w-0 items-center justify-between gap-1 pt-1 text-[0.6rem] leading-tight">
-                    <span className="truncate">{state === "Available" ? "" : state}</span>
-                    <OccupantStack space={space} seats={seats} movement={movement} />
+                  <span className="mt-auto min-w-0 truncate pt-1 text-[0.6rem] leading-tight">
+                    {state === "Available" ? "" : state}
                   </span>
                 </button>
               );
             })}
+            <div className="classic-board-piece-overlay" aria-hidden="true">
+              {[...seatsByPosition.entries()].flatMap(([position, positionedSeats]) =>
+                positionedSeats.map((seat, index) => {
+                  const space = spaces.find((candidate) => candidate.routeIndex === position);
+                  if (space === undefined || seat.token === undefined) return null;
+                  const coordinates = boardCellCoordinates(space, layout, space.spaceId);
+                  const offset = collisionOffset(index, positionedSeats.length);
+                  const moving = movement?.seatId === seat.seatId;
+                  return (
+                    <span
+                      key={seat.seatId}
+                      className={cn(
+                        "game-board-overlay-token",
+                        seat.seatId === activeSeatId && "game-board-overlay-token-active",
+                        moving && "game-board-overlay-token-moving",
+                      )}
+                      style={{
+                        left: `${((coordinates.x + 0.5) / 11) * 100}%`,
+                        top: `${((coordinates.y + 0.5) / 11) * 100}%`,
+                        transform: `translate(-50%, -50%) translate(${offset.x}, ${offset.y})`,
+                      }}
+                    >
+                      <PlayerToken token={seat.token} name={seat.name} />
+                    </span>
+                  );
+                }),
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -45,6 +45,7 @@ When documents disagree, use this order and correct the lower-level document:
 | Delivery    | [Observability runbook](delivery/observability-runbook.md)                | F4 safe telemetry, alerts, and staging drill record                                                   |
 | Delivery    | [Build backlog](delivery/build-backlog.md)                                | Historical: closed 64-ticket delivery ledger across Loops 0–F                                      |
 | Delivery    | [Classic overhaul backlog](delivery/classic-overhaul-backlog.md)          | Active: accepted sequential CO-* queue for classic rules, content, contracts, and UI                |
+| Delivery    | [Watchable gameplay plan](delivery/watchable-gameplay-plan.md)            | Planning proposal for full-board visibility, persistent pieces, dice, movement, and bot-turn pacing |
 | Delivery    | [gnhf prompt](gnhf-prompt.md)                                             | Current per-iteration prompt for the active classic-overhaul queue                                    |
 | Delivery    | [gnhf CLI](gnhf-cli.md)                                                   | Current gnhf commands, branch policy, and classic-overhaul stop condition                             |
 | Historical  | [gnhf CLI 2](gnhf-cli2.md)                                                | Historical alternative live-smoke command; retained for run provenance                                |

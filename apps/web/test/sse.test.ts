@@ -219,6 +219,23 @@ describe("authenticated SSE delivery", () => {
     expect(JSON.stringify(firstProjection)).not.toContain("contentHash");
     expect(canonicalHashBundle(CLASSIC_BUNDLE)).toBe(game.contentHash);
 
+    const staleFrames: string[] = [];
+    const staleUnsubscribe = subscribe(subscriber(game._id, game.hostSeatId, staleFrames));
+    await publishCommittedProjection({ gameId: game._id, sequence: 1, aggregateVersion: 0 }, {
+      collection: (name: string) =>
+        name === "games"
+          ? { findOne: vi.fn(async () => ({ ...game, aggregateVersion: 1, lastSequence: 1 })) }
+          : {
+              find: vi.fn(() => ({
+                sort: vi.fn(() => ({
+                  limit: vi.fn(() => ({ toArray: vi.fn(async () => []) })),
+                })),
+              })),
+            },
+    } as never);
+    expect(staleFrames.filter((frame) => frame.startsWith("event: game.snapshot"))).toHaveLength(0);
+    staleUnsubscribe();
+
     firstUnsubscribe();
     secondUnsubscribe();
   });

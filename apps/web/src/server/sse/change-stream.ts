@@ -82,6 +82,12 @@ export async function publishCommittedProjection(
     .findOne({ _id: event.gameId });
   if (game === null) return;
 
+  // A change-stream callback can observe event N after a later transaction
+  // has already updated the aggregate. Never label that newer state as the
+  // older committed boundary; the later event (or recovery) will converge the
+  // subscriber to the current snapshot instead. See PROTO-003.
+  if (game.aggregateVersion !== event.aggregateVersion) return;
+
   const rules = capturedRuleSet(game);
   if (rules === undefined) return;
 

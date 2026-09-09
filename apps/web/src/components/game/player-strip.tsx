@@ -57,6 +57,7 @@ export function PlayerStrip({
             )}
 
             <div className="mt-2 flex flex-wrap gap-1">
+              {seat.isSelf ? <Badge variant="brand">You</Badge> : null}
               {isActive ? <Badge variant="brand">Their turn</Badge> : null}
               {seat.kind === "bot" ? <Badge>Bot</Badge> : null}
               {seat.isHost ? <Badge>Host</Badge> : null}

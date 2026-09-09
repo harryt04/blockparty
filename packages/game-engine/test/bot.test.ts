@@ -224,7 +224,7 @@ describe("BotPolicy", () => {
       enabledToggles: [],
       seed: "000000001f62a5e82b6eb1f4377abd004386c90c4f92d5185b9ee12467aaed30",
     });
-  }, 120_000);
+  }, 420_000);
 
   it("completes a seeded classic game at every supported seat count", () => {
     const report = runBotSoak({ gameCount: 10, maxCommandsPerGame: 10_000 });

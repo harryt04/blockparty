@@ -324,6 +324,16 @@ screenshots never assert guessed or fabricated live state.
 | Debt/disconnected | ✓ | ✓ | ✓ | ✓ | Cash/debt, pause/reconnect text, legal continuation, no timer |
 | Completed/retired summary |  | ✓ | ✓ | ✓ | Read-only result, reason, history, fresh rematch |
 
+## DS-074 — Confirmed turn presentation grammar
+
+Confirmed dice use two semantic die faces plus visible `Server roll` text. A
+stable piece overlay uses transform-only stop-to-stop motion, a contrasting
+halo, deterministic collision offsets, and a separate destination emphasis.
+Turn-stage controls are keyboard reachable and presentation-only: skip, catch
+up, replay, and reduced motion always converge to the same authorized snapshot.
+No decorative face cycling, sound, opacity flash, DOM remount, or layout shift
+may imply randomness or change the table geometry.
+
 ## Design-to-UX requirement map
 
 | Design contract | UX requirements | Implementation evidence later required |

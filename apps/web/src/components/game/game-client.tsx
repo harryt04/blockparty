@@ -47,11 +47,15 @@ import {
   selectedSpaceAfterActiveChange,
   turnLabel,
 } from "./game-model";
-import { confirmedMovement, type AuthoritativeMovement } from "./movement-model";
 import { PlayerStrip } from "./player-strip";
 import { PropertyHand } from "./property-hand";
 import { MobileGameNav, type MobileGameSection } from "./mobile-game-nav";
 import { blockingDecisionKind } from "./action-bar-model";
+import {
+  TurnPresentationCoordinator,
+  type TurnPresentationState,
+} from "./turn-presentation/turn-presentation-coordinator";
+import { confirmedEvents } from "./turn-presentation/turn-presentation-model";
 
 function GameLoading() {
   return (
@@ -95,7 +99,13 @@ export function GameClient({ gameId }: { gameId: string }) {
   const previousBlockingDecision = useRef<ReturnType<typeof blockingDecisionKind>>(undefined);
   const restoreDecisionFocus = useRef(false);
   const previousActiveSpaceId = useRef<string | undefined>(undefined);
-  const previousMovementSnapshot = useRef<GameSnapshotProjection | undefined>(undefined);
+  const previousPresentationSnapshot = useRef<GameSnapshotProjection | undefined>(undefined);
+  const presentationCoordinator = useRef<TurnPresentationCoordinator | undefined>(undefined);
+  if (presentationCoordinator.current === undefined) {
+    presentationCoordinator.current = new TurnPresentationCoordinator();
+  }
+  const coordinator = presentationCoordinator.current;
+  const [presentation, setPresentation] = useState<TurnPresentationState>(coordinator.currentState);
   const commandSubmissionInFlight = useRef(false);
   const retryableCommand = useRef<RetryableCommand | undefined>(undefined);
   const acknowledgedCommandId = useRef<string | undefined>(undefined);
@@ -110,21 +120,32 @@ export function GameClient({ gameId }: { gameId: string }) {
   const [recoveryStatus, setRecoveryStatus] = useState<string>();
   const [boardZoom, setBoardZoom] = useState<1 | 1.25 | 1.5>(1);
   const [mobileSection, setMobileSection] = useState<MobileGameSection>("board-section");
-  const [movement, setMovement] = useState<AuthoritativeMovement>();
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   const snapshot = state.snapshot;
+  useEffect(() => coordinator.subscribe(setPresentation), [coordinator]);
+
   useEffect(() => {
     if (snapshot === undefined) return;
-    const previous = previousMovementSnapshot.current;
-    if (
-      previous?.sequence === snapshot.sequence &&
-      previous?.aggregateVersion === snapshot.aggregateVersion
-    ) {
-      return;
-    }
-    setMovement(confirmedMovement(previous, snapshot));
-    previousMovementSnapshot.current = snapshot;
-  }, [snapshot]);
+    const previous = previousPresentationSnapshot.current;
+    coordinator.acceptConfirmedUpdate({
+      snapshot,
+      events: confirmedEvents(previous, snapshot),
+    });
+    previousPresentationSnapshot.current = snapshot;
+  }, [coordinator, snapshot]);
+
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReducedMotion(query.matches);
+    update();
+    query.addEventListener?.("change", update);
+    return () => query.removeEventListener?.("change", update);
+  }, []);
+
+  useEffect(() => {
+    coordinator.setReducedMotion(reducedMotion);
+  }, [coordinator, reducedMotion]);
 
   const blockingDecision = snapshot === undefined ? undefined : blockingDecisionKind(snapshot);
   const spaces = useMemo(
@@ -618,7 +639,16 @@ export function GameClient({ gameId }: { gameId: string }) {
                 selectedSpaceId={selectedSpace?.spaceId}
                 onSelect={setSelectedSpaceId}
                 zoom={boardZoom}
-                movement={movement}
+                snapshot={snapshot}
+                movement={presentation.stage?.movement}
+                movementStep={presentation.movementStep}
+                activeSeatId={snapshot.activeSeatId}
+                presentationStage={presentation.stage}
+                presentationQueueLength={presentation.queueLength}
+                canReplayPresentation={presentation.stage === undefined}
+                onSkipPresentation={() => coordinator.skipCurrent()}
+                onSkipToLive={() => coordinator.skipToLive()}
+                onReplayPresentation={() => coordinator.replayLastTurn()}
                 className="game-board-viewport"
               />
             </CardContent>
@@ -707,7 +737,12 @@ export function GameClient({ gameId }: { gameId: string }) {
               (snapshot.paused ? "Play is paused until the required player reconnects." : undefined)
             }
             pending={pendingAction !== undefined}
-            disabled={state.connection !== "live" || snapshot.paused || pendingAction !== undefined}
+            disabled={
+              state.connection !== "live" ||
+              snapshot.paused ||
+              pendingAction !== undefined ||
+              presentation.catchingUp
+            }
             onAction={(action, amount) => void submitAction(action, amount)}
           />
 

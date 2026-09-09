@@ -1,3 +1,5 @@
+/* global module */
+
 // remove semi-colons
 module.exports = {
   semi: false,

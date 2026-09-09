@@ -228,6 +228,28 @@ that the earlier content version was retired as `CONTENT_RETIRED`, show its
 preserved standings and event history, revoke all gameplay controls, and offer
 safe navigation home. Never present it as migrated to the classic rules.
 
+<a id="ux-048--watchable-confirmed-turn-staging"></a>
+
+### UX-048 — Watchable confirmed turn staging
+
+The live table stages confirmed events in ascending sequence so a viewer can
+identify the actor, server-recorded dice, movement, landing result, and public
+outcome without opening History. A bounded presentation queue may pause controls
+while it catches up, and exposes **Skip animation**, **Skip to live**, and
+**Replay last turn** where available. These controls affect presentation only;
+the authoritative snapshot and event history remain immediately recoverable.
+
+<a id="ux-049--fitted-board-and-persistent-pieces"></a>
+
+### UX-049 — Fitted board and persistent over-board pieces
+
+The default overview fits the complete 40-space perimeter within both available
+width and height at phone, tablet, and desktop sizes. Every active seat has one
+stable, identifiable piece in an overlay above the cells; collision order is
+deterministic, selection never impersonates position, and reduced motion places
+the piece immediately while retaining the same text and accessible occupant
+information.
+
 ## 5. Reconnect, completion, rematch, and state handling
 
 ### UX-018/019 — Reconnect, completion, and rematch

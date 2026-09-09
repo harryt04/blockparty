@@ -16,6 +16,7 @@ import { jsonError, jsonOk } from "@/server/http/responses";
 import type { GameDocument } from "@/server/games/create-game";
 import { recover, recoveryStore } from "@/server/sync/recovery";
 import { withRequestTelemetry } from "@/server/observability/telemetry";
+import { scheduleBotTurns } from "@/server/commands/run-bot-turn";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,6 +58,7 @@ async function getSync(request: Request, params: Promise<{ gameId: string }>) {
     if (!game.seats.some((seat) => seat.seatId === actor.seatId)) {
       return jsonError("FORBIDDEN", { gameId });
     }
+    scheduleBotTurns(gameId);
 
     const envelope = await recover(
       recoveryStore(database),

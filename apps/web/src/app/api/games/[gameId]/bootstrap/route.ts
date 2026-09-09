@@ -19,6 +19,7 @@ import { subscriberCount } from "@/server/sse/registry";
 import type { GameEventDocument } from "@/server/commands/handle-command";
 import { readPublicEvents } from "@/server/sync/recovery";
 import { withRequestTelemetry } from "@/server/observability/telemetry";
+import { scheduleBotTurns } from "@/server/commands/run-bot-turn";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,6 +52,7 @@ async function getBootstrap(params: Promise<{ gameId: string }>) {
     if (!game.snapshot.seats.some((seat) => seat.seatId === actor.seatId)) {
       return jsonError("FORBIDDEN", { gameId });
     }
+    scheduleBotTurns(gameId);
 
     const publicEvents = await readPublicEvents(
       database.collection<GameEventDocument>(COLLECTIONS.gameEvents),

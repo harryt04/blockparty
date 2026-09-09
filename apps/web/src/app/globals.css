@@ -308,28 +308,18 @@
   }
 }
 
-/* Only the confirmed destination token receives this transition. The board
- * never interpolates an unconfirmed route or changes the authoritative state.
- * DS-050. */
-@keyframes game-token-arrival {
-  from {
-    opacity: 0.35;
-    transform: translateY(-0.35rem) scale(0.92);
+@keyframes game-dice-tumble {
+  0% {
+    transform: rotate(-5deg) translateY(-0.15rem);
   }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
+  35% {
+    transform: rotate(5deg) translateY(0.15rem);
   }
-}
-
-.game-token-arrival {
-  animation: game-token-arrival 220ms ease-out both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .game-token-arrival {
-    animation: none;
+  70% {
+    transform: rotate(-3deg) translateY(-0.05rem);
+  }
+  100% {
+    transform: rotate(0) translateY(0);
   }
 }
 
@@ -371,6 +361,7 @@
   }
 
   .classic-board-grid {
+    position: relative;
     display: grid;
     width: min(100%, 42rem);
     max-height: 100%;
@@ -382,6 +373,129 @@
     border: 2px solid var(--board-ink);
     background: var(--board-line);
     padding: 2px;
+  }
+
+  .classic-board-piece-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+  }
+
+  .game-board-overlay-token {
+    position: absolute;
+    display: inline-flex;
+    min-width: 2rem;
+    min-height: 2rem;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--board-paper);
+    border-radius: 999px;
+    background: var(--board-cell);
+    box-shadow:
+      0 0 0 2px var(--board-ink),
+      0 0.15rem 0.35rem rgb(0 0 0 / 25%);
+    transform-origin: center;
+    transition: transform 105ms linear;
+  }
+
+  .game-board-overlay-token .size-5 {
+    width: 1.55rem;
+    height: 1.55rem;
+  }
+
+  .game-board-overlay-token-active {
+    box-shadow:
+      0 0 0 2px var(--board-ink),
+      0 0 0 4px var(--board-selection),
+      0 0.15rem 0.35rem rgb(0 0 0 / 25%);
+  }
+
+  .game-board-overlay-token-moving {
+    z-index: 2;
+  }
+
+  .game-turn-stage {
+    width: min(100%, 15rem);
+    min-height: 8rem;
+    padding: 0.5rem;
+    text-align: center;
+  }
+
+  .game-dice-pair {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 3.5rem;
+  }
+
+  .game-dice-tumble {
+    animation: game-dice-tumble 700ms ease-out both;
+  }
+
+  .game-die {
+    position: relative;
+    display: inline-block;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 2px solid var(--board-ink);
+    border-radius: 0.5rem;
+    background: var(--board-cell);
+    box-shadow: 0 0.15rem 0 var(--board-line);
+  }
+
+  .game-die-pip {
+    position: absolute;
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 999px;
+    background: var(--board-ink);
+    opacity: 0;
+  }
+
+  .game-die-pip-visible {
+    opacity: 1;
+  }
+  .game-die-pip-center {
+    inset: 50% auto auto 50%;
+    transform: translate(-50%, -50%);
+  }
+  .game-die-pip-top-left {
+    inset: 22% auto auto 22%;
+  }
+  .game-die-pip-bottom-right {
+    inset: auto 22% 22% auto;
+  }
+  .game-die-pip-top-right {
+    inset: 22% 22% auto auto;
+  }
+  .game-die-pip-bottom-left {
+    inset: auto auto 22% 22%;
+  }
+  .game-die-pip-middle-left {
+    inset: 50% auto auto 22%;
+    transform: translateY(-50%);
+  }
+  .game-die-pip-middle-right {
+    inset: 50% 22% auto auto;
+    transform: translateY(-50%);
+  }
+
+  .game-presentation-control {
+    min-height: 2.75rem;
+    border: 1px solid var(--board-line);
+    border-radius: var(--radius-sm);
+    padding-inline: 0.6rem;
+    color: var(--board-ink);
+    background: var(--board-cell);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .game-presentation-control:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
   }
 
   .classic-board-cell {
@@ -462,7 +576,10 @@
   }
 
   .game-board-viewport {
-    height: clamp(16rem, 75vw, 22rem);
+    width: min(100%, calc(100dvh - 12rem));
+    aspect-ratio: 1;
+    height: auto;
+    margin-inline: auto;
   }
 
   .game-board-pan-viewport {
@@ -595,8 +712,8 @@
     }
 
     .game-board-viewport {
-      height: min(30rem, 62dvh);
-      min-height: 22rem;
+      width: min(100%, calc(100dvh - 11rem));
+      min-height: 0;
     }
 
     .game-action-bar {
@@ -641,7 +758,7 @@
     }
 
     .game-board-viewport {
-      height: 30rem;
+      width: min(100%, calc(100dvh - 12rem));
     }
   }
 

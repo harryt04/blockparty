@@ -23,6 +23,15 @@ import { handleCommand } from "./handle-command";
 
 const MAX_BOT_ACTIONS_PER_TRIGGER = 64;
 
+const globalForBotRunner = globalThis as unknown as {
+  __blockpartyBotRunners?: Map<string, Promise<void>>;
+};
+
+function runners(): Map<string, Promise<void>> {
+  globalForBotRunner.__blockpartyBotRunners ??= new Map();
+  return globalForBotRunner.__blockpartyBotRunners;
+}
+
 /**
  * A human command normally gives the bot runner a bounded slice of work. Once
  * every remaining active seat is a bot, there is no human command left that
@@ -108,4 +117,21 @@ export async function runBotTurns(gameId: string): Promise<void> {
     // requests remain serviceable while a bot-only game finishes.
     await new Promise<void>((resolve) => setImmediate(resolve));
   }
+}
+
+/**
+ * Starts one process-local runner without making a human command wait for it.
+ * A later authenticated bootstrap/sync call schedules the same work again
+ * after a process restart, so an in-flight bot decision is recoverable without
+ * putting pacing or correctness inside a transaction.
+ */
+export function scheduleBotTurns(gameId: string): void {
+  const active = runners().get(gameId);
+  if (active !== undefined) return;
+  const runner = runBotTurns(gameId)
+    .catch(() => undefined)
+    .finally(() => {
+      if (runners().get(gameId) === runner) runners().delete(gameId);
+    });
+  runners().set(gameId, runner);
 }

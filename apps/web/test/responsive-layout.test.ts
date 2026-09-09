@@ -49,7 +49,7 @@ describe("responsive game shell contract", () => {
     expect(stylesheet).toContain("env(safe-area-inset-left)");
     expect(stylesheet).toContain("env(safe-area-inset-right)");
     expect(stylesheet).toContain("env(safe-area-inset-bottom)");
-    expect(stylesheet).toContain("height: clamp(16rem, 75vw, 22rem)");
+    expect(stylesheet).toContain("width: min(100%, calc(100dvh - 12rem));");
     expect(gameClient).toContain('data-responsive-region="board"');
     expect(gameClient).toContain('data-responsive-region="context-panel"');
     expect(gameClient).toContain('data-responsive-region="player-rail"');
@@ -80,6 +80,8 @@ describe("responsive game shell contract", () => {
     expect(boardView).toContain('data-board-topology="perimeter-40"');
     expect(boardView).toContain('aria-controls="active-space-detail"');
     expect(boardView).toContain("onSelect(space.spaceId)");
+    expect(boardView).toContain("classic-board-piece-overlay");
+    expect(boardView).toContain("key={seat.seatId}");
     expect(gameClient).toContain("districtNames={districtMap}");
   });
 
