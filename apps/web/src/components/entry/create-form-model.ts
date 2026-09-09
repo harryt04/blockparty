@@ -10,6 +10,7 @@ import {
 import { PIECE_OPTIONS } from "./piece-options";
 
 export const CREATE_PIECES = PIECE_OPTIONS;
+export const DEFAULT_CREATE_PIECE_ID = CREATE_PIECES[0]!.token.pieceId;
 
 export type CreateField =
   | "name"
@@ -63,9 +64,11 @@ function selectedConfiguration(form: FormData): RulesConfiguration | undefined {
 export function createRequestFromForm(form: FormData): CreateFormResult {
   const name = textValue(form, "name").trim();
   const hostName = DisplayName.safeParse(textValue(form, "hostName"));
-  const hostToken = CREATE_PIECES.find(
-    (candidate) => candidate.token.pieceId === form.get("hostToken"),
-  );
+  const submittedHostPieceId = form.get("hostToken");
+  const hostToken =
+    submittedHostPieceId === null
+      ? CREATE_PIECES[0]
+      : CREATE_PIECES.find((candidate) => candidate.token.pieceId === submittedHostPieceId);
   const humanSeatCount = integerValue(form, "humanSeatCount");
   const botSeatCount = integerValue(form, "botSeatCount");
   const preset = textValue(form, "preset");

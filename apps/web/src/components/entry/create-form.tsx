@@ -23,7 +23,11 @@ import { Label } from "@/components/ui/label";
 import { PiecePicker } from "./piece-picker";
 import { SeatStepper } from "./seat-stepper";
 import { SeatTray, setupSeatTrayEntries } from "./seat-tray";
-import { createRequestFromForm, type CreateField } from "./create-form-model";
+import {
+  createRequestFromForm,
+  DEFAULT_CREATE_PIECE_ID,
+  type CreateField,
+} from "./create-form-model";
 import { PIECE_OPTIONS } from "./piece-options";
 import type { PieceId } from "@blockparty/contracts";
 
@@ -114,7 +118,7 @@ export function CreateGameForm() {
   const [pending, setPending] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<CreateField, string>>>({});
   const [apiError, setApiError] = useState<string>();
-  const [hostPieceId, setHostPieceId] = useState<PieceId>();
+  const [hostPieceId, setHostPieceId] = useState<PieceId>(DEFAULT_CREATE_PIECE_ID);
   const [humanSeatCount, setHumanSeatCount] = useState(2);
   const [botSeatCount, setBotSeatCount] = useState(0);
   const [preset, setPreset] = useState<"standard" | "short-game">("standard");
