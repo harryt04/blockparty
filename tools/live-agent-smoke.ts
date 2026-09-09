@@ -8,6 +8,7 @@ import {
 
 const baseUrl = (process.env.BASE_URL ?? "http://localhost:3000").replace(/\/$/u, "");
 const requestIds = new Set<string>();
+const maxSteps = Number.parseInt(process.env.SMOKE_STEPS ?? "64", 10);
 
 class CookieJar {
   private readonly values = new Map<string, string>();
@@ -208,8 +209,10 @@ async function main(): Promise<void> {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        seatCount: 2,
+        humanSeatCount: 1,
         botSeatCount: 1,
+        hostName: "Smoke Host",
+        hostToken: { colorIndex: 1, pieceId: "piece-lantern", pattern: "solid" },
         preset: "standard",
         configuration,
         acknowledged13Plus: true,
@@ -229,12 +232,16 @@ async function main(): Promise<void> {
   let accepted = 1;
   let tradeProposed = false;
   let tradeResolved = false;
-  for (let step = 0; step < 64; step += 1) {
+  for (let step = 0; step < maxSteps; step += 1) {
     current = await bootstrap(cookies, created.gameId);
     for (const event of current.snapshot.publicEvents ?? []) observedEvents.add(event.type);
     if (current.snapshot.status !== "ACTIVE" || current.snapshot.phase === "Finished") break;
     const action = current.snapshot.legalActions[0];
-    if (action === undefined) break;
+    if (action === undefined) {
+      throw new Error(
+        `No legal action at step ${step}; status=${current.snapshot.status}, phase=${current.snapshot.phase}, activeSeat=${current.snapshot.activeSeatId}, viewerSeat=${current.snapshot.viewerSeatId}, events=${(current.snapshot.publicEvents ?? []).map((event) => event.type).join(",")}`,
+      );
+    }
     const selectedAction = chooseAction(current.snapshot.legalActions);
     observedActions.add(selectedAction.type);
     tradeProposed ||= selectedAction.type === "ProposeTrade";
