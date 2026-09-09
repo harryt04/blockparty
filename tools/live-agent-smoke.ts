@@ -11,6 +11,7 @@ const requestIds = new Set<string>();
 const maxSteps = Number.parseInt(process.env.SMOKE_STEPS ?? "64", 10);
 const humanSeatCount = Number.parseInt(process.env.SMOKE_HUMAN_SEATS ?? "1", 10);
 const botSeatCount = Number.parseInt(process.env.SMOKE_BOT_SEATS ?? "1", 10);
+const botTurnWaitMs = Number.parseInt(process.env.SMOKE_BOT_TURN_WAIT_MS ?? "15000", 10);
 
 class CookieJar {
   private readonly values = new Map<string, string>();
@@ -158,6 +159,21 @@ async function bootstrap(cookies: CookieJar, gameId: string) {
   return BootstrapResponse.parse(await json(response));
 }
 
+async function waitForHumanAction(cookies: CookieJar, gameId: string) {
+  const deadline = Date.now() + botTurnWaitMs;
+  let current = await bootstrap(cookies, gameId);
+  while (
+    current.snapshot.status === "ACTIVE" &&
+    current.snapshot.phase !== "Finished" &&
+    current.snapshot.legalActions.length === 0 &&
+    Date.now() < deadline
+  ) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    current = await bootstrap(cookies, gameId);
+  }
+  return current;
+}
+
 async function command(
   cookies: CookieJar,
   gameId: string,
@@ -235,7 +251,7 @@ async function main(): Promise<void> {
   let tradeProposed = false;
   let tradeResolved = false;
   for (let step = 0; step < maxSteps; step += 1) {
-    current = await bootstrap(cookies, created.gameId);
+    current = await waitForHumanAction(cookies, created.gameId);
     for (const event of current.snapshot.publicEvents ?? []) observedEvents.add(event.type);
     if (current.snapshot.status !== "ACTIVE" || current.snapshot.phase === "Finished") break;
     const action = current.snapshot.legalActions[0];
