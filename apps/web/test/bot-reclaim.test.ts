@@ -38,7 +38,6 @@ const request = CreateGameRequest.parse({
     relaxedEvenBuilding: false,
     unlimitedImprovementInventory: false,
   },
-  acknowledged13Plus: true,
 });
 
 type Mutable<T> = { -readonly [Key in keyof T]: T[Key] };

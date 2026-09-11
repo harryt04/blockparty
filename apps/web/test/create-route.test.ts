@@ -29,7 +29,6 @@ const validBody = {
     relaxedEvenBuilding: false,
     unlimitedImprovementInventory: false,
   },
-  acknowledged13Plus: true,
 };
 
 describe("POST /api/games", () => {

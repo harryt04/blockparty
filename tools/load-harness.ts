@@ -251,7 +251,6 @@ async function runScenario(options: HarnessOptions): Promise<ScenarioResult> {
     botSeatCount: 0,
     preset: STANDARD_CONFIGURATION.preset,
     configuration: STANDARD_CONFIGURATION,
-    acknowledged13Plus: true,
   });
   samples.push(created.sample);
   const create = CreateGameResponse.parse(created.value);
@@ -262,7 +261,6 @@ async function runScenario(options: HarnessOptions): Promise<ScenarioResult> {
   const joined = await guest.json<unknown>(`/api/invites/${inviteId}/join`, "POST", {
     name: "Load seat",
     token: openSeat.token,
-    acknowledged13Plus: true,
   });
   samples.push(joined.sample);
   const join = JoinGameResponse.parse(joined.value);

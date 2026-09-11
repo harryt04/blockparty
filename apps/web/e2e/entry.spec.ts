@@ -78,9 +78,6 @@ test.describe("entry actions remain reachable with first-visit notices", () => {
     await page.getByRole("textbox", { name: "Name for this game" }).fill("Second Player");
     await page.getByRole("radio", { name: "Key" }).check();
     await page
-      .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
-      .check();
-    await page
       .context()
       .addCookies([{ name: "bp_csrf", value: csrf, url: "http://127.0.0.1:3100" }]);
     await page.getByRole("button", { name: "Join the lobby" }).click();
@@ -147,9 +144,6 @@ test.describe("entry actions remain reachable with first-visit notices", () => {
       await page.goto(`/join/${inviteId}`);
       await page.getByRole("textbox", { name: "Name for this game" }).fill("  Ada   Lovelace  ");
       await page.getByRole("radio", { name: "Lantern" }).check();
-      await page
-        .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
-        .check();
       await page.getByRole("button", { name: "Join the lobby" }).click();
 
       await expect(
@@ -158,9 +152,6 @@ test.describe("entry actions remain reachable with first-visit notices", () => {
       await expect(page.getByRole("textbox", { name: "Name for this game" })).toHaveValue(
         "  Ada   Lovelace  ",
       );
-      await expect(
-        page.getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." }),
-      ).toBeChecked();
       await expect(page.getByRole("radio", { name: "Lantern" })).toBeDisabled();
       await expect(page.getByRole("radio", { name: "Key" })).toBeEnabled();
       await expect(page.getByRole("radio", { name: "Key" })).toBeFocused();
@@ -172,9 +163,6 @@ test.describe("entry actions remain reachable with first-visit notices", () => {
     await page.goto("/create");
     await page.getByRole("textbox", { name: "Display name" }).fill("Host");
     await page.getByRole("radio", { name: "Lantern" }).check();
-    await page
-      .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
-      .check();
     await page.getByRole("button", { name: "Create lobby" }).click();
 
     // The browser-visible action must reach the form handler even when the
@@ -211,9 +199,6 @@ test.describe("entry actions remain reachable with first-visit notices", () => {
     await page.goto("/create");
     await page.getByRole("textbox", { name: "Display name" }).fill("Host");
     await page.getByRole("radio", { name: "Lantern" }).check();
-    await page
-      .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
-      .check();
 
     await page.getByRole("button", { name: "Create lobby" }).evaluate((button) => {
       const submitButton = button as HTMLButtonElement;

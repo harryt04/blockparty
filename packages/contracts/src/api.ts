@@ -39,8 +39,8 @@ export const CreateGameRequest = z
     hostToken: SeatToken,
     preset: RulesPreset,
     configuration: RulesConfiguration,
-    /** The 13+ notice must be acknowledged before creation. See SEC-005. */
-    acknowledged13Plus: z.literal(true),
+    /** Legacy clients may still send the former age acknowledgement. */
+    acknowledged13Plus: z.literal(true).optional(),
   })
   .strict()
   .refine((value) => value.humanSeatCount + value.botSeatCount >= 2, {
@@ -93,7 +93,8 @@ export const JoinGameRequest = z
   .object({
     name: DisplayName,
     token: SeatToken,
-    acknowledged13Plus: z.literal(true),
+    /** Legacy clients may still send the former age acknowledgement. */
+    acknowledged13Plus: z.literal(true).optional(),
   })
   .strict();
 export type JoinGameRequest = z.infer<typeof JoinGameRequest>;

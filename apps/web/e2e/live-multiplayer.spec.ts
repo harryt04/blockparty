@@ -124,9 +124,6 @@ test.describe("live multiplayer authority", () => {
       await host.getByRole("button", { name: "Keep analytics off" }).click();
       await host.getByRole("textbox", { name: "Display name" }).fill("Live Host");
       await host.getByRole("radio", { name: "Lantern" }).check();
-      await host
-        .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
-        .check();
       await assertNoHorizontalOverflow(host, "create");
 
       const createResponsePromise = host.waitForResponse(
@@ -151,9 +148,6 @@ test.describe("live multiplayer authority", () => {
       await joiner.getByRole("button", { name: "Keep analytics off" }).click();
       await joiner.getByRole("textbox", { name: "Display name" }).fill("Live Joiner");
       await joiner.getByRole("radio", { name: "Key" }).check();
-      await joiner
-        .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
-        .check();
       const joinResponsePromise = joiner.waitForResponse(
         (response) => response.url().includes("/join") && response.request().method() === "POST",
       );
@@ -512,9 +506,6 @@ test.describe("live multiplayer authority", () => {
       await host.goto("/create", { waitUntil: "domcontentloaded" });
       await host.getByRole("textbox", { name: "Display name" }).fill("Auction Host");
       await host.getByRole("radio", { name: "Lantern" }).check();
-      await host
-        .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
-        .check();
       const auctionCreateResponsePromise = host.waitForResponse(
         (response) =>
           response.url().endsWith("/api/games") && response.request().method() === "POST",
@@ -529,9 +520,6 @@ test.describe("live multiplayer authority", () => {
       await joiner.goto(auctionCreated.invitePath, { waitUntil: "domcontentloaded" });
       await joiner.getByRole("textbox", { name: "Display name" }).fill("Auction Joiner");
       await joiner.getByRole("radio", { name: "Key" }).check();
-      await joiner
-        .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
-        .check();
       const auctionJoinResponsePromise = joiner.waitForResponse(
         (response) => response.url().includes("/join") && response.request().method() === "POST",
       );
@@ -845,9 +833,6 @@ test.describe("live multiplayer authority", () => {
       await host.getByRole("button", { name: "Keep analytics off" }).click();
       await host.getByRole("textbox", { name: "Display name" }).fill("Detention Host");
       await host.getByRole("radio", { name: "Lantern" }).check();
-      await host
-        .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
-        .check();
       const createResponsePromise = host.waitForResponse(
         (response) =>
           response.url().endsWith("/api/games") && response.request().method() === "POST",
@@ -863,9 +848,6 @@ test.describe("live multiplayer authority", () => {
       await joiner.getByRole("button", { name: "Keep analytics off" }).click();
       await joiner.getByRole("textbox", { name: "Display name" }).fill("Detention Joiner");
       await joiner.getByRole("radio", { name: "Key" }).check();
-      await joiner
-        .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
-        .check();
       const joinResponsePromise = joiner.waitForResponse(
         (response) => response.url().includes("/join") && response.request().method() === "POST",
       );
@@ -1180,9 +1162,6 @@ test.describe("live multiplayer authority", () => {
       await host.getByRole("button", { name: "Keep analytics off" }).click();
       await host.getByRole("textbox", { name: "Display name" }).fill("Summary Host");
       await host.getByRole("radio", { name: "Lantern" }).check();
-      await host
-        .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
-        .check();
       const createResponsePromise = host.waitForResponse(
         (response) =>
           response.url().endsWith("/api/games") && response.request().method() === "POST",
@@ -1200,9 +1179,6 @@ test.describe("live multiplayer authority", () => {
       await joiner.getByRole("button", { name: "Keep analytics off" }).click();
       await joiner.getByRole("textbox", { name: "Display name" }).fill("Summary Joiner");
       await joiner.getByRole("radio", { name: "Key" }).check();
-      await joiner
-        .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
-        .check();
       const joinResponsePromise = joiner.waitForResponse(
         (response) => response.url().includes("/join") && response.request().method() === "POST",
       );
@@ -1266,9 +1242,6 @@ test.describe("live multiplayer authority", () => {
 
       await host.getByRole("textbox", { name: "Host display name" }).fill("Fresh Host");
       await host.getByRole("radio", { name: "Crescent" }).check();
-      await host
-        .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
-        .check();
       const rematchResponsePromise = host.waitForResponse(
         (response) =>
           response.url().endsWith(`/api/games/${created.gameId}/rematch`) &&

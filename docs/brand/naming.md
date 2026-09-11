@@ -4,7 +4,7 @@ This document explores names for the original game identity described in [Brand 
 
 ## Naming brief
 
-The name should feel social, bright, and strategically capable for a 13+ web game. It should support an original world rather than signal an unofficial version of an existing tabletop title. Prefer two to four syllables, easy spoken spelling, and a flexible visual mark. Avoid direct references to another game’s titles, components, slogans, board labels, or distinctive world.
+The name should feel social, bright, and strategically capable for an all-ages web game. It should support an original world rather than signal an unofficial version of an existing tabletop title. Prefer two to four syllables, easy spoken spelling, and a flexible visual mark. Avoid direct references to another game’s titles, components, slogans, board labels, or distinctive world.
 
 ### Explicitly rejected pattern
 

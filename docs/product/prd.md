@@ -1,7 +1,7 @@
 # Product Requirements Document: Blockparty classic-table game
 
 **Status:** accepted classic-overhaul target; implementation is in transition
-**Audience:** people aged 13+ who want a private, browser-based economic property board game with friends or bots.  
+**Audience:** people of all ages who want a private, browser-based economic property board game with friends or bots.
 **Product terms:** [Glossary](glossary.md) is normative for product and wire vocabulary. [Rules](rules.md), [game content](game-content.md), and [rule variants](rule-variants.md) define gameplay. The product name is **Blockparty**; brand and licensing decisions are recorded in the [brand](../brand/brand-strategy.md) and [legal](../legal/ip-safety.md) documents.
 
 ## Product statement

@@ -48,9 +48,9 @@ logs, or analytics.
 
 | Route/screen | Required experience |
 | --- | --- |
-| `/` — Landing | Open with the Blockparty city/table promise and a non-interactive classic-table preview. Make **Set up the table** the primary action and **Join with link** the secondary action. Use the compact top navigation; include the 13+ notice, accessibility/settings links, install education, and no account wall. |
-| `/create` — Create | One page for the host display name, host piece, optional table name, Human count, Computer count, collapsed house-rule summary, and age acknowledgement. Show the resulting seat tray before submission. |
-| `/join/[inviteId]` — Join | Validate the invite before collecting input. Show only server-reported open Human seats and available pieces. Collect a game-scoped display name, one remaining piece, and age acknowledgement. |
+| `/` — Landing | Open with the Blockparty city/table promise and a non-interactive classic-table preview. Make **Set up the table** the primary action and **Join with link** the secondary action. Use the compact top navigation; include accessibility/settings links, install education, and no account wall. |
+| `/create` — Create | One page for the host display name, host piece, optional table name, Human count, Computer count, and collapsed house-rule summary. Show the resulting seat tray before submission. |
+| `/join/[inviteId]` — Join | Validate the invite before collecting input. Show only server-reported open Human seats and available pieces. Collect a game-scoped display name and one remaining piece. |
 | `/game/[gameId]/lobby` — Lobby | Show a miniature classic board, seat tray, claimed/open Human seats, Computer seats, selected Standard/Custom summary, invite/share action, and host-only start or seat controls. Explain the exact unmet start condition. |
 | `/game/[gameId]` — Table | Show the authoritative board, player rail, current decision, local property hand, event history, connection state, and contextual inspection/management surfaces. |
 | `/game/[gameId]/summary` — Summary | Show the authoritative winner, standings, key events, no-contest or retired-game explanation, read-only board/history, and a fresh rematch action. Never silently reuse an invite, balance, capability, or identity. |
@@ -91,7 +91,7 @@ The host completes creation without a multi-step wizard:
 
 Error, empty, and recovery behavior:
 
-- Missing or invalid display name, piece, count, or acknowledgement is marked at
+- Missing or invalid display name, piece, or count is marked at
   the field and summarized at the form heading; safe values remain entered.
 - If the server rejects a stale piece or contract version, preserve the safe
   form values, refresh availability, and require a new piece selection.
@@ -108,12 +108,12 @@ or retired invitations receive a plain-language explanation and a safe route
 home without revealing private room details.
 
 For an open invite, the server supplies the available Human seats and pieces.
-The player enters a normalized display name, chooses one available piece, and
-acknowledges the 13+ notice. Occupied seats and pieces are visibly unavailable;
+The player enters a normalized display name and chooses one available piece.
+Occupied seats and pieces are visibly unavailable;
 the client does not guess availability from an earlier projection.
 
-On a concurrent claim conflict, keep the display name and acknowledgement, refresh
-the authoritative availability, identify the unavailable piece, move focus to
+On a concurrent claim conflict, keep the display name, refresh the authoritative
+availability, identify the unavailable piece, move focus to
 the new piece choices, and require another selection. Never displace an
 occupied Human or Computer seat. On success, issue the secure seat capability
 and focus the lobby heading with a textual joined announcement.

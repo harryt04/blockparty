@@ -66,7 +66,7 @@ function setupDatabase() {
 }
 
 function requestFor(name: string, token: NonNullable<GameDocument["seats"][number]["token"]>) {
-  return JSON.stringify(JoinGameRequest.parse({ name, token, acknowledged13Plus: true }));
+  return JSON.stringify(JoinGameRequest.parse({ name, token }));
 }
 
 describe("invite Route Handlers", () => {
@@ -98,7 +98,6 @@ describe("invite Route Handlers", () => {
         relaxedEvenBuilding: false,
         unlimitedImprovementInventory: false,
       },
-      acknowledged13Plus: true,
     });
     const game = documents.get(COLLECTIONS.games)![0] as unknown as GameDocument;
     const openSeat = game.seats.find((seat) => seat.kind === "open")!;

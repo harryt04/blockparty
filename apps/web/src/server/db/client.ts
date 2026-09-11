@@ -57,6 +57,36 @@ export class DatabaseSessionLimitError extends Error {
   }
 }
 
+export type DatabaseFailureCode =
+  | "DATABASE_NOT_CONFIGURED"
+  | "DATABASE_CLOSING"
+  | "DATABASE_SESSION_LIMIT"
+  | "DATABASE_UNAVAILABLE"
+  | "TRANSACTION_FAILED"
+  | "DATABASE_OPERATION_FAILED";
+
+/** Maps driver failures to bounded operational labels without logging details. */
+export function classifyDatabaseFailure(error: unknown): DatabaseFailureCode {
+  if (error instanceof DatabaseNotConfiguredError) return "DATABASE_NOT_CONFIGURED";
+  if (error instanceof DatabaseClosingError) return "DATABASE_CLOSING";
+  if (error instanceof DatabaseSessionLimitError) return "DATABASE_SESSION_LIMIT";
+
+  const errorName = error instanceof Error ? error.name : "";
+  if (
+    errorName === "MongoServerSelectionError" ||
+    errorName === "MongoNetworkError" ||
+    errorName === "MongoTopologyClosedError" ||
+    errorName === "MongoNotConnectedError" ||
+    errorName === "MongoWaitQueueTimeoutError"
+  ) {
+    return "DATABASE_UNAVAILABLE";
+  }
+  if (errorName === "MongoTransactionError" || errorName === "MongoWriteConcernError") {
+    return "TRANSACTION_FAILED";
+  }
+  return "DATABASE_OPERATION_FAILED";
+}
+
 export function getMongoClient(): MongoClient {
   if (!isDatabaseConfigured || env.MONGODB_URI === undefined) {
     throw new DatabaseNotConfiguredError();

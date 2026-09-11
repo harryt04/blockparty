@@ -211,24 +211,6 @@ function JoinForm({
               </p>
             )}
           </div>
-
-          <div>
-            <label className="flex min-h-11 items-start gap-3 text-sm">
-              <input
-                type="checkbox"
-                name="acknowledged13Plus"
-                className="mt-1"
-                aria-invalid={errors.acknowledged13Plus === undefined ? undefined : true}
-                aria-describedby={describedBy("acknowledged13Plus")}
-              />
-              <span>I confirm that all players are aged 13 or over.</span>
-            </label>
-            {errors.acknowledged13Plus === undefined ? null : (
-              <p id={fieldErrorId("acknowledged13Plus")} className="mt-1 text-sm text-danger">
-                {errors.acknowledged13Plus}
-              </p>
-            )}
-          </div>
         </CardContent>
       </Card>
 

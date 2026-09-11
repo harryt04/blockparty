@@ -77,7 +77,6 @@ const request = CreateGameRequest.parse({
     relaxedEvenBuilding: false,
     unlimitedImprovementInventory: false,
   },
-  acknowledged13Plus: true,
 });
 
 describe("game creation and capability issuance", () => {

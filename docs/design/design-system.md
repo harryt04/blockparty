@@ -125,7 +125,7 @@ screen-reader behavior. Do not introduce bespoke `div` controls.
 | Surface | Component anatomy | Responsive placement |
 | --- | --- | --- |
 | Entry shell | Wordmark, compact top navigation, page content, footer links | Header wraps safely; it never reserves a persistent sidebar column |
-| Create form | Heading, grouped fields, piece picker, Human/Computer steppers, collapsed rules summary, age acknowledgement, seat tray, one submit | One column; seat tray wraps without becoming a second page |
+| Create form | Heading, grouped fields, piece picker, Human/Computer steppers, collapsed rules summary, seat tray, one submit | One column; seat tray wraps without becoming a second page |
 | Lobby preview | Miniature 11 × 11 board, ordered seat tray, invite action, exact start condition, host controls | Board above tray; controls remain reachable at 320 px |
 | Board | Semantic 40-cell perimeter grid, center context, equivalent ordered list | Fitted viewport on phone; full anchor on desktop |
 | Player rail | Ordered player cards with piece, pseudonym, cash/debt, connection, elimination, and turn marker | Left rail desktop; horizontal `overflow-x: auto` strip on phone |

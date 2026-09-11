@@ -1,6 +1,6 @@
 # Brand Strategy
 
-> **Working premise:** This is a free, open-source web game for people 13+ that faithfully implements the accepted classic property-trading rules baseline while presenting it through Blockparty's original magical-city world, language, art direction, and table interface. It is not positioned as a replacement, sequel, edition, or unofficial version of any existing game.
+> **Working premise:** This is a free, open-source web game for people of all ages that faithfully implements the accepted classic property-trading rules baseline while presenting it through Blockparty's original magical-city world, language, art direction, and table interface. It is not positioned as a replacement, sequel, edition, or unofficial version of any existing game.
 
 Related documents: [Naming](naming.md) and [IP safety](../legal/ip-safety.md). Naming is provisional until the clearance and release gates in those documents are complete.
 
@@ -8,7 +8,7 @@ Related documents: [Naming](naming.md) and [IP safety](../legal/ip-safety.md). N
 
 ## Positioning
 
-**For** friends, families, and online groups aged 13+ who want a quick-to-learn economic board game with real negotiation,
+**For** friends, families, and online groups of all ages who want a quick-to-learn economic board game with real negotiation,
 **Blockparty** is a free, open-source web property game that brings a familiar classic rules contract to an original magical city, turning planning, timing, and deals into a lively shared table.
 Its independent identity comes from the Blockparty world, names, copy, art direction, interface, content provenance, and community practice—not from claiming a different rules genre.
 
@@ -29,7 +29,7 @@ The tone is **social and welcoming, but strategically sharp**. It should never t
 3. **Strategy is legible.** Explain choices, costs, ownership, and consequences clearly; avoid false complexity.
 4. **Open by default.** Describe the project honestly as free/open source, credit contributors, and make asset origins traceable.
 5. **Originality is a feature.** Independent names, copy, assets, provenance, and presentation are product requirements, not a last-minute legal polish.
-6. **Age-aware friendliness.** Keep copy suitable for 13+; avoid gambling framing, hostile trash talk, and manipulative urgency.
+6. **All-ages friendliness.** Keep copy suitable for a general audience; avoid gambling framing, hostile trash talk, and manipulative urgency.
 
 ## Brand territories
 
@@ -129,7 +129,7 @@ belong to the [Design System](../design/design-system.md).
 
 #### Motifs to avoid
 
-Beyond the standing prohibitions in [IP safety](../legal/ip-safety.md), this setting has its own traps. Avoid alcohol cues, prize wheels, raffle tickets, and cash-toss imagery. The audience is 13+ and the brand bans gambling framing. Avoid block-shaped or chain-link iconography that reads blockchain.
+Beyond the standing prohibitions in [IP safety](../legal/ip-safety.md), this setting has its own traps. Avoid alcohol cues, prize wheels, raffle tickets, and cash-toss imagery. The general-audience brand bans gambling framing. Avoid block-shaped or chain-link iconography that reads blockchain.
 
 ### Familiar without confusing source
 

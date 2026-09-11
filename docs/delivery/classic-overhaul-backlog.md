@@ -602,7 +602,7 @@ accidental collapse in coverage.
       Requirements: PRD-FUN-021, UX-041, ENG-029
       Read: create form/model/route and updated UX/content copy
       Changes: collect required host pseudonym and piece, optional table name,
-      Human/Computer counts, collapsed rule summary, and age acknowledgement;
+      Human/Computer counts and collapsed rule summary;
       default to two Humans/zero Computers/Standard; preview exact resulting seats;
       submit the new strict contract and preserve safe pending/error behavior.
       Acceptance: every valid combination from 2–6 creates the intended host,
@@ -629,7 +629,7 @@ accidental collapse in coverage.
       Changes: show only server-reported open pieces, combine pseudonym and piece
       choice into a short entry surface, visually distinguish unavailable choices,
       and refresh after a concurrent claimant wins. Preserve name normalization,
-      privacy copy, age acknowledgement, and secure cookie issuance.
+      privacy copy and secure cookie issuance.
       Acceptance: a player cannot displace an occupied/bot seat; stale conflicts
       retain safe form values, refresh availability, and request another choice.
       Proves: two-context race test, name collision tests, invite-state tests, axe,

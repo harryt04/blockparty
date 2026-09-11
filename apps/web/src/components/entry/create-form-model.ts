@@ -13,13 +13,7 @@ export const CREATE_PIECES = PIECE_OPTIONS;
 export const DEFAULT_CREATE_PIECE_ID = CREATE_PIECES[0]!.token.pieceId;
 
 export type CreateField =
-  | "name"
-  | "hostName"
-  | "hostToken"
-  | "humanSeatCount"
-  | "botSeatCount"
-  | "preset"
-  | "acknowledged13Plus";
+  "name" | "hostName" | "hostToken" | "humanSeatCount" | "botSeatCount" | "preset";
 
 export type CreateFormResult =
   | { readonly ok: true; readonly request: CreateGameRequest }
@@ -99,10 +93,6 @@ export function createRequestFromForm(form: FormData): CreateFormResult {
   if (configuration === undefined) {
     errors.preset = "Choose a rules preset.";
   }
-  if (!form.has("acknowledged13Plus")) {
-    errors.acknowledged13Plus = "Confirm that all players are aged 13 or over.";
-  }
-
   if (
     Object.keys(errors).length > 0 ||
     humanSeatCount === undefined ||
@@ -121,7 +111,6 @@ export function createRequestFromForm(form: FormData): CreateFormResult {
     hostToken: hostToken.token,
     preset: configuration?.preset,
     configuration,
-    acknowledged13Plus: true,
   });
   if (!parsed.success) {
     return {

@@ -43,5 +43,5 @@ async function getReady() {
       contentBundle: bundle.valid ? "ok" : "invalid",
     },
   };
-  return jsonOk(response, { status: status === "unavailable" ? 503 : 200 });
+  return jsonOk(response, { status: status === "ready" ? 200 : 503 });
 }

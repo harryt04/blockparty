@@ -56,7 +56,6 @@ export function ShellFooter() {
         <Link href="/settings" className="underline underline-offset-4">
           Settings
         </Link>
-        <span>For players aged 13 and over.</span>
       </nav>
     </footer>
   );

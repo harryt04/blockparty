@@ -36,7 +36,6 @@ const request = CreateGameRequest.parse({
     relaxedEvenBuilding: false,
     unlimitedImprovementInventory: false,
   },
-  acknowledged13Plus: true,
 });
 
 function makeFixture() {

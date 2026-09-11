@@ -5,7 +5,6 @@ function form(overrides: Record<string, string> = {}) {
   const value = new FormData();
   value.set("name", "  Ada   Lovelace  ");
   value.set("token", JOIN_TOKENS[0]!.token.pieceId);
-  value.set("acknowledged13Plus", "on");
   for (const [key, entry] of Object.entries(overrides)) value.set(key, entry);
   return value;
 }
@@ -17,7 +16,6 @@ describe("join form request mapping", () => {
       request: {
         name: "Ada Lovelace",
         token: JOIN_TOKENS[0]!.token,
-        acknowledged13Plus: true,
       },
     });
   });
@@ -25,14 +23,12 @@ describe("join form request mapping", () => {
   it("reports accessible errors without creating a request", () => {
     const invalid = form({ name: "\u202Ename" });
     invalid.delete("token");
-    invalid.delete("acknowledged13Plus");
 
     expect(joinRequestFromForm(invalid)).toEqual({
       ok: false,
       errors: {
         name: "Choose a display name with 1–24 characters for this game.",
         token: "Choose a token for your seat.",
-        acknowledged13Plus: "Confirm that all players are aged 13 or over.",
       },
     });
   });

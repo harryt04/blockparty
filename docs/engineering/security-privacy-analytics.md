@@ -68,11 +68,11 @@ Use a pseudonymous PostHog distinct ID derived from a random analytics ID, not a
 
 Operational telemetry is separate from product analytics and can collect aggregate counters/histograms such as active sockets, command latency, DB transaction failures, reconnect rate, rate-limit blocks, snapshot/resync rate, and engine invariant failures. It must use no player names, invite IDs, cookie/token values, or raw payloads.
 
-## SEC-005: Retention, deletion, and age boundary
+## SEC-005: Retention, deletion, and audience privacy
 
 Apply [ENG-017](realtime-and-data.md#eng-017-expiry-backup-recovery-and-scale): active game data and capabilities expire 30 days after the last authoritative gameplay action; completed games expire 30 days after completion. Expiry jobs revoke capabilities and delete related rows in a controlled order. Configure the shortest practical encrypted-backup retention and publish unavoidable deletion lag. A support deletion path uses an authorized game reference without collecting a raw capability and records only a minimal deletion audit entry.
 
-The service is for people age 13 and older. State this in terms/onboarding, do not knowingly collect personal information from under-13 users, and do not use child-directed marketing or analytics. If audience or territory changes, conduct a dedicated children's-privacy review. Guest play requires a game-scoped pseudonym under [PRD-FUN-003](../product/prd.md#entry-lobby-and-seats), never a real name, email address, birth date, account, or cross-game profile.
+The service is for people of all ages and uses general-audience presentation. Do not knowingly collect personal information from children, and do not use child-directed marketing or analytics. If audience, data collection, or territory changes, conduct a dedicated children's-privacy review. Guest play requires a game-scoped pseudonym under [PRD-FUN-003](../product/prd.md#entry-lobby-and-seats), never a real name, email address, birth date, account, or cross-game profile.
 
 ## SEC-006: Security acceptance checks
 

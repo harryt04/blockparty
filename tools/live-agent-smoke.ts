@@ -254,7 +254,6 @@ async function main(): Promise<void> {
         hostToken: { colorIndex: 1, pieceId: "piece-lantern", pattern: "solid" },
         preset: "standard",
         configuration,
-        acknowledged13Plus: true,
       }),
     },
     cookies,

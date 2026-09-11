@@ -172,7 +172,6 @@ describe("authenticated SSE delivery", () => {
         relaxedEvenBuilding: false,
         unlimitedImprovementInventory: false,
       },
-      acknowledged13Plus: true,
     });
     await createGameInTransaction(
       {

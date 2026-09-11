@@ -24,9 +24,6 @@ test("live two-seat game exposes the opening roll to the active browser", async 
     await host.getByRole("button", { name: "Keep analytics off" }).click();
     await host.getByRole("textbox", { name: "Display name" }).fill("First Roll Host");
     await host.getByRole("radio", { name: "Lantern" }).check();
-    await host
-      .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
-      .check();
     const createResponsePromise = host.waitForResponse(
       (response) => response.url().endsWith("/api/games") && response.request().method() === "POST",
     );
@@ -40,9 +37,6 @@ test("live two-seat game exposes the opening roll to the active browser", async 
     await joiner.getByRole("button", { name: "Keep analytics off" }).click();
     await joiner.getByRole("textbox", { name: "Display name" }).fill("First Roll Joiner");
     await joiner.getByRole("radio", { name: "Key" }).check();
-    await joiner
-      .getByRole("checkbox", { name: "I confirm that all players are aged 13 or over." })
-      .check();
     const joinResponsePromise = joiner.waitForResponse(
       (response) => response.url().includes("/join") && response.request().method() === "POST",
     );

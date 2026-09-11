@@ -18,7 +18,6 @@ describe("classic creation and admission contracts", () => {
       hostToken,
       preset: "standard" as const,
       configuration: STANDARD_CONFIGURATION,
-      acknowledged13Plus: true as const,
     };
 
     expect(CreateGameRequest.parse(request)).toMatchObject({
@@ -41,7 +40,6 @@ describe("classic creation and admission contracts", () => {
         hostToken,
         preset: "standard",
         configuration: STANDARD_CONFIGURATION,
-        acknowledged13Plus: true,
       }).success,
     ).toBe(false);
   });
@@ -55,7 +53,6 @@ describe("classic creation and admission contracts", () => {
         hostToken,
         preset: "standard",
         configuration: STANDARD_CONFIGURATION,
-        acknowledged13Plus: true,
       }).success,
     ).toBe(true);
   });

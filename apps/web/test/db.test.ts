@@ -15,6 +15,26 @@ if (replicaSetUri !== undefined) {
 const clientAdapter = await import("../src/server/db/client");
 
 describe("MongoDB readiness", () => {
+  it("classifies database failures without exposing driver details", () => {
+    expect(
+      clientAdapter.classifyDatabaseFailure(new clientAdapter.DatabaseNotConfiguredError()),
+    ).toBe("DATABASE_NOT_CONFIGURED");
+    expect(
+      clientAdapter.classifyDatabaseFailure(
+        Object.assign(new Error("network"), {
+          name: "MongoServerSelectionError",
+        }),
+      ),
+    ).toBe("DATABASE_UNAVAILABLE");
+    expect(
+      clientAdapter.classifyDatabaseFailure(
+        Object.assign(new Error("transaction"), {
+          name: "MongoTransactionError",
+        }),
+      ),
+    ).toBe("TRANSACTION_FAILED");
+  });
+
   it("distinguishes an absent database configuration", async () => {
     if (replicaSetUri !== undefined) return;
     await expect(clientAdapter.pingDatabase()).resolves.toBe("not_configured");

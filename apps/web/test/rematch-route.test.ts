@@ -42,7 +42,6 @@ const requestBody = {
     relaxedEvenBuilding: true,
     unlimitedImprovementInventory: false,
   },
-  acknowledged13Plus: true,
 };
 
 function arrange(status: "COMPLETED" | "ACTIVE" = "COMPLETED", contentVersion = "1.0.0") {

@@ -47,7 +47,6 @@ const createRequest = (seatCount: 2 | 4, botSeatCount: number) => ({
     relaxedEvenBuilding: false,
     unlimitedImprovementInventory: false,
   },
-  acknowledged13Plus: true as const,
 });
 
 function collection<T>() {
@@ -120,7 +119,7 @@ async function fixture(seatCount: 2 | 4 = 4, botSeatCount = 1) {
 }
 
 function joinRequest(name: string, token: NonNullable<GameDocument["seats"][number]["token"]>) {
-  return JoinGameRequest.parse({ name, token, acknowledged13Plus: true });
+  return JoinGameRequest.parse({ name, token });
 }
 
 describe("invite admission and seat claims", () => {

@@ -8,7 +8,6 @@ function formWithoutPiece(): FormData {
   form.set("humanSeatCount", "1");
   form.set("botSeatCount", "1");
   form.set("preset", "standard");
-  form.set("acknowledged13Plus", "on");
   return form;
 }
 

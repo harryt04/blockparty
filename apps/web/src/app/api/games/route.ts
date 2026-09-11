@@ -7,7 +7,7 @@
  * response body or in a URL.
  */
 import { CreateGameRequest, type CreateGameResponse } from "@blockparty/contracts";
-import { getDb, withMongoTransaction } from "@/server/db/client";
+import { classifyDatabaseFailure, getDb, withMongoTransaction } from "@/server/db/client";
 import { COLLECTIONS } from "@/server/db/collections";
 import { isProduction } from "@/server/env";
 import {
@@ -21,6 +21,7 @@ import {
 } from "@/server/games/create-game";
 import { checkJsonContentType, checkRequestBodySize, guardMutation } from "@/server/http/guards";
 import { jsonError, jsonOk } from "@/server/http/responses";
+import { safeLog } from "@/server/http/redaction";
 import { withRequestTelemetry } from "@/server/observability/telemetry";
 
 export const runtime = "nodejs";
@@ -80,6 +81,7 @@ async function createGame(request: Request) {
     if (error instanceof Error && error.message === "CONTENT_UNSUPPORTED") {
       return jsonError("CONTENT_UNSUPPORTED");
     }
+    safeLog("error", "game.create.failed", { code: classifyDatabaseFailure(error) });
     return jsonError("SERVER_BUSY");
   }
 }

@@ -204,10 +204,6 @@ export function RematchForm({ gameId }: { gameId: string }) {
               </fieldset>
             </div>
           </details>
-          <label className="flex min-h-11 items-start gap-3 text-sm">
-            <input type="checkbox" name="acknowledged13Plus" className="mt-1" />
-            <span>I confirm that all players are aged 13 or over.</span>
-          </label>
           {error === undefined ? null : (
             <Alert variant="danger" role="alert">
               <div>

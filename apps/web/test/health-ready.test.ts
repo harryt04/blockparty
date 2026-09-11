@@ -21,7 +21,7 @@ describe("GET /api/health/ready", () => {
 
     const response = await GET(new Request("http://localhost/api/health/ready"));
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({
       status: "degraded",
       checks: { database: "not_configured", contentBundle: "ok" },

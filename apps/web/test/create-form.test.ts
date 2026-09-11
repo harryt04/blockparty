@@ -13,7 +13,6 @@ function validForm(overrides: Record<string, string> = {}): FormData {
   form.set("humanSeatCount", "3");
   form.set("botSeatCount", "1");
   form.set("preset", "standard");
-  form.set("acknowledged13Plus", "on");
   for (const [key, value] of Object.entries(overrides)) form.set(key, value);
   return form;
 }
@@ -43,7 +42,6 @@ describe("create form request mapping", () => {
           relaxedEvenBuilding: false,
           unlimitedImprovementInventory: false,
         },
-        acknowledged13Plus: true,
       },
     });
   });
@@ -75,21 +73,14 @@ describe("create form request mapping", () => {
     }
   });
 
-  it("reports player, bot, and age-boundary errors before making a request", () => {
+  it("reports player and bot boundary errors before making a request", () => {
     const result = createRequestFromForm(validForm({ humanSeatCount: "1", botSeatCount: "0" }));
-    const missingAge = validForm();
-    missingAge.delete("acknowledged13Plus");
-    const missingAgeResult = createRequestFromForm(missingAge);
 
     expect(result).toEqual({
       ok: false,
       errors: {
         botSeatCount: "Choose between 2 and 6 total players.",
       },
-    });
-    expect(missingAgeResult).toEqual({
-      ok: false,
-      errors: { acknowledged13Plus: "Confirm that all players are aged 13 or over." },
     });
   });
 });

@@ -393,17 +393,6 @@ export function CreateGameForm() {
         </AlertDescription>
       </Alert>
 
-      <label className="flex min-h-11 items-start gap-3 text-sm">
-        <input
-          type="checkbox"
-          name="acknowledged13Plus"
-          className="mt-1"
-          {...fieldProps("acknowledged13Plus", errors)}
-        />
-        <span>I confirm that all players are aged 13 or over.</span>
-      </label>
-      <FieldError field="acknowledged13Plus" errors={errors} />
-
       {apiError === undefined ? null : <ApiError message={apiError} />}
       {!pending && Object.keys(errors).length > 0 ? (
         <p role="alert" className="text-sm text-danger">

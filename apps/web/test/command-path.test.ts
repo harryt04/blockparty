@@ -40,7 +40,6 @@ const request = CreateGameRequest.parse({
     relaxedEvenBuilding: false,
     unlimitedImprovementInventory: false,
   },
-  acknowledged13Plus: true,
 });
 
 const openLobbyRequest = CreateGameRequest.parse({

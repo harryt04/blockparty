@@ -36,7 +36,6 @@ async function fixture(): Promise<GameDocument> {
       hostToken: { colorIndex: 1, pieceId: "piece-lantern", pattern: "solid" },
       preset: "standard",
       configuration: STANDARD_CONFIGURATION,
-      acknowledged13Plus: true,
     }),
     new Date("2026-09-03T15:00:00.000Z"),
   );

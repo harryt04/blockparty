@@ -2,8 +2,8 @@
  * `/` - Landing. See UX section 2 and UX-010.
  *
  * Name and mark, the private-game promise, a Create game primary CTA, a
- * Join with link field, how it works, the 13+ notice, accessibility and
- * settings links, and install education. There is no account wall.
+ * Join with link field, how it works, accessibility and settings links, and
+ * install education. There is no account wall.
  */
 import Link from "next/link";
 import { JoinLinkForm } from "@/components/entry/join-link-form";
@@ -75,8 +75,8 @@ export default function LandingPage() {
 
         <Alert variant="info" className="mx-auto w-full max-w-3xl">
           <AlertDescription>
-            For players aged 13 and over. Anyone with the invite link can join until the game
-            starts. Games are removed 30 days after the last action.
+            Anyone with the invite link can join until the game starts. Games are removed 30 days
+            after the last action.
           </AlertDescription>
         </Alert>
       </div>
