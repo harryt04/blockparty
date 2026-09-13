@@ -75,7 +75,7 @@ test.describe("entry actions remain reachable with first-visit notices", () => {
       });
     });
     await page.goto(`/join/${inviteId}`);
-    await page.getByRole("textbox", { name: "Name for this game" }).fill("Second Player");
+    await page.getByRole("textbox", { name: "Display name" }).fill("Second Player");
     await page.getByRole("radio", { name: "Key" }).check();
     await page
       .context()
@@ -142,14 +142,14 @@ test.describe("entry actions remain reachable with first-visit notices", () => {
       statusRequests = 0;
       await page.setViewportSize({ width, height: 900 });
       await page.goto(`/join/${inviteId}`);
-      await page.getByRole("textbox", { name: "Name for this game" }).fill("  Ada   Lovelace  ");
+      await page.getByRole("textbox", { name: "Display name" }).fill("  Ada   Lovelace  ");
       await page.getByRole("radio", { name: "Lantern" }).check();
       await page.getByRole("button", { name: "Join the lobby" }).click();
 
       await expect(
         page.getByRole("alert").filter({ hasText: "That piece was just claimed" }),
       ).toBeVisible();
-      await expect(page.getByRole("textbox", { name: "Name for this game" })).toHaveValue(
+      await expect(page.getByRole("textbox", { name: "Display name" })).toHaveValue(
         "  Ada   Lovelace  ",
       );
       await expect(page.getByRole("radio", { name: "Lantern" })).toBeDisabled();
@@ -217,8 +217,10 @@ test.describe("entry actions remain reachable with first-visit notices", () => {
     for (const width of [375, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/create");
-      await expect(page.locator("main details")).not.toHaveAttribute("open", "");
-      await expect(page.locator("main summary")).toContainText("Standard · all house rules off");
+      await expect(page.locator("main details").first()).not.toHaveAttribute("open", "");
+      await expect(page.locator("main summary").first()).toContainText(
+        "Standard · all house rules off",
+      );
       const dimensions = await page.evaluate(() => ({
         clientWidth: document.documentElement.clientWidth,
         scrollWidth: document.documentElement.scrollWidth,

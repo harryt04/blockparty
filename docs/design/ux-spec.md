@@ -60,6 +60,16 @@ Room navigation warns before leaving an unresolved decision. Browser Back never
 silently discards an entered bid or trade. History is rendered from the
 authoritative event log, never inferred from animation.
 
+### UX-050 — Portfolio embedded presentation
+
+The root landing page accepts the exact `embed=portfolio` presentation hint for
+the first-party portfolio showcase. In that mode, render a static, recognizable
+Blockparty table preview with concise product context and no create, join, game,
+settings, install, consent, or other state-changing controls. The surface makes
+no game, API, SSE, analytics, capability, or service-worker request and remains
+usable as an optional visual preview; the canonical landing page and direct
+`Open app` link remain the route to play.
+
 ## 3. Creation and admission flows
 
 <a id="3-end-to-end-flows"></a>

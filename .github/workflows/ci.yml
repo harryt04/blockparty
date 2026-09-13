@@ -12,6 +12,15 @@ permissions:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: true
+      NODE_ENV: test
+      MONGODB_TEST_URI: mongodb://127.0.0.1:27017/blockparty_ci?replicaSet=test-rs
+      MONGODB_URI: mongodb://127.0.0.1:27017/blockparty_ci?replicaSet=test-rs
+      MONGODB_DB: blockparty_ci_${{ github.run_id }}_${{ github.run_attempt }}
+      NEXT_PUBLIC_APP_URL: http://127.0.0.1:3100
+      ALLOWED_ORIGINS: http://127.0.0.1:3100
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -22,4 +31,19 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run ci
+      - uses: supercharge/mongodb-github-action@1.12.0
+        with:
+          mongodb-version: 8.0
+          mongodb-replica-set: test-rs
+      - run: pnpm exec playwright install --with-deps chromium firefox webkit
+      - run: npm run ci
+      - name: Upload CI diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-diagnostics
+          if-no-files-found: ignore
+          path: |
+            coverage/
+            playwright-report/
+            test-results/

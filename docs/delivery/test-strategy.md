@@ -78,8 +78,8 @@ and raw results.
 
 ## TEST-007 — CI and release gate
 
-`pnpm run ci` runs Prettier check, typecheck, ESLint, and Vitest with coverage in
-that order, with no errors or warnings. Every ticket runs `pnpm run format` first,
+`npm run ci` runs Prettier check, typecheck, ESLint, and Vitest with coverage in
+that order, with no errors or warnings. Every ticket runs `npm run format` first,
 then the full gate. Its new test is mutation-confirmed: deliberately break the
 protected behavior, observe the test fail, and restore it. Tests for rules,
 authorization, persistence, or realtime ordering are never quarantined or
@@ -117,3 +117,32 @@ forced colors, major decision phases, reconnect, completion, retirement, and
 rematch. Screenshots and browser results are evidence only when they use
 authoritative or explicitly marked test projections and contain no capabilities
 or private data.
+
+<a id="test-010-local-and-pull-request-ci-parity"></a>
+
+## TEST-010 — Local and pull-request CI parity
+
+`npm run ci` is the canonical local and pull-request regression gate. It runs
+format validation, all package typechecks, ESLint, Vitest unit and replica-set
+integration tests with coverage, the production build, and the deterministic
+Playwright suite across Chromium, Firefox, and WebKit. The runner provisions an
+isolated local replica set when `MONGODB_TEST_URI` is not supplied; CI supplies
+an ephemeral replica set explicitly.
+
+The required GitHub Actions job invokes `npm run ci` rather than duplicating its
+stage list. It retains coverage, Playwright reports, traces, and test results as
+diagnostic artifacts. Live multi-context gameplay, the 5,000-game soak, load
+tests, and manual assistive-technology checks remain extended release or
+operator evidence and are not silently substituted by the deterministic gate.
+
+<a id="test-011-embedded-preview-boundary"></a>
+
+## TEST-011 — Embedded preview boundary
+
+The embedded landing presentation is tested at the HTTP and browser boundaries.
+The header matrix proves that only the exact first-party portfolio origin may
+frame `/?embed=portfolio`, while the default landing and all stateful routes
+retain frame protection. Chromium, Firefox, and WebKit prove the preview renders
+without game controls, API/SSE/analytics/service-worker requests, or page-level
+overflow. A deployed smoke check verifies the response headers and the preview
+inside `https://harryt.dev/work`.

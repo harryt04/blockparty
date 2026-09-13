@@ -85,7 +85,7 @@ async function waitFor(check, attempts, delayMs) {
   return false;
 }
 
-async function startLocalReplicaSet() {
+export async function startLocalReplicaSet() {
   if (await replicaSetReady(LOCAL_MONGODB_URI, 300)) return undefined;
 
   await mkdir(LOCAL_DB_PATH, { recursive: true });
@@ -149,6 +149,10 @@ async function startLocalReplicaSet() {
   return child;
 }
 
+export function stopLocalReplicaSet(child, signal = "SIGTERM") {
+  child?.kill(signal);
+}
+
 export async function runDev() {
   const configuredUri = process.env.MONGODB_URI?.trim();
   const configuredReady = await replicaSetReady(configuredUri, 1_000);
@@ -181,7 +185,7 @@ export async function runDev() {
     if (shuttingDown) return;
     shuttingDown = true;
     webChild.kill(signal);
-    mongoChild?.kill(signal);
+    stopLocalReplicaSet(mongoChild, signal);
   };
   for (const signal of ["SIGINT", "SIGTERM"]) {
     process.on(signal, () => stop(signal));
@@ -194,7 +198,7 @@ export async function runDev() {
   });
 
   webChild.on("exit", (code) => {
-    mongoChild?.kill("SIGTERM");
+    stopLocalReplicaSet(mongoChild);
     process.exitCode = code ?? 1;
   });
 }

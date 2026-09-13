@@ -16,7 +16,7 @@
     "node": ">=22.0.0 <23"
   },
   "scripts": {
-    "ci": "pnpm run format:check && pnpm run typecheck && pnpm run lint && pnpm run test",
+    "ci": "node tools/run-ci.mjs",
     "dev": "node --env-file-if-exists=.env --env-file-if-exists=.env.local tools/run-dev.mjs",
     "agent:smoke": "tsx tools/live-agent-smoke.ts",
     "start": "pnpm --filter @blockparty/web start",

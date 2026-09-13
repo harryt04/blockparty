@@ -11,6 +11,7 @@ import {
   PWA_DISMISSAL_KEY,
   shouldShowInstallPrompt,
 } from "./pwa-model";
+import { isPortfolioEmbedLocation } from "@/components/embed/embed-model";
 
 interface BeforeInstallPromptEvent extends Event {
   readonly userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
@@ -47,6 +48,8 @@ export function PwaClient() {
   const updateRequested = useRef(false);
 
   useEffect(() => {
+    if (isPortfolioEmbedLocation()) return;
+
     setOnline(navigator.onLine);
     setDismissed(readDismissal());
     setInstalled(isStandalone());

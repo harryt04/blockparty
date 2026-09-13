@@ -83,6 +83,15 @@ The service is for people of all ages and uses general-audience presentation. Do
 - Consent-denied browser sessions make no PostHog capture/replay requests; withdrawal stops them.
 - Retention job and restored-backup drill meet the documented 30-day deletion and recovery expectations.
 
+## SEC-007: Portfolio-only embedded preview
+
+The root landing page may render a static portfolio presentation only when the
+request is exactly `/?embed=portfolio`. Its response may be framed by the
+first-party portfolio origin `https://harryt.dev`; all other pages retain the
+default `frame-ancestors 'none'` policy and normal frame protection. The embed
+surface performs no authentication, game-state, API, SSE, analytics, or service
+worker operation. The query is presentation-only and never grants authority.
+
 ## Classic-overhaul security boundary
 
 The classic creation/admission migration keeps invite admission, seat command,

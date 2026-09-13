@@ -69,7 +69,9 @@ test.describe("PWA shell and network truth", () => {
       const response = await page.reload({ waitUntil: "domcontentloaded" });
       expect(response?.ok()).toBe(true);
     }
-    await expect(page.getByText("A private game, one link away.", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Own the block. Build your fortune." }),
+    ).toBeVisible();
     await page.evaluate(() => window.dispatchEvent(new Event("offline")));
     await expect(page.getByRole("status")).toContainText(
       "Offline. Live play requires reconnection.",

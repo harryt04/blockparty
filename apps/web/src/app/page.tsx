@@ -8,10 +8,12 @@
 import Link from "next/link";
 import { JoinLinkForm } from "@/components/entry/join-link-form";
 import { MiniBoard } from "@/components/game/lobby-preview";
+import { PortfolioEmbed } from "@/components/landing/portfolio-embed";
 import { AppShell } from "@/components/shell/app-shell";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { isPortfolioEmbedParam } from "@/components/embed/embed-model";
 
 const HOW_IT_WORKS = [
   "Create a private game and pick two to six seats.",
@@ -20,7 +22,14 @@ const HOW_IT_WORKS = [
   "Play on any device. Come back to the same link within 30 days.",
 ];
 
-export default function LandingPage() {
+export default async function LandingPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ embed?: string | string[] }>;
+}) {
+  const params = searchParams === undefined ? undefined : await searchParams;
+  if (isPortfolioEmbedParam(params?.embed)) return <PortfolioEmbed />;
+
   return (
     <AppShell>
       <div className="mx-auto flex max-w-6xl flex-col gap-10">

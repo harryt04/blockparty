@@ -47,7 +47,15 @@ export default defineConfig({
     ],
     coverage: {
       provider: "v8",
-      reporter: ["text", "json-summary"],
+      include: ["apps/web/src/**/*.ts", "packages/*/src/**/*.ts", "tools/load-harness.ts"],
+      exclude: [
+        "**/*.d.ts",
+        "**/instrumentation*.ts",
+        "**/maintenance.ts",
+        "**/verify-restore.ts",
+        "**/retire-placeholders.ts",
+      ],
+      reporter: ["text", "json-summary", "html", "lcov"],
       thresholds: {
         lines: 50,
         functions: 50,

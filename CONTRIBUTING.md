@@ -25,9 +25,10 @@ content, or documentation.
 Use the active [classic overhaul queue](docs/delivery/classic-overhaul-backlog.md)
 for scoped work, preserve the server-authority and deterministic-engine
 invariants, and update [traceability](docs/traceability.md) with evidence.
-Run the checks required by the ticket before requesting review. Never include
-capabilities, private game data, or secrets in issues, logs, screenshots, test
-fixtures, or analytics.
+Run `npm run format` and then `npm run ci` before requesting review. The CI gate
+includes the production build and browser regression suite as well as unit and
+replica-set integration tests. Never include capabilities, private game data,
+or secrets in issues, logs, screenshots, test fixtures, or analytics.
 
 By submitting a contribution, you agree that it may be distributed under the
 license applicable to the submitted material. This document does not grant

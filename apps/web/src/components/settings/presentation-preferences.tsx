@@ -11,6 +11,7 @@ import {
   type PresentationPreferences,
   type ThemePreference,
 } from "./presentation-preferences-model";
+import { isPortfolioEmbedLocation } from "@/components/embed/embed-model";
 
 interface PresentationPreferencesContextValue {
   readonly preferences: PresentationPreferences;
@@ -30,6 +31,11 @@ export function PresentationPreferencesProvider({ children }: { children: ReactN
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    if (isPortfolioEmbedLocation()) {
+      setLoaded(true);
+      return;
+    }
+
     try {
       setPreferences(
         parsePresentationPreferences(window.localStorage.getItem(PRESENTATION_PREFERENCES_KEY)),
@@ -42,7 +48,7 @@ export function PresentationPreferencesProvider({ children }: { children: ReactN
   }, []);
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || isPortfolioEmbedLocation()) return;
     try {
       window.localStorage.setItem(
         PRESENTATION_PREFERENCES_KEY,
@@ -54,6 +60,8 @@ export function PresentationPreferencesProvider({ children }: { children: ReactN
   }, [loaded, preferences]);
 
   useEffect(() => {
+    if (isPortfolioEmbedLocation()) return;
+
     const root = document.documentElement;
     root.dataset.theme = preferences.theme;
     root.dataset.contrast = preferences.contrast ? "high" : "default";

@@ -58,7 +58,9 @@ page rendering but makes readiness degraded and cannot serve real games.
 
 ## OPS-004 — Deploy and migration
 
-Deploy an immutable revision only after `pnpm run ci` and `pnpm build` pass.
+Deploy an immutable revision only after `npm run ci` passes. The gate includes
+the production build; the deployment process may still run `pnpm build` as an
+explicit artifact check.
 Before traffic shifts, apply idempotent indexes and compatible migrations from
 the same image, verify readiness, then smoke create/join/play/reconnect in staging.
 Schema and content readers for every unexpired game ship before writers produce

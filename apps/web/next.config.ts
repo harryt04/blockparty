@@ -25,31 +25,35 @@ const posthogOrigin = (() => {
   }
 })();
 
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self'",
-  // The optional analytics origin is present only when configured; the client
-  // still cannot use it until the ANA-001 consent gate is accepted.
-  `connect-src 'self'${posthogOrigin === undefined ? "" : ` ${posthogOrigin}`}`,
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "manifest-src 'self'",
-  // The development server is intentionally HTTP. WebKit upgrades local
-  // subresources under this directive and then fails TLS, leaving the app
-  // server-rendered instead of hydrated.
-  ...(isDevelopment || isLocalHttpTest ? [] : ["upgrade-insecure-requests"]),
-].join("; ");
+function contentSecurityPolicy(frameAncestors: string): string {
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "font-src 'self'",
+    // The optional analytics origin is present only when configured; the client
+    // still cannot use it until the ANA-001 consent gate is accepted.
+    `connect-src 'self'${posthogOrigin === undefined ? "" : ` ${posthogOrigin}`}`,
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    `frame-ancestors ${frameAncestors}`,
+    "manifest-src 'self'",
+    // The development server is intentionally HTTP. WebKit upgrades local
+    // subresources under this directive and then fails TLS, leaving the app
+    // server-rendered instead of hydrated.
+    ...(isDevelopment || isLocalHttpTest ? [] : ["upgrade-insecure-requests"]),
+  ].join("; ");
+}
+
+const defaultContentSecurityPolicy = contentSecurityPolicy("'none'");
+const portfolioContentSecurityPolicy = contentSecurityPolicy("'self' https://harryt.dev");
 
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: contentSecurityPolicy },
+  { key: "Content-Security-Policy", value: defaultContentSecurityPolicy },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "X-Frame-Options", value: "DENY" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
   // HSTS is also set at the proxy. Duplicating it here is harmless and keeps
   // the header present if the app is exposed directly.
@@ -66,7 +70,24 @@ const nextConfig: NextConfig = {
     "@blockparty/game-engine",
   ],
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      {
+        source: "/:path*",
+        missing: [{ type: "query", key: "embed" }],
+        headers: [{ key: "X-Frame-Options", value: "DENY" }],
+      },
+      {
+        source: "/:path*",
+        has: [{ type: "query", key: "embed", value: "(?!portfolio$).*" }],
+        headers: [{ key: "X-Frame-Options", value: "DENY" }],
+      },
+      {
+        source: "/",
+        has: [{ type: "query", key: "embed", value: "portfolio" }],
+        headers: [{ key: "Content-Security-Policy", value: portfolioContentSecurityPolicy }],
+      },
+    ];
   },
 };
 

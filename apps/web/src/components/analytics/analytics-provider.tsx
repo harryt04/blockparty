@@ -25,6 +25,7 @@ import {
   type AnalyticsEventName,
   type AnalyticsEventProperties,
 } from "./analytics-model";
+import { isPortfolioEmbedLocation } from "@/components/embed/embed-model";
 
 type ConsentState = AnalyticsConsent | "unset";
 
@@ -54,6 +55,8 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    if (isPortfolioEmbedLocation()) return;
+
     const storage = safeStorage();
     const saved = readAnalyticsConsent(storage);
     setConsent(saved ?? "unset");

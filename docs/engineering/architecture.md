@@ -208,7 +208,7 @@ The following are explicitly rejected for this final architecture:
 - Commands/events use canonical wire vocabulary and versioned schemas; UI display names remain at the presentation boundary.
 - Duplicate, stale, malformed, unauthorized, out-of-order, reconnect, replacement, reclaim, host-transfer, expiry, and no-contest cases satisfy the linked protocol/security requirements.
 - The board, compact top navigation, dialogs, action surfaces, event feed, and accessible board list use shadcn/Tailwind design rules and pass the UX/DS requirements.
-- `pnpm run ci` covers package boundaries, engine determinism, MongoDB transaction/idempotency behavior, route/projection authorization, SSE/sync recovery, PWA behavior, accessibility, and security redaction.
+- `npm run ci` covers package boundaries, engine determinism, MongoDB transaction/idempotency behavior, route/projection authorization, SSE/sync recovery, PWA behavior, accessibility, and security redaction. The GitHub Actions job invokes this same command.
 - Coolify deployment, backup/restore, cleanup, readiness, rollback, and capacity evidence is recorded against [traceability](../traceability.md).
 
 ## ENG-019: Primary implementation references

@@ -307,25 +307,33 @@ test.describe("accessibility release matrix", () => {
     expect(styleState.mainWidth).toBeLessThanOrEqual(styleState.viewportWidth);
   });
 
-  test("keeps the lobby preview and unmet start condition inside phone and desktop widths", async ({
-    page,
-  }) => {
-    await mockGameApi(page, "Lobby");
-    for (const width of [375, 1280]) {
-      await page.setViewportSize({ width, height: 900 });
-      await page.goto(`/game/${GAME_ID}/lobby`, { waitUntil: "domcontentloaded" });
-      await expect(page.getByRole("img", { name: "Classic 40-space board preview" })).toBeVisible();
-      await expect(page.getByText("Open Human seat", { exact: true })).toBeVisible();
-      await expect(page.locator('p[role="status"]')).toContainText("Waiting for 1 Human seat.");
-      await expect(page.getByRole("button", { name: "Add a Computer" })).toBeVisible();
-      const dimensions = await page.evaluate(() => ({
-        clientWidth: document.documentElement.clientWidth,
-        scrollWidth: document.documentElement.scrollWidth,
-      }));
-      expect(dimensions.scrollWidth, `${width}px lobby page overflow`).toBeLessThanOrEqual(
-        dimensions.clientWidth + 1,
-      );
-    }
+  test.describe("lobby preview regression", () => {
+    // WebKit service workers bypass page.route() on the second navigation.
+    // This layout-only check must keep the mocked game API authoritative.
+    test.use({ serviceWorkers: "block" });
+
+    test("keeps the lobby preview and unmet start condition inside phone and desktop widths", async ({
+      page,
+    }) => {
+      await mockGameApi(page, "Lobby");
+      for (const width of [375, 1280]) {
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto(`/game/${GAME_ID}/lobby`, { waitUntil: "domcontentloaded" });
+        await expect(
+          page.getByRole("img", { name: "Classic 40-space board preview" }),
+        ).toBeVisible();
+        await expect(page.getByText("Open Human seat", { exact: true })).toBeVisible();
+        await expect(page.locator('p[role="status"]')).toContainText("Waiting for 1 Human seat.");
+        await expect(page.getByRole("button", { name: "Add a Computer" })).toBeVisible();
+        const dimensions = await page.evaluate(() => ({
+          clientWidth: document.documentElement.clientWidth,
+          scrollWidth: document.documentElement.scrollWidth,
+        }));
+        expect(dimensions.scrollWidth, `${width}px lobby page overflow`).toBeLessThanOrEqual(
+          dimensions.clientWidth + 1,
+        );
+      }
+    });
   });
 
   test("keeps completion results distinct and rematch controls usable at phone width", async ({

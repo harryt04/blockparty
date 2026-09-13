@@ -5,6 +5,8 @@ dist/
 *.tsbuildinfo
 .turbo/
 coverage/
+playwright-report/
+test-results/
 .env
 .env.*
 !.env.example

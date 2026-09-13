@@ -447,14 +447,25 @@ test("a player can roll and acquire the current Address", async ({ page }) => {
   await mockLiveStream(page);
   const { commands } = await mockGameApi(page);
   await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByText("Connected", { exact: true })).toBeVisible();
+  await expect(
+    page.locator('[aria-label="Connection status: Connected"]:visible').first(),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "Open action sheet" }).click();
-  await page.getByRole("button", { name: "Roll and advance" }).click();
+  await page
+    .locator("#game-action-sheet")
+    .getByRole("button", { name: "Roll and advance" })
+    .filter({ visible: true })
+    .first()
+    .click();
   await expect.poll(() => commands.length).toBe(1);
   await expect(page.getByText("Await Purchase · 2 players ·", { exact: false })).toBeVisible();
 
-  await page.getByRole("button", { name: "Acquire this Address" }).click();
+  await page
+    .getByRole("button", { name: "Acquire this Address" })
+    .filter({ visible: true })
+    .first()
+    .click();
   await expect.poll(() => commands.length).toBe(2);
   expect((commands[0] as { payload: { type: string } }).payload.type).toBe("RollDice");
   expect((commands[1] as { payload: { type: string; deedId: string } }).payload).toEqual({
@@ -540,12 +551,18 @@ test("auction decision exposes only its foreground choices", async ({ page }) =>
 });
 
 test("decision sheet returns focus after its command finishes", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
   await mockLiveStream(page);
   const { commands } = await mockGameApi(page);
   await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
 
   await page.getByRole("button", { name: "Open action sheet" }).click();
-  await page.getByRole("button", { name: "Roll and advance" }).click();
+  await page
+    .locator("#game-action-sheet")
+    .getByRole("button", { name: "Roll and advance" })
+    .filter({ visible: true })
+    .first()
+    .click();
   await expect(page.getByText("Await Purchase · 2 players ·", { exact: false })).toBeVisible();
 
   const trigger = page.getByRole("button", { name: "Open action sheet" });
@@ -561,7 +578,10 @@ test("same-task activation submits a game command only once", async ({ page }) =
 
   const actionSheetButton = page.getByRole("button", { name: "Open action sheet" });
   await actionSheetButton.click();
-  const rollButton = page.getByRole("button", { name: "Roll and advance" });
+  const rollButton = page
+    .getByRole("button", { name: "Roll and advance" })
+    .filter({ visible: true })
+    .first();
   await rollButton.evaluate((element) => {
     (element as HTMLButtonElement).click();
     (element as HTMLButtonElement).click();
@@ -588,7 +608,10 @@ test("same-task acquisition activation submits a game command only once", async 
   });
   await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
 
-  const acquire = page.getByRole("button", { name: "Acquire this Address" });
+  const acquire = page
+    .getByRole("button", { name: "Acquire this Address" })
+    .filter({ visible: true })
+    .first();
   await acquire.evaluate((element) => {
     (element as HTMLButtonElement).click();
     (element as HTMLButtonElement).click();
@@ -720,7 +743,7 @@ test("same-task auction bidding submits a game command only once", async ({ page
   });
   await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
 
-  const bid = page.getByRole("button", { name: "Submit bid" });
+  const bid = page.getByRole("button", { name: "Submit bid" }).filter({ visible: true }).first();
   await bid.evaluate((element) => {
     (element as HTMLButtonElement).click();
     (element as HTMLButtonElement).click();
@@ -817,7 +840,12 @@ test("a retry after a lost response reuses the command identity", async ({ page 
   await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
 
   await page.getByRole("button", { name: "Open action sheet" }).click();
-  await page.getByRole("button", { name: "Roll and advance" }).click();
+  await page
+    .locator("#game-action-sheet")
+    .getByRole("button", { name: "Roll and advance" })
+    .filter({ visible: true })
+    .first()
+    .click();
   await expect(
     page.getByText("The action could not be sent. Check your connection and try again.", {
       exact: true,
@@ -825,7 +853,12 @@ test("a retry after a lost response reuses the command identity", async ({ page 
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Open action sheet" }).click();
-  await page.getByRole("button", { name: "Roll and advance" }).click();
+  await page
+    .locator("#game-action-sheet")
+    .getByRole("button", { name: "Roll and advance" })
+    .filter({ visible: true })
+    .first()
+    .click();
   await expect.poll(() => commands.length).toBe(2);
   expect(commands[1]).toMatchObject({
     commandId: (commands[0] as { commandId: string }).commandId,
@@ -842,10 +875,18 @@ test("a retry before the authoritative result reuses the acknowledged command id
   await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
 
   await page.getByRole("button", { name: "Open action sheet" }).click();
-  await page.getByRole("button", { name: "Roll and advance" }).click();
+  await page
+    .locator("#game-action-sheet")
+    .getByRole("button", { name: "Roll and advance" })
+    .filter({ visible: true })
+    .first()
+    .click();
   await expect(page.getByText("Await Purchase · 2 players ·", { exact: false })).toBeVisible();
 
-  const acquire = page.getByRole("button", { name: "Acquire this Address" });
+  const acquire = page
+    .getByRole("button", { name: "Acquire this Address" })
+    .filter({ visible: true })
+    .first();
   await acquire.click();
   await expect.poll(() => commands.length).toBe(2);
   await expect(
@@ -858,7 +899,12 @@ test("a retry before the authoritative result reuses the acknowledged command id
   // The mocked command acknowledgement arrives without a newer snapshot. Re-open
   // the still-visible legal action and verify this retry remains idempotent.
   await page.getByRole("button", { name: "Open action sheet" }).click();
-  await page.getByRole("button", { name: "Acquire this Address" }).click();
+  await page
+    .locator("#game-action-sheet")
+    .getByRole("button", { name: "Acquire this Address" })
+    .filter({ visible: true })
+    .first()
+    .click();
   await expect.poll(() => commands.length).toBe(3);
   expect(commands[2]).toMatchObject({
     commandId: (commands[1] as { commandId: string }).commandId,
@@ -950,7 +996,11 @@ test("an acknowledged auction retry reuses its command identity", async ({ page 
   });
   await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
 
-  const bid = page.getByRole("button", { name: "Submit bid" });
+  const bid = page
+    .locator("#game-action-sheet")
+    .getByRole("button", { name: "Submit bid" })
+    .filter({ visible: true })
+    .first();
   await bid.click();
   await expect.poll(() => commands.length).toBe(1);
   await expect(
@@ -963,7 +1013,12 @@ test("an acknowledged auction retry reuses its command identity", async ({ page 
   // The acknowledgement is accepted without a newer authoritative snapshot.
   // Retrying the still-visible bid must preserve both capability-safe IDs.
   await page.getByRole("button", { name: "Open action sheet" }).click();
-  await page.getByRole("button", { name: "Submit bid" }).click();
+  await page
+    .locator("#game-action-sheet")
+    .getByRole("button", { name: "Submit bid" })
+    .filter({ visible: true })
+    .first()
+    .click();
   await expect.poll(() => commands.length).toBe(2);
   expect(commands[1]).toMatchObject({
     commandId: (commands[0] as { commandId: string }).commandId,
@@ -1227,7 +1282,10 @@ test("transport loss disables an open acquisition decision without submitting", 
   });
   await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
 
-  const acquire = page.getByRole("button", { name: "Acquire this Address" });
+  const acquire = page
+    .getByRole("button", { name: "Acquire this Address" })
+    .filter({ visible: true })
+    .first();
   await expect(acquire).toBeVisible();
   await page.evaluate(() => {
     (window as unknown as { __emitGameConnectionError?: () => void }).__emitGameConnectionError?.();
@@ -2206,7 +2264,9 @@ test("authoritative decision events produce one live announcement", async ({ pag
   await mockLiveStream(page);
   await mockGameApi(page);
   await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByText("Connected", { exact: true })).toBeVisible();
+  await expect(
+    page.locator('[aria-label="Connection status: Connected"]:visible').first(),
+  ).toBeVisible();
 
   await emitSnapshot(
     page,
@@ -2267,7 +2327,9 @@ test("confirmed movement appears at its authoritative destination without reduce
   await mockLiveStream(page);
   await mockGameApi(page);
   await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByText("Connected", { exact: true })).toBeVisible();
+  await expect(
+    page.locator('[aria-label="Connection status: Connected"]:visible').first(),
+  ).toBeVisible();
 
   const current = snapshot("TurnStart", 1);
   const moved = snapshot("AwaitPurchase", 2, {
@@ -2289,7 +2351,7 @@ test("confirmed movement appears at its authoritative destination without reduce
   });
   await emitSnapshot(page, moved);
 
-  const token = page.locator('[data-movement-sequence="2"]');
+  const token = page.locator('[data-piece-id="piece-lantern"]:visible').first();
   await expect(token).toBeVisible();
   await expect(
     page.getByRole("status").filter({ hasText: "North Star moved to Stop 4." }),
@@ -2305,7 +2367,9 @@ test("reconnect transitions announce once and stay quiet through transport churn
   await mockLiveStream(page);
   await mockGameApi(page);
   await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByText("Connected", { exact: true })).toBeVisible();
+  await expect(
+    page.locator('[aria-label="Connection status: Connected"]:visible').first(),
+  ).toBeVisible();
 
   const announcement = page.getByRole("group", { name: "Game announcements" }).getByRole("alert");
   await page.evaluate(() => {
@@ -2319,7 +2383,9 @@ test("reconnect transitions announce once and stay quiet through transport churn
     (window as unknown as { __emitGameConnectionError?: () => void }).__emitGameConnectionError?.();
   });
   await expect(announcement).toHaveText("Connection lost. Reconnecting to the live game.");
-  await expect(page.getByText("Connected", { exact: true })).toBeVisible({ timeout: 5_000 });
+  await expect(
+    page.locator('[aria-label="Connection status: Connected"]:visible').first(),
+  ).toBeVisible({ timeout: 5_000 });
 });
 
 test("mobile connection status distinguishes reconnecting from initial connecting", async ({
@@ -2353,7 +2419,9 @@ test("reconnect keeps the newer authoritative snapshot against a late stale fram
   });
 
   await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByText("Connected", { exact: true })).toBeVisible();
+  await expect(
+    page.locator('[aria-label="Connection status: Connected"]:visible').first(),
+  ).toBeVisible();
   await expect(
     page.getByText("Turn Start · 2 players · sequence 1", { exact: true }),
   ).toBeVisible();
@@ -2382,7 +2450,9 @@ test("terminal sync failure shows Offline and keeps the last confirmed table rea
   await mockLiveStream(page);
   const { commands } = await mockGameApi(page, { failSync: true });
   await page.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByText("Connected", { exact: true })).toBeVisible();
+  await expect(
+    page.locator('[aria-label="Connection status: Connected"]:visible').first(),
+  ).toBeVisible();
 
   await page.evaluate(() => {
     (window as unknown as { __emitGameConnectionError?: () => void }).__emitGameConnectionError?.();
@@ -2415,8 +2485,12 @@ test("separate browser contexts can replace and reclaim one disconnected seat", 
       hostPage.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" }),
       playerPage.goto(`/game/${GAME_ID}`, { waitUntil: "domcontentloaded" }),
     ]);
-    await expect(hostPage.getByText("Connected", { exact: true })).toBeVisible();
-    await expect(playerPage.getByText("Connected", { exact: true })).toBeVisible();
+    await expect(
+      hostPage.locator('[aria-label="Connection status: Connected"]:visible').first(),
+    ).toBeVisible();
+    await expect(
+      playerPage.locator('[aria-label="Connection status: Connected"]:visible').first(),
+    ).toBeVisible();
 
     // The test server has received the authenticated presence edge after the
     // returning player's context disappears. The host must act at this safe
