@@ -20,7 +20,7 @@ jobs:
       MONGODB_URI: mongodb://127.0.0.1:27017/blockparty_ci?replicaSet=test-rs
       MONGODB_DB: blockparty_ci_${{ github.run_id }}_${{ github.run_attempt }}
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3100
-      ALLOWED_ORIGINS: http://127.0.0.1:3100
+      ALLOWED_ORIGINS: http://127.0.0.1:3100,http://localhost:3000
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
