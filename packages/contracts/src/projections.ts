@@ -1,0 +1,313 @@
+/**
+ * Authorized projections: what one seat is allowed to see.
+ *
+ * These schemas define the presentation seam. They must NOT contain seed
+ * material, PRNG state, future deck order, raw capabilities, token hashes,
+ * host or reclaim credentials, or another seat's private state. The server
+ * never serializes an internal full-state object to a client. See PROTO-004.
+ *
+ * Field names are the canonical wire layer (`deedId`, `district`, `detention`).
+ * The UI maps them to display names. See docs/product/glossary.md.
+ */
+import { z } from "zod";
+import {
+  AggregateVersion,
+  CapturedVersions,
+  DisplayName,
+  GameId,
+  GameStatus,
+  Money,
+  NonNegativeMoney,
+  Phase,
+  PieceId,
+  SeatId,
+  SeatKind,
+  SeatStatus,
+  Sequence,
+  ServerTime,
+} from "./common";
+import { CommandTypeSchema } from "./commands";
+import { DomainEvent } from "./events";
+import { RulesConfiguration } from "./variants";
+
+/** Non-color-carrying identity for a seat. See DS-020 and DS-041. */
+export const SeatToken = z
+  .object({
+    /** Stable index 1-6, mapped to a player color role by the UI. */
+    colorIndex: z.int().min(1).max(6),
+    /** Stable content piece identity. Color is never the only cue. */
+    pieceId: PieceId,
+    /** Pattern key, for grayscale and forced-colors modes. */
+    pattern: z.enum(["solid", "stripe", "dot", "cross", "chevron", "grid"]),
+  })
+  .strict();
+export type SeatToken = z.infer<typeof SeatToken>;
+
+export const SeatProjection = z
+  .object({
+    seatId: SeatId,
+    /** Absent for an open seat. */
+    name: DisplayName.optional(),
+    kind: SeatKind,
+    status: SeatStatus,
+    token: SeatToken.optional(),
+    /** Public balance. Present once the game starts. */
+    balance: Money.optional(),
+    /** Route index of this seat's token. */
+    position: z.int().min(0).optional(),
+    detained: z.boolean().optional(),
+    /** Number of failed release attempts used by this seat. */
+    detentionTurnsRemaining: z.int().min(0).optional(),
+    /** Count only. Card identities stay private until played. */
+    detentionReleaseCardCount: z.int().min(0).optional(),
+    /** Held card IDs are returned only to the owning seat or a named trade party. */
+    detentionReleaseCardIds: z.array(z.string().max(64)).max(8).optional(),
+    deedIds: z.array(z.string().max(64)).max(128).optional(),
+    isHost: z.boolean(),
+    /** Ephemeral presence. Not a game-rule field. See PROTO-003. */
+    connected: z.boolean(),
+    /** True only for the seat this projection is addressed to. */
+    isSelf: z.boolean(),
+  })
+  .strict();
+export type SeatProjection = z.infer<typeof SeatProjection>;
+
+export const SpaceCategory = z.enum([
+  "start",
+  "deed",
+  "eventDraw",
+  "fee",
+  "rest",
+  "detention",
+  "sendToDetention",
+]);
+export type SpaceCategory = z.infer<typeof SpaceCategory>;
+
+export const DeedCategory = z.enum(["district", "transit", "utility"]);
+export type DeedCategory = z.infer<typeof DeedCategory>;
+
+export const BoardSpaceProjection = z
+  .object({
+    spaceId: z.string().min(1).max(64),
+    /** Position along the classic 40-space perimeter route. DS-072. */
+    routeIndex: z.int().min(0),
+    /** Original space name from the content bundle. */
+    name: z.string().min(1).max(64),
+    category: SpaceCategory,
+    deedId: z.string().max(64).optional(),
+    deedCategory: DeedCategory.optional(),
+    districtId: z.string().max(64).optional(),
+    ownerSeatId: SeatId.optional(),
+    mortgaged: z.boolean().optional(),
+    improvementLevel: z.int().min(0).optional(),
+    /** Public price, when the rules make it public. */
+    price: NonNegativeMoney.optional(),
+    /** Seats standing here now. */
+    occupantSeatIds: z.array(SeatId).max(6),
+  })
+  .strict();
+export type BoardSpaceProjection = z.infer<typeof BoardSpaceProjection>;
+
+/** Public bank inventory. Deed identities are safe; private deck state is not. */
+export const BankProjection = z
+  .object({
+    cash: NonNegativeMoney,
+    deedIds: z.array(z.string().max(64)).max(128),
+    improvementInventory: z.record(z.string().max(64), z.int().min(0)),
+  })
+  .strict();
+export type BankProjection = z.infer<typeof BankProjection>;
+
+/**
+ * A command this seat may execute right now, with bounded parameters.
+ * Advisory for the UI. The server revalidates every submitted payload. ENG-023.
+ */
+export const LegalAction = z
+  .object({
+    type: CommandTypeSchema,
+    /** Bounded parameters, such as a minimum and maximum auction bid. */
+    constraints: z
+      .record(z.string().max(32), z.union([z.number(), z.string(), z.boolean()]))
+      .optional(),
+    /** Complete signed inventory movement for an improvement transition. */
+    inventoryDeltas: z.record(z.string().max(64), z.int()).optional(),
+  })
+  .strict();
+export type LegalAction = z.infer<typeof LegalAction>;
+
+/**
+ * A relevant blocked action with a stable reason code and safe display copy.
+ * This never grants authority. See PRD-FUN-009 and ENG-023.
+ */
+export const ActionAvailability = z
+  .object({
+    type: CommandTypeSchema,
+    available: z.literal(false),
+    reasonCode: z.string().max(64),
+    /** Plain-language reason for the disabled control. See UX-016. */
+    reason: z.string().max(160),
+  })
+  .strict();
+export type ActionAvailability = z.infer<typeof ActionAvailability>;
+
+/** Ephemeral presence. Never changes game state. See PROTO-003. */
+export const PresenceEvent = z
+  .object({
+    seatId: SeatId,
+    state: z.enum(["connected", "disconnected", "reconnected"]),
+  })
+  .strict();
+export type PresenceEvent = z.infer<typeof PresenceEvent>;
+
+export const AuctionProjection = z
+  .object({
+    deedId: z.string().min(1).max(64),
+    highBid: NonNegativeMoney.optional(),
+    highBidderSeatId: SeatId.optional(),
+    minimumNextBid: NonNegativeMoney,
+    prioritySeatId: SeatId,
+    passedSeatIds: z.array(SeatId).max(6),
+  })
+  .strict();
+export type AuctionProjection = z.infer<typeof AuctionProjection>;
+
+export const ObligationProjection = z
+  .object({
+    debtorSeatId: SeatId,
+    amount: NonNegativeMoney,
+    creditorSeatId: SeatId.optional(),
+    reasonCode: z.string().max(64),
+    reason: z.string().max(160),
+  })
+  .strict();
+export type ObligationProjection = z.infer<typeof ObligationProjection>;
+
+/** A present-value, escrow-free trade side. IDs remain canonical wire data. */
+export const TradeSideProjection = z
+  .object({
+    cash: NonNegativeMoney,
+    deedIds: z.array(z.string().max(64)).max(64),
+    detentionReleaseCardIds: z.array(z.string().max(64)).max(8),
+  })
+  .strict();
+export type TradeSideProjection = z.infer<typeof TradeSideProjection>;
+
+/** The one pending offer, visible only to its named parties. See UX-015. */
+export const PendingTradeProjection = z
+  .object({
+    tradeId: z.string().min(1).max(128),
+    proposerSeatId: SeatId,
+    counterpartySeatId: SeatId,
+    offered: TradeSideProjection,
+    requested: TradeSideProjection,
+    proposerBalance: Money,
+    counterpartyBalance: Money,
+    aggregateVersion: AggregateVersion,
+  })
+  .strict();
+export type PendingTradeProjection = z.infer<typeof PendingTradeProjection>;
+
+/**
+ * Server-advertised recovery authority. These are booleans and seat IDs only;
+ * capability material never crosses the projection boundary. See PRD-FUN-012,
+ * PRD-FUN-014, PRD-FUN-019, and UX-018.
+ */
+export const RecoveryProjection = z
+  .object({
+    safeBoundary: z.boolean(),
+    replacementSeatIds: z.array(SeatId).max(6),
+    pendingSeatReclaimId: SeatId.optional(),
+    pendingHostClaimSeatId: SeatId.optional(),
+    viewerCanRequestReclaim: z.boolean(),
+    viewerCanClaimHost: z.boolean(),
+  })
+  .strict();
+export type RecoveryProjection = z.infer<typeof RecoveryProjection>;
+
+/**
+ * The complete authorized snapshot for one seat. The database snapshot is
+ * always authoritative; this is a projection of it.
+ */
+export const GameSnapshotProjection = z
+  .object({
+    gameId: GameId,
+    status: GameStatus,
+    phase: Phase,
+    aggregateVersion: AggregateVersion,
+    sequence: Sequence,
+    versions: CapturedVersions,
+    configuration: RulesConfiguration,
+    /** Seat this projection is authorized for. */
+    viewerSeatId: SeatId.optional(),
+    activeSeatId: SeatId.optional(),
+    prioritySeatId: SeatId.optional(),
+    seats: z.array(SeatProjection).max(6),
+    board: z.array(BoardSpaceProjection).max(128),
+    /** Public bank-controlled inventory, never future deck order. */
+    bank: BankProjection.optional(),
+    /** Bounded, already-redacted history for the readable event feed. */
+    publicEvents: z.array(DomainEvent).max(256).optional(),
+    auction: AuctionProjection.optional(),
+    obligation: ObligationProjection.optional(),
+    pendingTrade: PendingTradeProjection.optional(),
+    recovery: RecoveryProjection,
+    /** Present only when a variant enables it. See VAR-001. */
+    jackpot: NonNegativeMoney.optional(),
+    legalActions: z.array(LegalAction).max(64),
+    actionAvailability: z.array(ActionAvailability).max(64),
+    /** True while a required actor is disconnected. See PRD-FUN-014. */
+    paused: z.boolean(),
+    expiresAt: ServerTime,
+  })
+  .strict();
+export type GameSnapshotProjection = z.infer<typeof GameSnapshotProjection>;
+
+/** The lobby view, before a game starts. */
+export const LobbyProjection = z
+  .object({
+    gameId: GameId,
+    status: GameStatus,
+    name: z.string().max(48).optional(),
+    seatCount: z.int().min(2).max(6),
+    seats: z.array(SeatProjection).max(6),
+    configuration: RulesConfiguration,
+    versions: CapturedVersions,
+    viewerSeatId: SeatId.optional(),
+    viewerIsHost: z.boolean(),
+    /** Relative path only. The invite ID is opaque and carries no capability. */
+    invitePath: z.string().max(256).optional(),
+    canStart: z.boolean(),
+    startBlockedReason: z.string().max(160).optional(),
+    expiresAt: ServerTime,
+  })
+  .strict();
+export type LobbyProjection = z.infer<typeof LobbyProjection>;
+
+/** The completion view. See UX-019 and PRD-FUN-015. */
+export const SummaryProjection = z
+  .object({
+    gameId: GameId,
+    status: GameStatus,
+    finishReason: z.enum(["WINNER", "NO_WINNER", "NO_CONTEST", "EXPIRED", "CONTENT_RETIRED"]),
+    winnerSeatId: SeatId.optional(),
+    standings: z
+      .array(
+        z
+          .object({
+            seatId: SeatId,
+            name: DisplayName.optional(),
+            rank: z.int().min(1),
+            finalBalance: Money,
+            token: SeatToken.optional(),
+          })
+          .strict(),
+      )
+      .max(6),
+    configuration: RulesConfiguration,
+    durationSeconds: z.int().min(0),
+    /** Bounded, redacted history retained for the read-only summary. */
+    publicEvents: z.array(DomainEvent).max(256),
+    expiresAt: ServerTime,
+  })
+  .strict();
+export type SummaryProjection = z.infer<typeof SummaryProjection>;

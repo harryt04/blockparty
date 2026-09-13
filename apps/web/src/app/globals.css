@@ -1,0 +1,822 @@
+/*
+ * Design tokens. See DS-010 and DS-020 in docs/design/design-system.md.
+ *
+ * Colors are semantic roles, not brand hex values. No component may use a raw
+ * brand or district value. Dark mode is a dim asphalt-and-string-light
+ * treatment, not an inverted light mode.
+ *
+ * Every color role has a required companion cue (border, icon, pattern, text).
+ * Color is never the sole carrier of meaning. See UX-006 and DS-041.
+ */
+@import "tailwindcss";
+
+@theme {
+  /*
+   * TODO(DS-010): self-host Atkinson Hyperlegible (UI) and Fraunces (display)
+   * and preload the above-the-fold UI face. Both need a license and provenance
+   * record before the files land, so only the fallback stacks are wired now.
+   */
+  --font-ui: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+  --font-sans: var(--font-ui);
+  --font-serif: var(--font-display);
+
+  /* 4 px spacing base. */
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-5: 1.5rem;
+  --spacing-6: 2rem;
+  --spacing-8: 3rem;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1.125rem;
+  --radius-pill: 999px;
+
+  /* Light theme: a street at dusk, before the lights come on. */
+  --color-canvas: oklch(97.5% 0.008 85);
+  --color-surface: oklch(99% 0.004 85);
+  --color-surface-raised: oklch(100% 0 0);
+  --color-ink: oklch(23% 0.02 60);
+  --color-muted-ink: oklch(29% 0 60);
+  --color-line: oklch(40% 0.01 70);
+
+  --color-brand: oklch(30% 0.08 45);
+  --color-brand-ink: oklch(98% 0 45);
+
+  --color-success: oklch(28% 0.06 155);
+  --color-warning: oklch(29% 0.06 75);
+  --color-danger: oklch(29% 0.06 27);
+  --color-info: oklch(28% 0.06 240);
+
+  --color-focus: oklch(28% 0.06 250);
+  --color-selection: oklch(92% 0.05 250);
+  --color-disabled: oklch(72% 0.01 70);
+
+  /* Player roles. Always paired with a token shape and a pattern. DS-020. */
+  --color-player-1: oklch(58% 0.16 25);
+  --color-player-2: oklch(58% 0.14 145);
+  --color-player-3: oklch(56% 0.15 255);
+  --color-player-4: oklch(64% 0.15 85);
+  --color-player-5: oklch(55% 0.16 315);
+  --color-player-6: oklch(56% 0.11 195);
+
+  /* Original space categories. Always paired with an icon and a label. */
+  --color-asset-district-north: oklch(60% 0.12 30);
+  --color-asset-district-east: oklch(60% 0.12 150);
+  --color-asset-district-west: oklch(60% 0.12 265);
+  --color-asset-district-ash: oklch(60% 0.12 30);
+  --color-asset-district-moonfen: oklch(60% 0.12 150);
+  --color-asset-district-rosecoil: oklch(60% 0.12 265);
+  --color-asset-district-copperwake: oklch(62% 0.13 55);
+  --color-asset-district-starling: oklch(58% 0.11 135);
+  --color-asset-district-thornlight: oklch(58% 0.13 300);
+  --color-asset-district-nightjar: oklch(58% 0.12 250);
+  --color-asset-district-crown: oklch(58% 0.13 330);
+  --color-asset-transit: oklch(58% 0.1 90);
+  --color-asset-utility: oklch(58% 0.09 210);
+}
+
+/*
+ * Dark theme. Reduce glare, keep borders legible, preserve player-pattern
+ * distinction. Not an inversion. DS-020.
+ */
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-canvas: oklch(19% 0.012 65);
+    --color-surface: oklch(23% 0.014 65);
+    --color-surface-raised: oklch(27% 0.016 65);
+    --color-ink: oklch(94% 0.008 80);
+    --color-muted-ink: oklch(82% 0 75);
+    --color-line: oklch(70% 0.01 68);
+
+    --color-brand: oklch(75% 0.08 60);
+    --color-brand-ink: oklch(20% 0 60);
+
+    --color-success: oklch(82% 0.06 155);
+    --color-warning: oklch(84% 0.06 78);
+    --color-danger: oklch(82% 0.06 27);
+    --color-info: oklch(82% 0.06 240);
+
+    --color-focus: oklch(85% 0.06 250);
+    --color-selection: oklch(32% 0.05 250);
+    --color-disabled: oklch(42% 0.01 70);
+
+    --color-player-1: oklch(72% 0.15 25);
+    --color-player-2: oklch(72% 0.13 145);
+    --color-player-3: oklch(72% 0.14 255);
+    --color-player-4: oklch(78% 0.14 85);
+    --color-player-5: oklch(70% 0.15 315);
+    --color-player-6: oklch(72% 0.1 195);
+
+    --color-asset-district-north: oklch(72% 0.12 30);
+    --color-asset-district-east: oklch(72% 0.12 150);
+    --color-asset-district-west: oklch(72% 0.12 265);
+    --color-asset-district-ash: oklch(72% 0.12 30);
+    --color-asset-district-moonfen: oklch(72% 0.12 150);
+    --color-asset-district-rosecoil: oklch(72% 0.12 265);
+    --color-asset-district-copperwake: oklch(74% 0.13 55);
+    --color-asset-district-starling: oklch(70% 0.11 135);
+    --color-asset-district-thornlight: oklch(70% 0.13 300);
+    --color-asset-district-nightjar: oklch(70% 0.12 250);
+    --color-asset-district-crown: oklch(70% 0.13 330);
+    --color-asset-transit: oklch(72% 0.1 90);
+    --color-asset-utility: oklch(72% 0.09 210);
+  }
+}
+
+/* Explicit device preferences override the system hint. UX-005, DS-060. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-canvas: oklch(97.5% 0.008 85);
+  --color-surface: oklch(99% 0.004 85);
+  --color-surface-raised: oklch(100% 0 0);
+  --color-ink: oklch(23% 0.02 60);
+  --color-muted-ink: oklch(29% 0 60);
+  --color-line: oklch(40% 0.01 70);
+  --color-brand: oklch(30% 0.08 45);
+  --color-brand-ink: oklch(98% 0 45);
+  --color-success: oklch(28% 0.06 155);
+  --color-warning: oklch(29% 0.06 75);
+  --color-danger: oklch(29% 0.06 27);
+  --color-info: oklch(28% 0.06 240);
+  --color-focus: oklch(28% 0.06 250);
+  --color-selection: oklch(92% 0.05 250);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-canvas: oklch(19% 0.012 65);
+  --color-surface: oklch(23% 0.014 65);
+  --color-surface-raised: oklch(27% 0.016 65);
+  --color-ink: oklch(94% 0.008 80);
+  --color-muted-ink: oklch(82% 0 75);
+  --color-line: oklch(70% 0.01 68);
+  --color-brand: oklch(75% 0.08 60);
+  --color-brand-ink: oklch(20% 0 60);
+  --color-success: oklch(82% 0.06 155);
+  --color-warning: oklch(84% 0.06 78);
+  --color-danger: oklch(82% 0.06 27);
+  --color-info: oklch(82% 0.06 240);
+  --color-focus: oklch(85% 0.06 250);
+  --color-selection: oklch(32% 0.05 250);
+}
+
+:root[data-contrast="high"] {
+  --color-muted-ink: oklch(36% 0.02 60);
+  --color-line: oklch(62% 0.02 65);
+  --color-focus: oklch(42% 0.2 250);
+}
+
+:root[data-theme="dark"][data-contrast="high"] {
+  --color-muted-ink: oklch(84% 0.012 75);
+  --color-line: oklch(58% 0.018 68);
+  --color-focus: oklch(86% 0.14 250);
+}
+
+/*
+ * Forced-colours users replace the palette with their OS colours. Keep the
+ * semantic roles mapped to named system colours so borders, text, selection,
+ * and focus stay legible without relying on author colour values. DS-020,
+ * DS-060, and UX-040.
+ */
+@media (forced-colors: active) {
+  :root,
+  :root[data-theme="light"],
+  :root[data-theme="dark"] {
+    color-scheme: light;
+    --color-canvas: Canvas;
+    --color-surface: Canvas;
+    --color-surface-raised: Canvas;
+    --color-ink: CanvasText;
+    --color-muted-ink: GrayText;
+    --color-line: ButtonText;
+    --color-brand: Highlight;
+    --color-brand-ink: HighlightText;
+    --color-success: LinkText;
+    --color-warning: ButtonText;
+    --color-danger: ButtonText;
+    --color-info: LinkText;
+    --color-focus: Highlight;
+    --color-selection: Highlight;
+    --color-disabled: GrayText;
+    --color-player-1: CanvasText;
+    --color-player-2: CanvasText;
+    --color-player-3: CanvasText;
+    --color-player-4: CanvasText;
+    --color-player-5: CanvasText;
+    --color-player-6: CanvasText;
+    --color-asset-district-north: CanvasText;
+    --color-asset-district-east: CanvasText;
+    --color-asset-district-west: CanvasText;
+    --color-asset-district-ash: CanvasText;
+    --color-asset-district-moonfen: CanvasText;
+    --color-asset-district-rosecoil: CanvasText;
+    --color-asset-district-copperwake: CanvasText;
+    --color-asset-district-starling: CanvasText;
+    --color-asset-district-thornlight: CanvasText;
+    --color-asset-district-nightjar: CanvasText;
+    --color-asset-district-crown: CanvasText;
+    --color-asset-transit: CanvasText;
+    --color-asset-utility: CanvasText;
+  }
+
+  [data-badge-variant] {
+    background-color: Canvas !important;
+    border-color: ButtonText !important;
+    color: CanvasText !important;
+  }
+
+  [data-token-pattern] {
+    color: CanvasText !important;
+  }
+
+  :focus-visible {
+    outline: 2px solid Highlight;
+  }
+}
+
+:root[data-reduced-motion="true"] *,
+:root[data-reduced-motion="true"] *::before,
+:root[data-reduced-motion="true"] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
+/* Keep the stop name in its aria-label while allowing visual labels to be
+ * compacted on small boards. DS-040. */
+:root[data-board-labels="false"] .board-stop-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
+    /* Never suppress browser zoom. DS-060. */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-ui);
+    /* Minimum body is 16 px, line-height 1.5. DS-010. */
+    font-size: 1rem;
+    line-height: 1.5;
+    min-height: 100dvh;
+    overflow-x: clip;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    line-height: 1.2;
+  }
+
+  /* Tabular numerals for balances and bids. DS-010. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Visible 3:1 focus ring, never obscured by sticky UI. DS-060. */
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  /* Respect reduced motion: show the final state immediately. DS-050. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@keyframes game-dice-tumble {
+  0% {
+    transform: rotate(-5deg) translateY(-0.15rem);
+  }
+  35% {
+    transform: rotate(5deg) translateY(0.15rem);
+  }
+  70% {
+    transform: rotate(-3deg) translateY(-0.05rem);
+  }
+  100% {
+    transform: rotate(0) translateY(0);
+  }
+}
+
+/*
+ * Responsive game shell. The named modes are deliberately CSS-only so a
+ * viewport change never changes authoritative game state:
+ *
+ * - default / 320–767 px: focused board, one contextual column, fixed action
+ *   bar; the semantic board list remains available below the board.
+ * - 768–1023 px: board plus a 320–400 px contextual panel.
+ * - 1024 px and up: a 240 px player rail, flexible board/hand, and 288 px
+ *   decision/detail rail.
+ * - short landscape: board-first split view with a scrollable context panel.
+ *
+ * PRD-FUN-016, UX-030–033, and DS-050. Keep every grid track minmax(0, ...)
+ * so labels and action controls cannot create page-level horizontal scrolling.
+ */
+@layer components {
+  .classic-board-frame,
+  .mini-classic-board {
+    --board-paper: oklch(95.5% 0.025 87);
+    --board-cell: oklch(98% 0.012 87);
+    --board-ink: oklch(24% 0.025 60);
+    --board-muted-ink: oklch(38% 0.02 60);
+    --board-line: oklch(34% 0.02 60);
+    --board-selection: oklch(88% 0.08 78);
+  }
+
+  /* DS-040: fixed 11 × 11 classic perimeter geometry. */
+  .classic-board-frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 0;
+    padding: 0.25rem;
+    color: var(--board-ink);
+    background: var(--board-paper);
+  }
+
+  .classic-board-grid {
+    position: relative;
+    display: grid;
+    width: min(100%, 42rem);
+    max-height: 100%;
+    aspect-ratio: 1;
+    grid-template-columns: repeat(11, minmax(0, 1fr));
+    grid-template-rows: repeat(11, minmax(0, 1fr));
+    gap: 1px;
+    overflow: hidden;
+    border: 2px solid var(--board-ink);
+    background: var(--board-line);
+    padding: 2px;
+  }
+
+  .classic-board-piece-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+  }
+
+  .game-board-overlay-token {
+    position: absolute;
+    display: inline-flex;
+    min-width: 2rem;
+    min-height: 2rem;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--board-paper);
+    border-radius: 999px;
+    background: var(--board-cell);
+    box-shadow:
+      0 0 0 2px var(--board-ink),
+      0 0.15rem 0.35rem rgb(0 0 0 / 25%);
+    transform-origin: center;
+    transition: transform 105ms linear;
+  }
+
+  .game-board-overlay-token .size-5 {
+    width: 1.55rem;
+    height: 1.55rem;
+  }
+
+  .game-board-overlay-token-active {
+    box-shadow:
+      0 0 0 2px var(--board-ink),
+      0 0 0 4px var(--board-selection),
+      0 0.15rem 0.35rem rgb(0 0 0 / 25%);
+  }
+
+  .game-board-overlay-token-moving {
+    z-index: 2;
+  }
+
+  .game-turn-stage {
+    width: min(100%, 15rem);
+    min-height: 8rem;
+    padding: 0.5rem;
+    text-align: center;
+  }
+
+  .game-dice-pair {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 3.5rem;
+  }
+
+  .game-dice-tumble {
+    animation: game-dice-tumble 700ms ease-out both;
+  }
+
+  .game-die {
+    position: relative;
+    display: inline-block;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 2px solid var(--board-ink);
+    border-radius: 0.5rem;
+    background: var(--board-cell);
+    box-shadow: 0 0.15rem 0 var(--board-line);
+  }
+
+  .game-die-pip {
+    position: absolute;
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 999px;
+    background: var(--board-ink);
+    opacity: 0;
+  }
+
+  .game-die-pip-visible {
+    opacity: 1;
+  }
+  .game-die-pip-center {
+    inset: 50% auto auto 50%;
+    transform: translate(-50%, -50%);
+  }
+  .game-die-pip-top-left {
+    inset: 22% auto auto 22%;
+  }
+  .game-die-pip-bottom-right {
+    inset: auto 22% 22% auto;
+  }
+  .game-die-pip-top-right {
+    inset: 22% 22% auto auto;
+  }
+  .game-die-pip-bottom-left {
+    inset: auto auto 22% 22%;
+  }
+  .game-die-pip-middle-left {
+    inset: 50% auto auto 22%;
+    transform: translateY(-50%);
+  }
+  .game-die-pip-middle-right {
+    inset: 50% 22% auto auto;
+    transform: translateY(-50%);
+  }
+
+  .game-presentation-control {
+    min-height: 2.75rem;
+    border: 1px solid var(--board-line);
+    border-radius: var(--radius-sm);
+    padding-inline: 0.6rem;
+    color: var(--board-ink);
+    background: var(--board-cell);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .game-presentation-control:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .classic-board-cell {
+    position: relative;
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    border-top-width: 4px;
+    color: var(--board-ink);
+    background: var(--board-cell);
+    font-size: 0.75rem;
+    line-height: 1.1;
+  }
+
+  .classic-board-cell[data-board-side="right"],
+  .classic-board-cell[data-board-side="left"] {
+    padding: 0.25rem;
+  }
+
+  .classic-board-cell[data-board-state="owned"] {
+    box-shadow: inset 0 0 0 1px var(--board-ink);
+  }
+
+  .classic-board-cell-selected {
+    z-index: 2;
+    outline: 3px solid var(--board-selection);
+    outline-offset: -2px;
+    background: var(--board-selection);
+  }
+
+  .classic-board-center {
+    min-width: 0;
+    color: var(--board-ink);
+    background: var(--board-paper);
+  }
+
+  .classic-board-muted {
+    color: var(--board-muted-ink);
+  }
+
+  .mini-classic-board {
+    color: var(--board-ink);
+    background: var(--board-line);
+  }
+
+  .mini-classic-board-center {
+    color: var(--board-muted-ink);
+    background: var(--board-paper);
+  }
+
+  .mini-classic-board-cell {
+    color: var(--board-ink);
+    background: var(--board-cell);
+  }
+
+  .game-shell {
+    --game-gutter: 1rem;
+    width: 100%;
+    padding-inline: max(var(--game-gutter), env(safe-area-inset-left))
+      max(var(--game-gutter), env(safe-area-inset-right));
+    padding-block: 1.5rem calc(1.5rem + 5.25rem + env(safe-area-inset-bottom));
+    overflow-x: clip;
+  }
+
+  .game-workspace {
+    display: grid;
+    min-width: 0;
+    gap: 1.25rem;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .game-player-rail,
+  .game-board-column,
+  .game-context,
+  .game-board-column > *,
+  .game-context > * {
+    min-width: 0;
+  }
+
+  .game-board-viewport {
+    width: min(100%, calc(100dvh - 12rem));
+    aspect-ratio: 1;
+    height: auto;
+    margin-inline: auto;
+  }
+
+  .game-board-pan-viewport {
+    min-width: 0;
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-x pan-y;
+  }
+
+  .game-board-zoom-frame {
+    flex: 0 0 auto;
+  }
+
+  .game-mobile-status,
+  .game-mobile-nav,
+  .game-board-inspection-controls {
+    display: none;
+  }
+
+  .game-mobile-status,
+  #board-section,
+  #properties-section,
+  #trade-section,
+  #history-section {
+    scroll-margin-top: 1rem;
+  }
+
+  .game-player-rail {
+    order: 2;
+  }
+
+  .game-board-column {
+    order: 1;
+  }
+
+  .game-context {
+    order: 3;
+  }
+
+  .game-player-list {
+    min-width: 0;
+  }
+
+  .game-action-bar {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    padding: 0.75rem max(var(--game-gutter), env(safe-area-inset-left))
+      calc(0.75rem + env(safe-area-inset-bottom))
+      max(var(--game-gutter), env(safe-area-inset-right));
+  }
+
+  .game-action-inline {
+    display: none;
+  }
+
+  @media (max-width: 47.99rem) {
+    .game-desktop-header {
+      display: none;
+    }
+
+    .game-mobile-status {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.75rem;
+      align-items: start;
+      border: 1px solid var(--color-line);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface-raised);
+      padding: 0.75rem;
+    }
+
+    .game-mobile-status-facts {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.25rem;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .game-mobile-status-facts p {
+      font-size: 0.875rem;
+    }
+
+    .game-mobile-status-facts [aria-label^="Connection status"] {
+      padding-inline: 0.5rem;
+    }
+
+    .game-mobile-nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.25rem;
+      border-block: 1px solid var(--color-line);
+      background: var(--color-canvas);
+      padding-block: 0.5rem;
+    }
+
+    .game-board-inspection-controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.25rem;
+    }
+
+    .game-board-inspection-controls button {
+      min-width: 2.75rem;
+    }
+
+    .game-board-pan-viewport {
+      scrollbar-width: thin;
+    }
+  }
+
+  @media (min-width: 48rem) {
+    .game-shell {
+      --game-gutter: 1.5rem;
+      padding-block: 1.5rem;
+    }
+
+    .game-workspace {
+      gap: 1.5rem;
+      grid-template-columns: minmax(0, 1fr) minmax(20rem, 25rem);
+    }
+
+    .game-board-viewport {
+      width: min(100%, calc(100dvh - 11rem));
+      min-height: 0;
+    }
+
+    .game-action-bar {
+      position: sticky;
+      inset-inline: auto;
+      bottom: 0;
+      border: 0;
+      padding: 0;
+      background: transparent;
+    }
+
+    .game-action-inline {
+      display: block;
+    }
+
+    .game-action-sheet-trigger {
+      display: none;
+    }
+  }
+
+  @media (min-width: 64rem) {
+    .game-shell {
+      --game-gutter: 2rem;
+    }
+
+    .game-workspace {
+      grid-template-columns: minmax(15rem, 15rem) minmax(0, 1fr) minmax(18rem, 18rem);
+      align-items: start;
+    }
+
+    .game-player-rail,
+    .game-board-column,
+    .game-context {
+      order: initial;
+    }
+
+    .game-player-list {
+      flex-direction: column;
+      overflow-x: hidden;
+      overflow-y: auto;
+      max-height: 30rem;
+    }
+
+    .game-board-viewport {
+      width: min(100%, calc(100dvh - 12rem));
+    }
+  }
+
+  /* UX-033: landscape prioritizes the board and keeps secondary context
+   * independently scrollable instead of forcing rotation or a wide page. */
+  @media (orientation: landscape) and (max-height: 40rem) {
+    .game-shell {
+      --game-gutter: 1rem;
+      padding-block: 1rem calc(1rem + 4.25rem + env(safe-area-inset-bottom));
+    }
+
+    .game-shell-header {
+      gap: 0.75rem;
+    }
+
+    .game-workspace {
+      gap: 1rem;
+      grid-template-columns: minmax(0, 1fr) minmax(17rem, 43%);
+    }
+
+    .game-board-viewport {
+      height: min(28rem, calc(100dvh - 8rem));
+      min-height: 14rem;
+    }
+
+    .game-context {
+      max-height: calc(100dvh - 5rem);
+      overflow-y: auto;
+      padding-right: 0.25rem;
+    }
+
+    .game-action-bar {
+      padding-block: 0.5rem;
+    }
+  }
+}
+
+@layer utilities {
+  /* Screen-reader-only text that becomes visible on focus. */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  .focus\:not-sr-only:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+  }
+}

@@ -1,0 +1,137 @@
+import "server-only";
+
+/**
+ * Drives deterministic bot actions after a human command commits. Bot commands
+ * still use the normal versioned command path; this module only supplies the
+ * server-derived actor and the policy decision. See PRD-FUN-011 and ENG-026.
+ */
+import { CommandEnvelope, PROTOCOL_VERSION } from "@blockparty/contracts";
+import {
+  chooseBotAction,
+  legalActions,
+  toBotPublicState,
+  type GameState,
+} from "@blockparty/game-engine";
+import { randomUUID } from "node:crypto";
+import { getDb } from "../db/client";
+import { COLLECTIONS } from "../db/collections";
+import type { GameDocument } from "../games/create-game";
+import { capturedRuleSet } from "../games/captured-rules";
+import { normalizeGameState } from "../games/normalize-state";
+import type { AuthenticatedSeat } from "../auth/session";
+import { handleCommand } from "./handle-command";
+
+const MAX_BOT_ACTIONS_PER_TRIGGER = 64;
+
+const globalForBotRunner = globalThis as unknown as {
+  __blockpartyBotRunners?: Map<string, Promise<void>>;
+};
+
+function runners(): Map<string, Promise<void>> {
+  globalForBotRunner.__blockpartyBotRunners ??= new Map();
+  return globalForBotRunner.__blockpartyBotRunners;
+}
+
+/**
+ * A human command normally gives the bot runner a bounded slice of work. Once
+ * every remaining active seat is a bot, there is no human command left that
+ * could trigger the next slice, so bot-only games must continue themselves.
+ * Keep this decision based on the authoritative snapshot: the top-level seat
+ * records intentionally retain their original capability lifecycle. See
+ * PRD-FUN-011 and ENG-026.
+ */
+export function isBotOnlyGame(game: Pick<GameDocument, "status" | "paused" | "snapshot">): boolean {
+  if (game.status !== "ACTIVE" || game.paused) return false;
+  const activeSeats = game.snapshot.seats.filter((seat) => seat.status === "active");
+  return activeSeats.length > 0 && activeSeats.every((seat) => seat.kind === "bot");
+}
+
+/**
+ * Selects the seat that owns the next server-driven decision. Auction and
+ * improvement-auction priority rotates independently from the enclosing turn;
+ * a pending trade likewise waits on its named counterparty. See ENG-023 and
+ * ENG-026.
+ */
+export function botActorSeatId(state: GameState): string | undefined {
+  if (state.pendingTrade !== undefined) return state.pendingTrade.counterpartySeatId;
+  if (state.phase === "AwaitAuction" || state.phase === "ImprovementAuction") {
+    return state.prioritySeatId;
+  }
+  return state.activeSeatId;
+}
+
+/**
+ * Runs bot turns until a human is active, the game pauses/finishes, or a bot
+ * has no advertised decision. Each slice has a bounded bot budget; a game
+ * with only active bots yields and starts another slice so elimination cannot
+ * strand the next bot turn. There is deliberately no timer or fake pass: a
+ * bot acts only when its current state advertises a legal action.
+ */
+export async function runBotTurns(gameId: string): Promise<void> {
+  const database = getDb();
+
+  while (true) {
+    for (let actionIndex = 0; actionIndex < MAX_BOT_ACTIONS_PER_TRIGGER; actionIndex += 1) {
+      const persistedGame = await database
+        .collection<GameDocument>(COLLECTIONS.games)
+        .findOne({ _id: gameId });
+      if (persistedGame === null || persistedGame.status !== "ACTIVE" || persistedGame.paused)
+        return;
+
+      const game = { ...persistedGame, snapshot: normalizeGameState(persistedGame.snapshot) };
+      const actorSeatId = botActorSeatId(game.snapshot);
+      const actorSeat = game.snapshot.seats.find((seat) => seat.seatId === actorSeatId);
+      if (actorSeatId === undefined || actorSeat?.kind !== "bot") return;
+
+      const rules = capturedRuleSet(game);
+      if (rules === undefined) return;
+      const actions = legalActions(game.snapshot, actorSeatId, rules);
+      const decision = chooseBotAction(
+        toBotPublicState(game.snapshot, rules),
+        actorSeatId,
+        actions,
+        game.snapshot.lastRoll ?? [],
+      );
+      if (decision === undefined) return;
+
+      const envelope = CommandEnvelope.parse({
+        protocolVersion: PROTOCOL_VERSION,
+        type: "game.command",
+        requestId: randomUUID(),
+        gameId,
+        commandId: randomUUID(),
+        expectedVersion: game.aggregateVersion,
+        payload: decision.command,
+      });
+      const actor: AuthenticatedSeat = { gameId, seatId: actorSeatId, kind: "seat" };
+      const outcome = await handleCommand(envelope, actor, { botDecision: decision });
+      if (!outcome.ok) return;
+    }
+
+    const currentGame = await database
+      .collection<GameDocument>(COLLECTIONS.games)
+      .findOne({ _id: gameId });
+    if (currentGame === null || !isBotOnlyGame(currentGame)) return;
+
+    // Yield between bounded slices so change-stream delivery and other
+    // requests remain serviceable while a bot-only game finishes.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+  }
+}
+
+/**
+ * Starts one process-local runner without making a human command wait for it.
+ * A later authenticated bootstrap/sync call schedules the same work again
+ * after a process restart, so an in-flight bot decision is recoverable without
+ * putting pacing or correctness inside a transaction.
+ */
+export function scheduleBotTurns(gameId: string): void {
+  const active = runners().get(gameId);
+  if (active !== undefined) return;
+  const runner = runBotTurns(gameId)
+    .catch(() => undefined)
+    .finally(() => {
+      if (runners().get(gameId) === runner) runners().delete(gameId);
+    });
+  runners().set(gameId, runner);
+}

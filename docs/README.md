@@ -1,6 +1,10 @@
 # Project Planning Index
 
-This directory is the implementation authority for the private browser-based property board game. The approved direction is broad mechanical completeness with independently authored expression and a mandatory legal release gate.
+This directory is the implementation authority for the private browser-based
+property board game. The approved direction is broad mechanical completeness
+with independently authored expression and a mandatory legal release gate. The
+classic overhaul queue is the active transition plan; the former 64-ticket
+build queue is a closed historical delivery ledger.
 
 ## Normative precedence
 
@@ -10,33 +14,76 @@ When documents disagree, use this order and correct the lower-level document:
 2. [Canonical rules](product/rules.md), [rule variants](product/rule-variants.md), [game content](product/game-content.md), and [glossary](product/glossary.md).
 3. [Engineering architecture](engineering/architecture.md), [game engine](engineering/game-engine.md), [realtime/data](engineering/realtime-and-data.md), and [security/privacy/analytics](engineering/security-privacy-analytics.md).
 4. [UX specification](design/ux-spec.md) and [design system](design/design-system.md).
-5. [Test strategy](delivery/test-strategy.md), [roadmap](delivery/roadmap.md), and [operations](delivery/operations.md).
+5. [Test strategy](delivery/test-strategy.md), [build backlog](delivery/build-backlog.md), and [operations](delivery/operations.md).
 
-[Traceability](traceability.md) maps requirements to implementation ownership, evidence, and milestones.
+[Traceability](traceability.md) maps requirements to implementation ownership, evidence, and loops.
 
 ## Document register
 
-| Area | Document | Status / use |
-|---|---|---|
-| Product | [PRD](product/prd.md) | Normative MVP scope and release criteria |
-| Product | [Mechanical completeness](product/feature-parity.md) | Internal exhaustive coverage matrix; not a public compatibility claim |
-| Product | [Rules](product/rules.md) | Normative state transitions and edge cases |
-| Product | [Variants](product/rule-variants.md) | Standard/short presets and exactly eight toggles |
-| Product | [Game content](product/game-content.md) | Required original topology, economy, decks, constants, and provenance |
-| Product | [Glossary](product/glossary.md) | Normative product and wire terminology |
-| Brand | [Brand strategy](brand/brand-strategy.md) | Managed by the separate branding workstream; reconcile before design lock |
-| Brand | [Naming](brand/naming.md) | Managed by the separate branding workstream; no candidate is cleared by this package |
-| Legal | [IP safety](legal/ip-safety.md) | Operational guardrails and attorney release gate; not legal advice |
-| Design | [UX](design/ux-spec.md) | Responsive flows and accessibility behavior |
-| Design | [Design system](design/design-system.md) | Internal visual-system direction; final brand reconciliation required |
-| Engineering | [Architecture](engineering/architecture.md) | Workspace, service, deployment, and ADR baseline |
-| Engineering | [Game engine](engineering/game-engine.md) | Pure deterministic engine contract |
-| Engineering | [Realtime and data](engineering/realtime-and-data.md) | Protocol, capabilities, persistence, reconnect, and retention |
-| Engineering | [Security, privacy, analytics](engineering/security-privacy-analytics.md) | Threat model, PostHog policy, data minimization, and acceptance checks |
-| Delivery | [Test strategy](delivery/test-strategy.md) | CI, scenario, browser, accessibility, soak, load, and release evidence |
-| Delivery | [Roadmap](delivery/roadmap.md) | Dependency-ordered tracer bullets and bounded `gnhf` workflow |
-| Delivery | [Operations](delivery/operations.md) | Coolify deployment, observability, backup, recovery, and incidents |
-| Historical | [Original prompt](mvp-prd-prompt.md) | Superseded input; never implementation authority; exclude from public package unless counsel approves |
+| Area        | Document                                                                  | Status / use                                                                                          |
+| ----------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Product     | [PRD](product/prd.md)                                                     | Normative MVP scope and release criteria                                                              |
+| Product     | [Mechanical completeness](product/feature-parity.md)                      | Internal exhaustive coverage matrix; not a public compatibility claim                                 |
+| Product     | [Rules](product/rules.md)                                                 | Normative state transitions and edge cases                                                            |
+| Product     | [Variants](product/rule-variants.md)                                      | Standard/short presets and exactly eight toggles                                                      |
+| Product     | [Game content](product/game-content.md)                                   | Required original topology, economy, decks, constants, and provenance                                 |
+| Product     | [Glossary](product/glossary.md)                                           | Normative product and wire terminology                                                                |
+| Brand       | [Brand strategy](brand/brand-strategy.md)                                 | Settled Blockparty positioning, voice, vocabulary, and guardrails                                     |
+| Brand       | [Naming](brand/naming.md)                                                 | Settled-name decision record and naming history                                                       |
+| Legal       | [IP safety](legal/ip-safety.md)                                           | Operational guardrails and attorney release gate; not legal advice                                    |
+| Design      | [UX](design/ux-spec.md)                                                   | Responsive flows and accessibility behavior                                                           |
+| Design      | [Design system](design/design-system.md)                                  | Normative classic-table visual system and responsive evidence contract                               |
+| Engineering | [Architecture](engineering/architecture.md)                               | Workspace, service, deployment, and ADR baseline                                                      |
+| Engineering | [Game engine](engineering/game-engine.md)                                 | Pure deterministic engine contract                                                                    |
+| Engineering | [Realtime and data](engineering/realtime-and-data.md)                     | Protocol, capabilities, persistence, reconnect, and retention                                         |
+| Engineering | [Security, privacy, analytics](engineering/security-privacy-analytics.md) | Threat model, PostHog policy, data minimization, and acceptance checks                                |
+| Delivery    | [Test strategy](delivery/test-strategy.md)                                | CI, scenario, browser, accessibility, soak, load, and release evidence                                |
+| Delivery    | [Accessibility checklist](delivery/accessibility-checklist.md)            | E6 automated run record and human assistive-technology release evidence                               |
+| Delivery    | [Deployment runbook](delivery/deployment-runbook.md)                      | Current Coolify deploy, migration, cleanup, shutdown, and rollback procedure                         |
+| Delivery    | [Backup and restore drill](delivery/backup-restore-drill.md)              | Current isolated MongoDB backup/restore procedure and evidence record                                |
+| Delivery    | [Load and performance](delivery/load-performance.md)                      | Current deployed-topology load budget and privacy-safe evidence procedure                             |
+| Delivery    | [Observability runbook](delivery/observability-runbook.md)                | F4 safe telemetry, alerts, and staging drill record                                                   |
+| Delivery    | [Build backlog](delivery/build-backlog.md)                                | Historical: closed 64-ticket delivery ledger across Loops 0–F                                      |
+| Delivery    | [Classic overhaul backlog](delivery/classic-overhaul-backlog.md)          | Active: accepted sequential CO-* queue for classic rules, content, contracts, and UI                |
+| Delivery    | [Watchable gameplay plan](delivery/watchable-gameplay-plan.md)            | Planning proposal for full-board visibility, persistent pieces, dice, movement, and bot-turn pacing |
+| Delivery    | [gnhf prompt](gnhf-prompt.md)                                             | Current per-iteration prompt for the active classic-overhaul queue                                    |
+| Delivery    | [gnhf CLI](gnhf-cli.md)                                                   | Current gnhf commands, branch policy, and classic-overhaul stop condition                             |
+| Historical  | [gnhf CLI 2](gnhf-cli2.md)                                                | Historical alternative live-smoke command; retained for run provenance                                |
+| Delivery    | [gnhf CLI 3](gnhf-cli3.md)                                                | Current shorthand invocation for the active classic-overhaul queue                                     |
+| Delivery    | [Operations](delivery/operations.md)                                      | Coolify deployment, observability, backup, recovery, and incidents                                    |
+| Historical  | [Original prompt](mvp-prd-prompt.md)                                      | Superseded input; never implementation authority; exclude from public package unless counsel approves |
+| Historical  | [Memory: player strip](../memory/2026-09-04-live-player-strip-axe.md)     | Dated debugging record; observations are historical and not current authority                         |
+| Historical  | [Memory: dev debug](../memory/2026-09-04-npm-run-dev-debug.md)            | Dated runtime investigation; observations are historical and not current authority                    |
+| Historical  | [Memory: playable run](../memory/2026-09-06-npm-run-dev-playable.md)      | Dated live-play investigation; observations are historical and not current authority                  |
+
+| Repository / support | Document                                                                  | Status / use                                                                                          |
+| -------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Repository            | [Agent instructions](../AGENTS.md)                                        | Current repository operating contract and cross-cutting invariants                                    |
+| Repository            | [README](../README.md)                                                    | Current contributor/operator orientation and implementation status                                     |
+| Repository            | [Content license](../CONTENT-LICENSE.md)                                  | CC BY-SA 4.0 scope, attribution, and exclusions                                                       |
+| Repository            | [Contributing](../CONTRIBUTING.md)                                        | Contribution, provenance, and review requirements                                                     |
+| Repository            | [Notices](../NOTICE.md)                                                    | Dependency-license audit and asset/font notice inventory                                               |
+| Repository            | [Trademarks](../TRADEMARKS.md)                                            | Blockparty mark policy and clearance gate                                                             |
+| Delivery              | [PWA implementation notes](../apps/web/public/PWA-TODO.md)               | Current PWA cache/install behavior and remaining artwork release note                                  |
+| Historical            | [gnhf prompt 2](gnhf-prompt2.md)                                          | Historical autonomous instruction variant; not the active queue authority                            |
+| Normative             | [Documentation index](README.md)                                          | Current register and precedence index for every repository Markdown document                         |
+| Normative             | [Traceability](traceability.md)                                           | Current requirement ownership, evidence, and disposition register                                    |
+
+## Implementation state
+
+The workspace has one deployable `apps/web` Next.js application and the three
+internal packages. The authenticated create/join/lobby/game/summary flows,
+server-authoritative command path, bot dispatch, MongoDB persistence, SSE sync,
+PWA shell, consent-gated analytics, and operational tooling are implemented and
+covered by their recorded unit/integration/browser evidence. A local build can
+render pages without MongoDB, but live games require a healthy replica set.
+
+The active classic overhaul has completed its product, rules, content,
+branding, UX, design-system authority reset, and 1.0.0 content activation. New
+games use the validated classic bundle; the placeholder reader remains only for
+retained historical summaries. The [traceability](traceability.md) register
+distinguishes implemented foundation evidence from planned classic migration
+and release evidence; a scaffold is never evidence.
 
 ## Settled MVP decisions
 
@@ -47,17 +94,9 @@ When documents disagree, use this order and correct the lower-level document:
 - Required disconnected humans pause play. Host-approved bot replacement and reclaim occur only at safe command boundaries.
 - Standard preset, short-game preset, and exactly eight start-locked toggles.
 - Server-authoritative deterministic engine with snapshots, append-only events, optimistic versions, and idempotent command IDs.
-- Next.js PWA plus dedicated Fastify/Socket.IO game server, PostgreSQL/Drizzle, Tailwind/shadcn, PostHog opt-in, and Coolify.
-- Redis is deferred until horizontal realtime scaling.
+- One Next.js App Router/PWA application with Route Handlers for commands and authenticated SSE for realtime delivery, MongoDB transactions/change streams, Tailwind/shadcn including the shadcn Sidebar, PostHog opt-in, and Coolify.
+- The pure engine, contracts, and game-content packages remain internal build dependencies; there is one deployable application. Redis is deferred until measured horizontal coordination need.
 - Public release is blocked on approved original content, licenses, brand clearance, privacy review, and attorney sign-off.
-
-## Pre-implementation gates
-
-1. Merge the chosen-name branding workstream and reconcile it with UX/design terminology.
-2. Select and approve code, content/asset, contributor, and trademark policies.
-3. Have counsel review the complete mechanic combination and research/provenance process.
-4. Author the first valid `CONTENT-001` bundle using independent balancing evidence.
-5. Initialize Git, commit approved planning files, and start [MILE-003](delivery/roadmap.md#mile-003--platform-skeleton-and-deterministic-engine-seam).
 
 ## Change control
 

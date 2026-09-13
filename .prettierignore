@@ -1,0 +1,17 @@
+.next
+dist
+.gnhf
+test-results
+playwright-report
+node_modules
+pnpm-lock.yaml
+
+**/*.md
+node_modules
+.next
+dist
+build
+.claude/*
+.gnhf/**
+*.yml
+*.yaml

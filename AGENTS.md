@@ -1,10 +1,24 @@
 ## Repository state
 
-This repository contains **planning documents only**. There is no source code, no `package.json`, and no build, lint, or test commands yet. The single commit is the docs baseline.
+The workspace and the application are implemented through the completed
+historical delivery queue. `apps/web` builds and runs without MongoDB for page
+and health-route development, while `npm run dev` provisions an isolated local
+replica set when the configured database is absent or unreachable. The
+authenticated sync client, lobby, live game, summary, bot-turn, persistence,
+SSE, PWA, analytics, and operational paths are present and must not fabricate
+state. The current runtime still uses the placeholder content bundle; the
+active [classic overhaul queue](docs/delivery/classic-overhaul-backlog.md) must
+land the classic 1.0.0 bundle and its UI/contracts before that becomes the
+production default.
 
 `docs/` is the implementation authority. Read the relevant spec before you write code. Do not invent behavior that a document already defines.
 
-The next planned work is [MILE-003](docs/delivery/roadmap.md) — platform skeleton and deterministic engine seam. [MILE-002](docs/delivery/roadmap.md) (legal, brand, and policy approvals) is a hard gate before it.
+Implementation is unblocked. The project owner settled the name — **Blockparty** — and the brand documents are the current naming authority.
+
+The historical 64-ticket [build backlog](docs/delivery/build-backlog.md) is
+closed. The active work queue is the dependency-ordered
+[classic overhaul backlog](docs/delivery/classic-overhaul-backlog.md). Take one
+ticket per session. Do not add a ticket to either queue.
 
 ## Normative precedence
 
@@ -14,29 +28,28 @@ When two documents disagree, the higher level wins. Correct the lower-level docu
 2. [Rules](docs/product/rules.md), [variants](docs/product/rule-variants.md), [game content](docs/product/game-content.md), [glossary](docs/product/glossary.md)
 3. [Architecture](docs/engineering/architecture.md), [game engine](docs/engineering/game-engine.md), [realtime and data](docs/engineering/realtime-and-data.md), [security/privacy/analytics](docs/engineering/security-privacy-analytics.md)
 4. [UX spec](docs/design/ux-spec.md), [design system](docs/design/design-system.md)
-5. [Test strategy](docs/delivery/test-strategy.md), [roadmap](docs/delivery/roadmap.md), [operations](docs/delivery/operations.md)
+5. [Test strategy](docs/delivery/test-strategy.md), [build backlog](docs/delivery/build-backlog.md), [operations](docs/delivery/operations.md)
 
 `docs/mvp-prd-prompt.md` is superseded historical input. It is never authority.
 
-## Planned architecture
+## Final architecture
 
-A pnpm workspace with two apps and three packages. Dependency direction is enforced, not advisory:
+A pnpm workspace with one deployable Next.js App Router application and three internal packages. Dependency direction is enforced, not advisory:
 
-| Package                                                          | May depend on                                       | Must not depend on                                 |
-| ---------------------------------------------------------------- | --------------------------------------------------- | -------------------------------------------------- |
-| `apps/web` (Next.js App Router, Tailwind, shadcn/ui, PWA)        | `contracts`                                         | game-server internals, Drizzle, DB credentials     |
-| `apps/game-server` (Fastify + Socket.IO)                         | `contracts`, `game-engine`, `game-content`, Drizzle | Next.js runtime, browser globals                   |
-| `packages/game-engine` (pure reducer)                            | `contracts`, `game-content`                         | Node APIs, clock, `Math.random`, IO, DB, Socket.IO |
-| `packages/contracts` (Zod schemas + `z.infer` types)             | Zod                                                 | React, Fastify, DB, engine                         |
-| `packages/game-content` (versioned original board/decks/economy) | data and validation helpers                         | infrastructure, third-party content                |
+| Package                                                                       | May depend on                                              | Must not depend on                                         |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------- |
+| `apps/web` (Next.js App Router, Tailwind, shadcn/ui, PWA, API Route Handlers) | `contracts`, `game-engine`, `game-content`, MongoDB driver | browser modules importing server modules; raw capabilities |
+| `packages/game-engine` (pure reducer)                                         | `contracts`, `game-content`                                | Node APIs, clock, `Math.random`, IO, DB, transport         |
+| `packages/contracts` (Zod schemas + `z.infer` types)                          | Zod                                                        | React, Next.js, DB, engine                                 |
+| `packages/game-content` (versioned original board/decks/economy)              | data and validation helpers                                | infrastructure, third-party content                        |
 
-Storage is PostgreSQL with Drizzle. Redis is deliberately absent until horizontal realtime scale is proven necessary. Deployment is Coolify: `web`, `game-server`, `postgres`, a one-shot `migrate` job, and a scheduled `cleanup` job.
+Storage is MongoDB with the official driver and replica-set transactions. Realtime uses authenticated SSE and MongoDB change streams inside the Next.js runtime. Redis is deliberately absent until measured horizontal coordination need is proven. Deployment is Coolify: one `web` service and private MongoDB; maintenance and cleanup use the same web image.
 
 ## Cross-cutting invariants
 
 These constraints span many documents. Break one and the change is wrong, even if it compiles.
 
-- **Server authority.** The browser may render a projection or preview a legal action. Only `apps/game-server` calls the engine to accept a command. See [ENG-002](docs/engineering/architecture.md).
+- **Server authority.** The browser may render a projection or preview a legal action. Only server-side modules in `apps/web` call the engine to accept a command. See [ENG-002](docs/engineering/architecture.md).
 - **Pure engine.** `packages/game-engine` performs no IO, no clock read, no randomness, no logging, no mutation, and no token checks. The server authorizes; the engine then independently rejects illegal seat/phase actions. See [ENG-020](docs/engineering/game-engine.md).
 - **One transactional command path.** Authenticate, lock the game, check the command ID, load snapshot, verify `expectedVersion`, resolve, append events, update snapshot, insert receipt, commit, _then_ broadcast. See [ENG-015](docs/engineering/realtime-and-data.md).
 - **Four separate capabilities.** Invite, game-seat command token, host capability, and reclaim claim are distinct. An invite admits; it never operates an occupied seat. Store token hashes, never raw tokens. Never place a capability in a URL, localStorage, log, or analytics event. See [SEC-002](docs/engineering/security-privacy-analytics.md).
@@ -59,16 +72,36 @@ Domain commands and events are PascalCase (`AcquireDeed`, `RulesConfigured`). Tr
 
 ## Requirement IDs and traceability
 
-Every normative statement carries a bounded ID: `PRD-FUN`, `PRD-NFR`, `RULE`, `VAR`, `CONTENT`, `UX`, `DS`, `ENG`, `PROTO`, `SEC`, `ANA`, `OPS`, `TEST`, `MILE`, `BRAND`, `LEGAL`.
+Every normative statement carries a bounded ID: `PRD-FUN`, `PRD-NFR`, `RULE`, `VAR`, `CONTENT`, `UX`, `DS`, `ENG`, `PROTO`, `SEC`, `ANA`, `OPS`, `TEST`, `BRAND`, `LEGAL`.
 
 Cite the IDs you implement, and update [traceability](docs/traceability.md) in the same change. New scope gets a new ID; never widen an existing one silently. A requirement is `Verified` only when implementation, evidence, and approvals are all linked — code alone is not enough.
 
-## Planned test commands
+## Commands
 
-Not yet runnable. When the workspace exists, the intended toolchain is:
+Runnable now:
 
-- Vitest for engine, table, scenario, and property tests (`fast-check`). No browser, clock, network, or DB in engine tests.
-- Protocol/integration tests against ephemeral PostgreSQL.
+| Command          | Purpose                                              |
+| ---------------- | ---------------------------------------------------- |
+| `pnpm install`   | Resolve the workspace                                |
+| `pnpm dev`       | Development server on port 3000                      |
+| `pnpm build`     | Production build; must succeed with no `MONGODB_URI` |
+| `pnpm typecheck` | Type-check all four packages                         |
+| `pnpm lint`      | ESLint, including the dependency-direction rules     |
+| `pnpm test`      | Run the four-project Vitest workspace with coverage  |
+| `pnpm format`    | Format the workspace with Prettier                   |
+| `pnpm run ci`    | Run format check, typecheck, lint, and tests         |
+
+The boundary rules in `eslint.config.mjs` are enforcement, not documentation.
+Browser code importing `@/server/*`, `mongodb`, or the engine fails lint; the
+engine importing a Node API, `Date`, or `Math.random` fails lint. `src/server/**`
+also imports `server-only`, which turns the same mistake into a build failure.
+
+## Test strategy
+
+The unit gate is runnable now. Later backlog tickets add:
+
+- Engine table, scenario, and property tests (`fast-check`). No browser, clock, network, or DB in engine tests.
+- Protocol/integration tests against an ephemeral replica-set MongoDB.
 - Playwright across Chromium, Firefox, and WebKit with separate browser contexts per player.
 - axe for automated accessibility, plus a manual VoiceOver and NVDA checklist per release.
 
@@ -80,9 +113,11 @@ This project implements familiar mechanics with independently authored expressio
 
 - Never commit copied or paraphrased rule text, board data, card copy, rent schedules, art, audio, or third-party scans. Synonym substitution is prohibited — start from the original brief.
 - Every creative or numerical asset needs a provenance record (creator, date, inputs, license, AI-tool record, review). Missing provenance blocks release.
-- **Blockparty** is provisional and uncleared; **Civora** is the fallback. No design or content decision may depend on the name. Do not register domains, reserve handles, or publish packages.
+- **Blockparty** is the settled product name. Public release still requires the attorney gate and provenance/license packet.
 - Never place the mark next to blockchain, web3, crypto, NFT, or token language anywhere public.
-- The board is a winding, irregular neighborhood street route. A square grid or a familiar perimeter layout is a **Red** finding, not a style choice.
+- The classic overhaul board is a 40-space perimeter table. The pre-overhaul
+  winding-route requirement remains historical in the closed delivery ledger;
+  do not reintroduce it into classic content or UI implementation.
 - Public release is blocked on the attorney gate. Do not make clone, remake, compatibility, or affiliation claims.
 
 ## Working practice

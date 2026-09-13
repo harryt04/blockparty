@@ -1,78 +1,129 @@
-# Operations Runbook
+# Operations
 
-**ID:** OPS-001  
-**Status:** pre-production operating baseline  
-**Inputs:** [Architecture](../engineering/architecture.md), [Roadmap](roadmap.md), and [Test Strategy](test-strategy.md)
+**Status:** normative deployment and runbook contract
 
-## OPS-002 — Coolify topology and services
+Blockparty deploys as one Coolify-managed Node service built from this repository.
+MongoDB is deployed and operated separately as a private replica set; the web
+service reaches it only through `MONGODB_URI`. There is no application Docker
+Compose topology and no Redis service. Maintenance and cleanup run from the same
+web image as the application.
 
-Deploy through Coolify in a local-region production environment. Start with one Next.js `web` service, one Fastify/Socket.IO `game-server` service, and managed/compose PostgreSQL on a private Docker network. Terminate TLS at Coolify's proxy; expose HTTPS to web and HTTPS/WSS to game-server. PostgreSQL is never public. Use a persistent database volume and separate backup destination. Pin all image versions/digests; no `latest` tags.
+The current deployment creates new games with content version 1.0.0. It keeps
+the placeholder reader for retained summaries while the staged retirement job
+ends existing placeholder games; activation never rewrites or silently
+migrates a started game.
 
-Initial services are `web`, `game-server`, `postgres`, a one-shot `migrate` job using the game-server image, and a scheduled `cleanup` job using that image. Optional observability exporters remain private. Redis is absent initially; add it only after `TEST-006` shows a shared pub/sub, presence, rate-limit, or connection boundary. When added, Redis is private/authenticated and replicas use the tested Socket.IO adapter.
+## OPS-001 — Ownership and environments
+
+The operator owns development, staging, and production configuration; the
+project owner owns release approval. Each environment records its public URL,
+web image/build revision, content version, MongoDB cluster, backup target, alert
+destinations, and rollback owner. Production is HTTPS-only behind Coolify's
+proxy, and MongoDB is never public.
+
+## OPS-002 — Coolify and MongoDB topology
+
+Coolify runs one Node 22 web service using `pnpm install --frozen-lockfile`,
+`pnpm build`, and `pnpm start`. Health probes use `/api/health/live` for process
+liveness and `/api/health/ready` for dependency readiness. The separately
+deployed MongoDB URI names a replica set and supports transactions and change
+streams. Scale beyond one web instance requires measured evidence that
+process-local SSE coordination is sufficient or a documented coordination
+change.
+
+<a id="ops-003--environment-and-secrets-inventory"></a>
 
 ## OPS-003 — Environment and secrets inventory
 
-Store values only in Coolify secret management (and the backup provider); never in Git, client bundles, logs, screenshots, or analytics. Inventory, without values:
+[`.env.example`](../../.env.example) is the exact configuration inventory:
 
-| Category | Required configuration |
-| --- | --- |
-| Application | environment, public canonical URL, port, log level, build/version identifier |
-| Database | connection URL, TLS/CA settings, pool limits, migration lock/timeout |
-| Sessions/auth | signing/encryption keys, cookie domain/security policy, token TTLs |
-| Realtime | allowed origins, connection/message/rate limits, protocol version |
-| Analytics | provider host/project key, consent mode, replay masking/redaction configuration |
-| PWA | cache/version identifier and update policy |
-| Backups | destination credentials, encryption key/reference, retention, restore authorization |
-| Observability | error-reporting/metrics endpoint credentials, alert webhook/recipient |
+- runtime: `NEXT_PUBLIC_APP_URL`, `NODE_ENV`, `PORT`;
+- MongoDB: `MONGODB_URI`, `MONGODB_DB`;
+- capability cookies: `COOKIE_SECRET`;
+- request trust: `ALLOWED_ORIGINS`;
+- compatibility: `PROTOCOL_VERSION`, `APP_VERSION`, `CONTENT_VERSION` (default
+  `1.0.0`),
+  `PWA_CACHE_VERSION`;
+- maintenance: `INTERNAL_CLEANUP_SECRET` (also authorizes the staged
+  placeholder-retirement route);
+- limits: `RATE_LIMIT_CREATE_PER_MINUTE`, `RATE_LIMIT_JOIN_PER_MINUTE`,
+  `RATE_LIMIT_COMMANDS_PER_MINUTE`, `RATE_LIMIT_SYNC_PER_MINUTE`,
+  `RATE_LIMIT_SSE_CONNECTIONS`;
+- consent-gated analytics: `NEXT_PUBLIC_POSTHOG_KEY`,
+  `NEXT_PUBLIC_POSTHOG_HOST`.
 
-Rotate application/session, database, backup, analytics, and alert credentials on suspected exposure and at the organization’s defined cadence. Record owner, rotation date, and dependent service for each secret; do not record secret values.
+Secrets live in the deployment secret store, rotate through a recorded procedure,
+and never use `NEXT_PUBLIC_*`. An unset `MONGODB_URI` is valid for local build and
+page rendering but makes readiness degraded and cannot serve real games.
 
-## OPS-004 — Deployment and rollback
+## OPS-004 — Deploy and migration
 
-1. Confirm a clean release candidate has `TEST-007` evidence, migration review, current backup, and named release/rollback owner.
-2. Build and pin immutable web and game-server image digests; never migrate implicitly at application startup.
-3. Run the migration job once with an advisory/lease lock; verify its version and logs. Migrations must be forward-compatible with prior web/game-server versions during rollout and include a rollback/roll-forward decision.
-4. Start game-server, then web; wait for readiness and run authenticated smoke: create/join, deterministic action/broadcast, reconnect, and basic read/write.
-5. Observe error rate, realtime latency, database pool, CPU/memory, and logs for the defined bake window before declaring success.
+Deploy an immutable revision only after `pnpm run ci` and `pnpm build` pass.
+Before traffic shifts, apply idempotent indexes and compatible migrations from
+the same image, verify readiness, then smoke create/join/play/reconnect in staging.
+Schema and content readers for every unexpired game ship before writers produce
+the new version.
 
-Rollback code by redeploying the prior compatible web and game-server image pair and confirming health/smokes. Never blindly down-migrate production data. For an incompatible migration, use the rehearsed restore/forward-fix plan; communicate degraded availability rather than risk corruption. Record both images, migration versions, operator, timestamps, and result.
+## OPS-005 — Rollback and graceful shutdown
 
-## OPS-005 — Health, readiness, logs, metrics, and alerts
+Rollback restores the prior web revision without rolling back durable events.
+Deploys first stop admitting commands, finish in-flight command transactions,
+close SSE streams with `SERVER_SHUTDOWN`, and then exit. Rollback is safe only
+while the prior revision reads every version written by the newer revision;
+otherwise use the forward repair documented with the migration.
 
-Both application services expose `/health/live` as cheap process liveness. `/health/ready` verifies required configuration; game-server also checks database connectivity and migration compatibility. Endpoints return no secrets, game data, or verbose errors. Coolify restarts only on liveness failure and removes a service from traffic on readiness failure.
+## OPS-006 — Logs, metrics, and alerts
 
-Emit structured JSON logs with UTC timestamp, level, release/image, request/correlation ID, hashed/pseudonymous game/player identifiers where needed, route/protocol event, latency, and error class. Never log invite URLs/tokens, credentials, session cookies, full payloads, or private game state. Retain logs according to the 30-day policy below unless an incident/legal hold requires otherwise.
+Structured logs contain request/correlation IDs, safe codes, latency, versions,
+and aggregate operational counts. They exclude capabilities, invite values,
+cookies, seeds, future deck order, pseudonyms, command payloads, private
+projections, and analytics identifiers. Metrics cover request/error/latency,
+transaction conflicts, SSE connections and lag, change-stream recovery,
+readiness, cleanup, expiry, and MongoDB pool health. Alerts name an owner,
+threshold, [runbook link](observability-runbook.md), and recovery condition.
+The logger and telemetry allowlists are the implementation boundary; staging
+must complete the fire-and-recover drill before release.
 
-Minimum metrics: HTTP/WebSocket connection counts; active games/clients; commands accepted/rejected; action-to-broadcast p50/p95/p99; reconnects; protocol/order/idempotency failures; error rate; event lag; Postgres connections/latency/locks/storage; app CPU/memory/restarts; backup age/success; and migration status. Alert on readiness failures, sustained 5xx/realtime error rates, p95 broadcast SLO breach, database connection/storage pressure, restart loops, failed/missing backup, failed migration, and anomalous authorization/rate-limit rejections. Alerts require an owner, severity, runbook link, and test notification.
+## OPS-007 — Retention and scheduled cleanup
 
-## OPS-006 — Backup, restore drill, retention, and cleanup
+Coolify schedules the authenticated cleanup command from the web image. It first
+transitions overdue active games to `EXPIRED` with an authoritative event, then
+deletes expired game data and all related capability hashes in bounded,
+idempotent batches. Presence, reads, and rejected commands do not extend expiry.
 
-Take encrypted PostgreSQL backups at least daily and retain point-in-time/WAL coverage if supported. Active games and capabilities expire 30 days after the last authoritative gameplay action; completed games expire 30 days after completion. Cleanup transitions due active games to `EXPIRED`, revokes capabilities, and deletes in bounded batches. Logs, traces, replay artifacts, and temporary exports default to no more than 30 days. Backups require a shortest-practical approved retention and published deletion lag; application cleanup does not erase backups immediately.
+Before shifting production traffic to the classic default, an operator runs
+`pnpm --filter @blockparty/web db:retire-placeholders --dry-run`, reviews the
+candidate count, then runs the same command with `--execute`. The execute path
+also exists as `POST /api/internal/retire-placeholders` with a strict
+`{"mode":"dry-run"}` or `{"mode":"execute"}` body. It retires only
+non-terminal `0.0.0-placeholder` games, preserves their captured versions for
+read-only summaries, and is safe to repeat after an interrupted batch.
+The job reports examined, transitioned, deleted, failed, and duration counts
+without player data.
 
-## OPS-009 — Restore drill
+## OPS-008 — Incident response
 
-Before beta and at least quarterly, select a known backup and restore it into an isolated database with no production outbound integrations. Verify checksum/restore completion, migration compatibility, sampled game/event replay, authorized read/write smoke, and deletion after validation. Record recovery time, recovery point age, operator, backup identifier, failures, and corrective action. A restore is not complete until the test services start and a persisted game replays.
+Incidents preserve evidence while containing exposure: stop affected writes,
+rotate exposed secrets, record versions and correlation IDs, and communicate
+without copying sensitive payloads. Runbooks cover transaction failure,
+change-stream interruption, readiness loss, capacity exhaustion, capability
+exposure, analytics leakage, and cleanup failure. The owner records timeline,
+impact, recovery, follow-up requirement IDs, and notification decisions.
 
-## OPS-007 — Incident playbooks
+## OPS-009 — Backup and restore
 
-**Realtime outage:** acknowledge, check `/health/ready`, deploy/version changes, connection/error metrics, PostgreSQL availability and logs; stop unsafe traffic, roll back the compatible service pair if correlated, preserve correlation IDs, and update status. Verify reconnect/replay after mitigation.
+Back up the MongoDB replica set with encrypted, access-controlled, monitored
+snapshots on a documented schedule. A restore drill at least quarterly restores
+into an isolated environment, verifies snapshot/event/receipt consistency,
+indexes, capability-hash handling, captured versions, expiry timestamps, and a
+read-only completed game. Record recovery point, recovery time, tool versions,
+result, and remediation; an untested backup is not release evidence.
 
-**Data corruption or bad migration:** declare a write freeze, preserve evidence, identify affected migration/event range, do not run destructive repair ad hoc, notify the incident owner, restore into isolation, validate replay, then choose documented forward repair or restore under `OPS-004`.
+## OPS-010 — Capacity and maintenance
 
-**Security/secret exposure:** revoke/rotate affected credentials, invalidate impacted sessions/invites where applicable, isolate exposed service, preserve audit logs, assess user/data impact, patch and verify scans, then follow notification obligations approved by security/legal.
-
-**Capacity saturation:** protect the database first: apply admission/rate limits, pause new games if necessary, shed nonessential analytics/replay work, scale game-server only when the realtime topology supports it, and use `TEST-006` evidence before introducing Redis or changing connection pools.
-
-For every incident: assign commander and communications owner, timestamp decisions, preserve evidence without secrets, open corrective actions with owners/dates, and run a blameless review for sev-1/sev-2 events.
-
-## OPS-008 — Capacity, scaling, SLOs, and disaster recovery
-
-Initial capacity acceptance is `TEST-006`: 100 concurrent games/600 clients and local-region action broadcast p95 below 300 ms for at least 30 minutes. Maintain 30% resource headroom before increasing beta access. Scale vertically first; scale game-server replicas only after shared realtime delivery, presence, rate limits, and session behavior are verified. Redis is the later coordination layer, not a substitute for durable PostgreSQL events.
-
-Proposed beta SLOs (review after alpha): 99.5% monthly successful ready availability; 99% of accepted local-region actions broadcast in under 300 ms; 99.9% durable event-write success; daily backup success with backup age under 26 hours. Track error budgets monthly; halt feature rollout when an SLO is materially breached until mitigation is agreed.
-
-Disaster recovery is restore-to-new-infrastructure, not an untested promise of zero downtime. Target initial objectives: RPO 24 hours without point-in-time recovery, RTO 4 hours; improve only after drill evidence. Keep infrastructure configuration, image digests, migration history, domain/TLS procedure, secret-rotation access, and restore instructions available to at least two authorized operators. Run the `OPS-009` drill after topology/database major-version changes.
-
-## OPS-010 — Security maintenance
-
-Review dependency, base-image, and runtime security updates weekly; triage critical actively exploitable issues immediately and apply/mitigate within 24 hours where operationally feasible. Apply normal security patches in the next scheduled release after `TEST-007`; document exceptions, compensating controls, owner, and expiry. Re-run vulnerability, secret, authorization, and PWA cache/privacy checks after material upgrades. Maintain least-privilege Coolify/database/backup access, MFA where supported, periodic access review, TLS renewal monitoring, and a documented responsible-disclosure contact before public beta.
+Capacity evidence records the deployed web/MongoDB topology and tests the PRD
+latency budgets under expected concurrent games, commands, syncs, and SSE
+connections. Define warning and hard limits for the MongoDB pool, transaction
+retries, memory, event lag, and open streams. Index maintenance, dependency and
+Node updates, certificate renewal, secret rotation, content/version retirement,
+and restore drills have named schedules and owners.

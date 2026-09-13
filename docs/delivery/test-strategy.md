@@ -1,76 +1,119 @@
-# Test Strategy
+# Test strategy
 
-**ID:** TEST-001  
-**Status:** implementation baseline  
-**Inputs:** [PRD](../product/prd.md), [Rules](../product/rules.md), [Game content](../product/game-content.md), [Roadmap](roadmap.md), and [Operations](operations.md)
+**Status:** normative delivery contract
 
-This strategy verifies a private-link browser game with 2–6 total human/bot seats without claiming third-party compatibility. Normative requirement families are `PRD-FUN`, `PRD-NFR`, `RULE`, `VAR`, `CONTENT`, `UX`, `DS`, `ENG`, `PROTO`, `SEC`, `ANA`, `OPS`, `TEST`, `BRAND`, and `LEGAL`.
+This document defines the evidence required to move a requirement from
+`Planned` to `Verified`. Tests follow the authority boundary: the pure engine
+proves rules, server integration proves authorization and persistence, and a
+real browser proves player-visible flows. A lower layer cannot stand in for the
+layer that owns the risk.
 
-## TEST-002 — Quality model and requirement mapping
+## TEST-001 — Evidence and traceability
 
-| Layer | Primary requirement families | Purpose | Required evidence |
-| --- | --- | --- | --- |
-| Vitest unit/engine | `RULE`, `VAR`, `CONTENT`, `ENG` | Pure state transitions, money, ownership, phases, bot decisions | JUnit/results plus coverage report |
-| Table and scenario tests | `RULE`, `VAR`, `CONTENT` | Human-readable edge cases and complete rules sequences | Named scenario output keyed to requirement IDs |
-| Property-based tests | `RULE`, `CONTENT`, `ENG` | Explore legal command sequences and invariant preservation | Seed, counterexample, shrink output |
-| Protocol/integration | `PROTO`, `SEC`, `ENG` | Validate authorization, persistence, idempotency, reconnect | Ephemeral Postgres-backed test report |
-| Playwright multi-browser/client | `UX`, `DS`, `PROTO`, `SEC` | Validate 2–6 independent players on supported browsers | Trace, screenshots/video on failure |
-| Accessibility | `UX`, `DS`, `PRD-NFR` | Automated axe and manual assistive-technology behavior | axe report and manual checklist sign-off |
-| Resilience, migration, load | `OPS`, `ENG`, `PROTO` | Verify restart, recovery, restoration, and capacity/latency | Runbook output and timestamped metrics |
-| Security | `SEC`, `PROTO`, `ENG` | Protect private games, capabilities, inputs, and dependencies | Scan output, threat-case results, remediation record |
+Every implementation ticket names its requirement IDs and the test that proves
+its acceptance line. The same commit updates [traceability](../traceability.md)
+with implementation and evidence links. A requirement becomes `Verified` only
+when its automated evidence, required manual evidence, and applicable approval
+or operational drill are linked. Scaffolding, snapshots without assertions,
+and code review alone are not evidence.
 
-Every implemented requirement has an acceptance test reference (`TEST-###`) in its implementation issue. A failing test blocks the corresponding roadmap exit gate; missing coverage is not waived by manual playtesting.
+## TEST-002 — Requirement-to-test-layer map
 
-## TEST-003 — Engine, scenarios, and generators
+Use the narrowest layer that observes the requirement's authoritative outcome.
+Every backlog `Proves:` line cites one of these assignments.
 
-Keep game-engine tests in Vitest with no browser, clock, network, or database dependency. Initialize `GameState` with a fixed PRNG algorithm, seed, and state; commands supply player choices. Server timestamps are explicit envelope metadata and never engine clock reads. Record the seed in assertion failures; production randomness never enters tests.
+| Requirement family                                                                                                          | Required proving layer                                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Contract schemas, wire vocabulary, versions, configuration shape                                                            | Contract-schema Vitest tests in `packages/contracts`                                                    |
+| Content topology, values, effects, provenance shape, bundle selection                                                       | Content validation and immutable fixture tests in `packages/game-content`                               |
+| `RULE-*`, engine-owned `VAR-*`, deterministic outcomes, invariants, replay                                                  | Pure table, scenario, property, and golden tests in `packages/game-engine`                              |
+| Authentication, capabilities, command ordering, MongoDB documents/indexes/transactions, retention, projections, SSE, resync | Protocol integration tests against an ephemeral replica-set MongoDB, with separate clients per seat     |
+| Player journeys, responsive behavior, browser recovery, PWA, and app-owned accessibility                                    | Playwright in Chromium, Firefox, and WebKit; separate browser contexts per player                       |
+| Component semantics or presentation logic with no server behavior                                                           | Component Vitest tests; use browser tests when layout, focus, networking, or assistive behavior matters |
+| Security and privacy controls                                                                                               | Integration or browser network tests at the boundary being protected, plus the applicable manual review |
+| Bot policy and simulations                                                                                                  | Fixed-state policy tests plus the deterministic soak harness                                            |
+| Deployment, observability, backup/restore, maintenance, and capacity                                                        | Deployment smoke tests, runbook drills, and load evidence against the deployed topology                 |
+| Legal, content similarity, provenance sign-off, and assistive-technology review                                             | Recorded human review; automation may support but cannot replace approval                               |
 
-Table tests cover setup and 2/6-seat boundaries; movement and Start crossing; purchasable and unavailable spaces; rent, fees, and bankruptcy; deed and scarce-improvement auctions; districts and inventory-conserving level transitions; mortgage/redeem; trades; Detention/release; event-card decks; forced moves and effect continuations; doubles/extra turns; winner/no-winner/no-contest; disconnect pause/replacement/reclaim; and replay/idempotency. Scenario fixtures cite their `RULE-*`, `VAR-*`, and `CONTENT-*` IDs.
+## TEST-003 — Deterministic domain suites
 
-Property-based tests use `fast-check` (or equivalent) with deterministic replay. Run at least 1,000 generated command sequences locally/CI and retain the seed on failure. Invariants include:
+Engine tests use no browser, clock, network, database, or host randomness. They
+use fixed seeds and print the seed on failure. Table tests cover bounded rule
+cases; scenario tests cover multi-step phase transitions; property tests check
+invariants over generated legal sequences; golden fixtures prove replay and
+version compatibility. Golden fixtures are immutable: add a new version rather
+than editing history.
 
-- balances are integral minor currency units; no balance or payment is silently lost;
-- each deed has at most one owner and each building belongs to its valid deed/set;
-- the ledger, current state, and replayed event stream agree;
-- only the active player may issue phase-legal commands;
-- rejected or duplicate command IDs do not mutate state;
-- a finished game cannot accept state-changing commands;
-- deck/card, property, and player locations remain within valid domains; and
-- generated bot commands obey the same validation as human commands.
+Content tests validate both a known-good bundle and targeted broken fixtures.
+They identify the offending canonical ID and cover every `CONTENT-009` rejection.
 
-Fixtures are versioned, small, and named by behavior: canonical board/ruleset, players, deck order, starting state, event stream, and expected projection. Do not snapshot opaque whole application state when a semantic assertion is possible. Golden fixtures for historical/replay compatibility are immutable; add a new version rather than edit one.
+## TEST-004 — Protocol and browser suites
 
-## TEST-004 — Realtime, browser, and accessibility tests
+Protocol tests run against an ephemeral MongoDB replica set so transactions and
+change streams are real. They prove idempotency, optimistic concurrency,
+commit-before-publish ordering, authorization, per-seat projections, reconnect,
+catch-up, restart recovery, and retention boundaries. Browser tests use separate
+contexts for separate players and cover current plus previous major Chrome,
+Safari, Firefox, and Edge behavior through the Chromium, WebKit, and Firefox
+projects, with explicit iOS Safari and Android Chrome release checks.
 
-Protocol tests start the realtime boundary against ephemeral Postgres and verify invite admission; game-seat/host/reclaim capability separation; server command validation; monotonic sequences; ordered broadcast; duplicate handling; disconnect/reconnect/catch-up; replacement/reclaim; host transfer; stale client resync; completion; expiry; and restart persistence. Test malformed payloads, expired/revoked capabilities, cross-game access, and rate limits adversarially.
+## TEST-005 — Security, privacy, data, PWA, and accessibility
 
-Playwright runs Chromium, Firefox, and WebKit. Separate browser contexts never share cookies. The suite covers a 2-seat turn and 6-seat lifecycle with human/bot mixes, reconnect/reclaim, and mobile/tablet/desktop layouts. Use deterministic seeds and semantic locators; do not depend on animations, wall-clock sleeps, or CSS classes. Keep a smoke path PR-blocking and run the full matrix on merge/release candidates.
+Threat cases cover capability separation, hashes at rest, cookie attributes,
+CSRF/origin checks, payload bounds, rate limits, generic not-found responses,
+log redaction, analytics denial/withdrawal, schema allowlists, and session-replay
+masking. PWA tests prove the app shell works offline while game state and
+capabilities are never cached. Automated axe, keyboard, zoom, contrast, forced
+colors, and reduced-motion checks are supplemented by the manual VoiceOver and
+NVDA checklist; manual evidence is required for release.
 
-Run axe on every major page/state: landing, create/join, lobby, active turn, modal/dialog, trade, auction, settings, reconnect, and game-over. Manual accessibility evidence per release includes keyboard-only completion of a turn; screen-reader checks with VoiceOver/Safari and NVDA/Firefox; zoom/reflow at 200% and 400%; reduced-motion; contrast; focus restoration after dialogs; and touch target review on a physical mobile device. Record browser/OS/assistive-tech versions and unresolved exceptions.
+## TEST-006 — Soak, load, and performance
 
-## TEST-005 — PWA, security, and resilience
+The deterministic bot harness runs at least 5,000 games spanning 2–6 seats,
+presets, and every toggle, recording its seed and stalled-game diagnostics on
+failure. Load tests exercise create, join, command, sync, and SSE behavior at the
+capacity target. Browser and server measurements prove the PRD p75 lobby and p95
+acknowledgement budgets; reports record build, content version, dataset, topology,
+and raw results.
 
-PWA tests verify manifest fields/icons, installability, HTTPS-only service-worker registration, offline shell behavior, update prompt/activation, cache-version rollback safety, and no caching of private game state or authenticated responses unless explicitly designed and reviewed. Test an installed app reopening into an expired/revoked session.
+## TEST-007 — CI and release gate
 
-Security tests include dependency and container-image vulnerability scans, secret scanning, authenticated and unauthenticated authorization tests, CSP/security-header assertions, CSRF/session fixation cases where applicable, invite-token entropy/non-enumerability, input-size/schema limits, WebSocket origin/auth checks, rate-limit behavior, and analytics redaction checks. Treat game links as credentials: do not place them in logs, analytics, referrers, screenshots, or public error reports.
+`pnpm run ci` runs Prettier check, typecheck, ESLint, and Vitest with coverage in
+that order, with no errors or warnings. Every ticket runs `pnpm run format` first,
+then the full gate. Its new test is mutation-confirmed: deliberately break the
+protected behavior, observe the test fail, and restore it. Tests for rules,
+authorization, persistence, or realtime ordering are never quarantined or
+retried into green.
 
-Resilience tests deliberately terminate the application during commands and broadcasts, restart it, and verify durable replay without duplicated effects. Exercise network loss, delayed/out-of-order messages, reconnect after a missed turn, database reconnect, and deploy overlap. Migration tests upgrade a production-shaped anonymized fixture through every pending migration, then restore it into a fresh database and run read/write/replay smoke checks. A restore drill is also required by `OPS-009`.
+Pull requests run the same command. Release evidence adds production build and
+deployment smoke results, browser projects, manual accessibility records,
+security/privacy review, provenance and license inventory, operations drills,
+and the attorney gate where required.
 
-## TEST-006 — Soak, performance, and capacity
+<a id="test-008-classic-content-and-engine-scenarios"></a>
 
-Run bot soaks using real command validation and persistence. The release qualification soak completes at least **thousands of games** (minimum 5,000 unless a milestone specifies more), reports completion/failure counts, invariant failures, duplicate-event count, mean/percentile game duration, and memory/connection trends, and preserves failing seed/event streams.
+## TEST-008 — Classic content and engine scenarios
 
-The pre-beta load test targets **100 concurrent games / 600 connected clients** in a representative local-region environment. Measure client action accepted through recipient broadcast, excluding human think time. The target is **p95 under 300 ms** with no unauthorized delivery, event ordering error, or sustained error rate above 1%. Publish environment size, duration (at least 30 minutes), concurrency ramp, p50/p95/p99, database pool usage, CPU/memory, reconnect count, and saturation point. This is a capacity target, not proof of global latency.
+The classic-overhaul content bundle requires immutable reconciliation fixtures
+for all 40 route spaces, 28 ownable deeds, eight Color Sets, four Transit
+Properties, two Utilities, two fee spaces, six draw spaces, both 16-card decks,
+the 32-House/12-Hotel bank, and the six pieces. Engine evidence adds fixed-seed
+scenarios for the Standard turn loop, acquisition/auction, rent, Detention,
+cards, debt, bankruptcy, improvement transitions, replay, and victory. The bot
+matrix also runs seeded `CLASSIC_BUNDLE` games through every 2–6 seat count and
+records any rejected or stalled game with its seed. These tests belong in
+`packages/game-content` and `packages/game-engine`; human review remains
+required for original names, copy, and provenance.
 
-## TEST-007 — CI gates, flakes, and release evidence
+<a id="test-009-responsive-visual-and-interaction-regression"></a>
 
-| Gate | Trigger | Required checks |
-| --- | --- | --- |
-| Fast | every change | formatting/type checks, Vitest unit/table/scenario/property tests, targeted protocol tests, secret scan |
-| Merge | protected branch | full protocol suite, Chromium smoke, axe smoke, dependency/image scan |
-| Nightly | scheduled | three-browser multi-client suite, fault/restart tests, bot soak, migration/restore fixture test |
-| Release candidate | manual/tag | full matrix, manual AT checklist, PWA checks, 5,000-game soak, 100/600 load test, backup restore drill |
+## TEST-009 — Responsive, visual, and interaction regression
 
-A test is flaky only after an owner records reproducible evidence and an issue. Do not retry a failure into green: one diagnostic retry may classify an infrastructure failure, but it remains visible. Quarantine requires a linked issue, owner, expiry no later than 14 days, and a non-quarantined replacement check when risk is release-critical. Expired quarantines fail the gate. Tests touching rules, authorization, persistence, or realtime ordering may not be quarantined for release.
-
-Release evidence is retained with the release: immutable build/image digest; commit and migration versions; all gate links/results; browser/OS matrix; accessibility checklist; security scan and accepted-risk decisions; soak/load dashboards; backup restore-drill timestamp; rollback verification; known limitations; and approvers for product/engineering/operations. `LEGAL` sign-off is evidence of review, not an automated test result.
+Classic table evidence requires deterministic browser scenarios in Chromium,
+Firefox, and WebKit with separate contexts where multiple seats participate.
+The matrix covers 320, 375, 768, and 1280 CSS pixels, page-overflow checks,
+semantic board-list equivalence, 44px targets, focus/zoom, reduced motion,
+forced colors, major decision phases, reconnect, completion, retirement, and
+rematch. Screenshots and browser results are evidence only when they use
+authoritative or explicitly marked test projections and contain no capabilities
+or private data.
