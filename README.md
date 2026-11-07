@@ -34,15 +34,15 @@ while its retirement workflow drains existing games.
 ```bash
 pnpm install
 cp .env.example .env.local
-npm run dev
+pnpm run dev
 ```
 
 The app runs at http://localhost:3000. The root `.env` or `.env.local` is loaded
 before Next.js starts. When its `MONGODB_URI` is absent or unreachable,
-`npm run dev` starts an isolated, loopback-only development replica set through
+`pnpm run dev` starts an isolated, loopback-only development replica set through
 the installed `mongod`; its data and log live under the operating system's
 temporary directory. A healthy configured replica set still takes precedence.
-Production, builds, and direct `pnpm dev` execution never start local database
+Production, builds, and direct `pnpm --filter @blockparty/web dev` execution never start local database
 infrastructure.
 
 ## Commands
@@ -52,12 +52,12 @@ infrastructure.
 | `pnpm dev`            | Development server                                |
 | `pnpm build`          | Production build                                  |
 | `pnpm start`          | Serve the production build                        |
-| `npm run agent:smoke` | Exercise create/start/bot/trade through live HTTP |
+| `pnpm run agent:smoke` | Exercise create/start/bot/trade through live HTTP |
 | `pnpm typecheck`      | Type-check all four packages                      |
 | `pnpm lint`           | ESLint, including the dependency-direction rules  |
 | `pnpm test`           | Vitest workspace with coverage                    |
 | `pnpm format`         | Prettier                                          |
-| `npm run ci`          | Full local and pull-request regression gate       |
+| `pnpm run ci`          | Full local and pull-request regression gate       |
 
 ## Layout
 
@@ -81,8 +81,8 @@ remaining paths. See [ENG-002](docs/engineering/architecture.md).
 1. Read [AGENTS.md](AGENTS.md), [docs/README.md](docs/README.md), and the
    specification for the area you are changing.
 2. Work on one item from the active [classic overhaul queue](docs/delivery/classic-overhaul-backlog.md).
-3. Run `npm run format` before checking the change.
-4. Run `npm run ci` before committing or pushing. It validates formatting,
+3. Run `pnpm run format` before checking the change.
+4. Run `pnpm run ci` before committing or pushing. It validates formatting,
    typecheck, lint, unit and integration tests, the production build, and the
    deterministic browser suite.
 5. Run the live browser, soak, load, or manual accessibility checks when the

@@ -34,6 +34,7 @@ export default defineConfig({
         test: {
           name: "web",
           root: "apps/web",
+          setupFiles: ["./test/clock-setup.ts"],
           include: ["test/**/*.test.ts"],
         },
       },

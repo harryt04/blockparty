@@ -199,6 +199,24 @@ describe("GET /api/games/[gameId]/sync", () => {
     expect(forbidden.status).toBe(403);
   });
 
+  it("rejects a game exactly at its expiry boundary", async () => {
+    const { game, events } = await fixture();
+    mocks.readGameCapability.mockResolvedValue({
+      gameId: GAME_ID,
+      seatId: game.hostSeatId,
+      kind: "seat",
+    });
+    mocks.getDb.mockReturnValue(database(game, events));
+    vi.setSystemTime(game.expiresAt);
+
+    const response = await GET(
+      new Request(`http://localhost/api/games/${GAME_ID}/sync?lastSequence=0&aggregateVersion=0`),
+      { params: Promise.resolve({ gameId: GAME_ID }) },
+    );
+    expect(response.status).toBe(410);
+    expect((await response.json()).error.code).toBe("GAME_EXPIRED");
+  });
+
   it("rejects an incomplete recovery query instead of guessing a sequence", async () => {
     const response = await GET(
       new Request(`http://localhost/api/games/${GAME_ID}/sync?lastSequence=1`),
