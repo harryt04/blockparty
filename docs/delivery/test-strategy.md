@@ -57,6 +57,13 @@ contexts for separate players and cover current plus previous major Chrome,
 Safari, Firefox, and Edge behavior through the Chromium, WebKit, and Firefox
 projects, with explicit iOS Safari and Android Chrome release checks.
 
+Web Vitest fixtures use a fixed September 2026 clock from
+`apps/web/test/clock-setup.ts`, configured only for the web project. The setup
+mocks the date without faking timers, so SSE and asynchronous IO keep running.
+Tests that exercise time boundaries may advance that clock explicitly;
+`sync-route.test.ts` also proves rejection exactly at game expiry. Each test
+restores the real clock afterward. Engine suites continue to use no host clock.
+
 ## TEST-005 — Security, privacy, data, PWA, and accessibility
 
 Threat cases cover capability separation, hashes at rest, cookie attributes,
@@ -71,15 +78,16 @@ NVDA checklist; manual evidence is required for release.
 
 The deterministic bot harness runs at least 5,000 games spanning 2–6 seats,
 presets, and every toggle, recording its seed and stalled-game diagnostics on
-failure. Load tests exercise create, join, command, sync, and SSE behavior at the
+failure. The 5,000-game matrix is synchronous and can run silently for several
+minutes within its explicit 15-minute test allowance. Load tests exercise create, join, command, sync, and SSE behavior at the
 capacity target. Browser and server measurements prove the PRD p75 lobby and p95
 acknowledgement budgets; reports record build, content version, dataset, topology,
 and raw results.
 
 ## TEST-007 — CI and release gate
 
-`npm run ci` runs Prettier check, typecheck, ESLint, and Vitest with coverage in
-that order, with no errors or warnings. Every ticket runs `npm run format` first,
+`pnpm run ci` runs Prettier check, typecheck, ESLint, and Vitest with coverage in
+that order, with no errors or warnings. Every ticket runs `pnpm run format` first,
 then the full gate. Its new test is mutation-confirmed: deliberately break the
 protected behavior, observe the test fail, and restore it. Tests for rules,
 authorization, persistence, or realtime ordering are never quarantined or
@@ -122,18 +130,18 @@ or private data.
 
 ## TEST-010 — Local and pull-request CI parity
 
-`npm run ci` is the canonical local and pull-request regression gate. It runs
+`pnpm run ci` is the canonical local and pull-request regression gate. It runs
 format validation, all package typechecks, ESLint, Vitest unit and replica-set
 integration tests with coverage, the production build, and the deterministic
 Playwright suite across Chromium, Firefox, and WebKit. The runner provisions an
 isolated local replica set when `MONGODB_TEST_URI` is not supplied; CI supplies
 an ephemeral replica set explicitly.
 
-The required GitHub Actions job invokes `npm run ci` rather than duplicating its
+The required GitHub Actions job invokes `pnpm run ci` rather than duplicating its
 stage list. It retains coverage, Playwright reports, traces, and test results as
-diagnostic artifacts. Live multi-context gameplay, the 5,000-game soak, load
-tests, and manual assistive-technology checks remain extended release or
-operator evidence and are not silently substituted by the deterministic gate.
+diagnostic artifacts. The seeded 5,000-game bot soak is part of the Vitest gate.
+Live multi-context gameplay, load tests, and manual assistive-technology checks
+remain extended release or operator evidence and are not silently substituted by the deterministic gate.
 
 <a id="test-011-embedded-preview-boundary"></a>
 

@@ -778,3 +778,11 @@ producing a negative public balance, replay preserves the same result, and the
 invariant suite rejects corrupted negative bank cash. Debt, bankruptcy,
 completion, rematch, Firefox/WebKit runtime, and manual accessibility evidence
 remain open.
+
+## Gate clock regression, 2026-11-07
+
+TEST-004/TEST-007: `apps/web/test/clock-setup.ts` and the web-only setup in
+`vitest.config.mts` stabilize the September route fixtures as the real calendar
+advances. `apps/web/test/sync-route.test.ts` retains the authorization/recovery
+checks and adds rejection at the exact expiry boundary. This changes test time,
+not production retention. The existing seeded 5,000-game soak remains mandatory.

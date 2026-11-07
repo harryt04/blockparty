@@ -34,7 +34,7 @@ HTTPS `NEXT_PUBLIC_APP_URL` and matching `ALLOWED_ORIGINS`.
 
 ## Pre-traffic sequence
 
-1. Run `npm run ci` against the immutable revision. This includes the production
+1. Run `pnpm run ci` against the immutable revision. This includes the production
    build, unit and replica-set integration tests, and the deterministic browser
    regression suite.
 2. Run the same revision's one-shot `pnpm db:maintain` command against the

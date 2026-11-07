@@ -2,7 +2,7 @@
 
 The workspace and the application are implemented through the completed
 historical delivery queue. `apps/web` builds and runs without MongoDB for page
-and health-route development, while `npm run dev` provisions an isolated local
+and health-route development, while `pnpm run dev` provisions an isolated local
 replica set when the configured database is absent or unreachable. The
 authenticated sync client, lobby, live game, summary, bot-turn, persistence,
 SSE, PWA, analytics, and operational paths are present and must not fabricate
@@ -89,7 +89,7 @@ Runnable now:
 | `pnpm lint`      | ESLint, including the dependency-direction rules     |
 | `pnpm test`      | Run the four-project Vitest workspace with coverage  |
 | `pnpm format`    | Format the workspace with Prettier                   |
-| `npm run ci`     | Run the complete local pull-request regression gate |
+| `pnpm run ci`     | Run the complete local pull-request regression gate |
 
 The boundary rules in `eslint.config.mjs` are enforcement, not documentation.
 Browser code importing `@/server/*`, `mongodb`, or the engine fails lint; the
@@ -124,5 +124,5 @@ This project implements familiar mechanics with independently authored expressio
 
 - Prefer editing an existing document over adding a new one. The register in [docs/README.md](docs/README.md) lists every document and its purpose.
 - When a document is wrong, fix the document in the same change as the code.
-- Run `npm run format` and then `npm run ci` before committing or pushing. Do not commit or push a change while the gate fails.
+- Run `pnpm run format` and then `pnpm run ci` before committing or pushing. Do not commit or push a change while the gate fails.
 - Do not delegate brand selection, legal judgment, privacy approval, or launch approval to an agent.
