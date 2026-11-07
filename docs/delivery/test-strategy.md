@@ -137,6 +137,12 @@ Playwright suite across Chromium, Firefox, and WebKit. The runner provisions an
 isolated local replica set when `MONGODB_TEST_URI` is not supplied; CI supplies
 an ephemeral replica set explicitly.
 
+The hosted job pins Ubuntu 22.04 and MongoDB 8.0. Newer hosted runner kernels
+can prevent MongoDB 8 from starting before the gate runs; see
+[the upstream startup failure](https://github.com/supercharge/mongodb-github-action/issues/81).
+Recheck that compatibility before moving the runner forward. A failed setup
+prints MongoDB container logs and state for diagnosis.
+
 The required GitHub Actions job invokes `pnpm run ci` rather than duplicating its
 stage list. It retains coverage, Playwright reports, traces, and test results as
 diagnostic artifacts. The seeded 5,000-game bot soak is part of the Vitest gate.
