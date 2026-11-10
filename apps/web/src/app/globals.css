@@ -267,6 +267,15 @@
     -webkit-text-size-adjust: 100%;
   }
 
+  /*
+   * The analytics notice is server-rendered so it cannot shift the page. This
+   * hides it before hydration for visitors who already chose. See
+   * components/analytics/consent-bootstrap.ts.
+   */
+  html[data-consent-resolved] [data-consent-banner] {
+    display: none;
+  }
+
   body {
     background-color: var(--color-canvas);
     color: var(--color-ink);

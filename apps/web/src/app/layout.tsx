@@ -5,6 +5,7 @@ import {
   AnalyticsProvider,
 } from "@/components/analytics/analytics-provider";
 import { PresentationPreferencesProvider } from "@/components/settings/presentation-preferences";
+import { CONSENT_BOOTSTRAP_SCRIPT } from "@/components/analytics/consent-bootstrap";
 import { PwaClient } from "@/components/pwa/pwa-client";
 import "./globals.css";
 
@@ -35,8 +36,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    // The consent bootstrap script sets an attribute on <html> before hydration.
+    <html lang="en" suppressHydrationWarning>
       <body>
+        <script dangerouslySetInnerHTML={{ __html: CONSENT_BOOTSTRAP_SCRIPT }} />
         {/* Focus is never obscured by sticky UI. UX-040. */}
         <a
           href="#main"

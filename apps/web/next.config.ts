@@ -10,7 +10,9 @@ import type { NextConfig } from "next";
  * still renders real document content under this policy. SEC-003.
  *
  * TODO(SEC-003): replace `unsafe-inline` on script-src with a nonce once the
- * app has interactive routes. The optional PostHog origin is added to
+ * app has interactive routes. The static consent bootstrap script in the root
+ * layout (components/analytics/consent-bootstrap.ts) needs the same nonce, or
+ * a hash of its fixed text. The optional PostHog origin is added to
  * connect-src only when configured and is used only after ANA-001 consent.
  */
 const isDevelopment = process.env.NODE_ENV === "development";
