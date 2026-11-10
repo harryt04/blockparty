@@ -26,6 +26,7 @@ import {
   type AnalyticsEventProperties,
 } from "./analytics-model";
 import { isPortfolioEmbedLocation } from "@/components/embed/embed-model";
+import { CONSENT_RESOLVED_ATTRIBUTE } from "./consent-bootstrap";
 
 type ConsentState = AnalyticsConsent | "unset";
 
@@ -63,6 +64,12 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
     setReady(true);
     if (saved === "granted") void adapter.current?.enable();
   }, []);
+
+  useEffect(() => {
+    // The pre-hydration script only hides the server-rendered notice. Once the
+    // saved choice has been applied to React state, React alone decides.
+    if (ready) document.documentElement.removeAttribute(CONSENT_RESOLVED_ATTRIBUTE);
+  }, [ready]);
 
   const track = useCallback(
     (event: AnalyticsEventName, properties?: AnalyticsEventProperties) =>
@@ -107,10 +114,14 @@ export function useAnalytics(): AnalyticsContextValue {
 
 export function AnalyticsConsentBanner() {
   const { consent, ready, grant, deny } = useAnalytics();
-  if (!ready || consent !== "unset") return null;
+  // Before hydration (`ready` false) the notice is part of the server HTML so it
+  // never shifts the page. A pre-hydration script hides it from visitors who
+  // already chose; see consent-bootstrap.ts.
+  if (ready && consent !== "unset") return null;
 
   return (
     <aside
+      data-consent-banner=""
       aria-label="Analytics consent"
       className="mx-4 my-4 max-w-lg rounded-(--radius-lg) border-2 border-line bg-surface-raised p-4 shadow-lg sm:mx-auto"
     >
