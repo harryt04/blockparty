@@ -7,7 +7,7 @@ content, or documentation.
 ## License and provenance
 
 - Code, tests, configuration, and build tooling are contributed under
-  `AGPL-3.0-or-later`.
+  `MIT`.
 - Original game content and assets are contributed under `CC BY-SA 4.0`.
 - The project does not currently accept a contribution as an assignment of
   copyright. Contributors must have the right to grant the stated license and

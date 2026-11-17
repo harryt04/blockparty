@@ -3,7 +3,7 @@
 Copyright and license obligations are layered:
 
 - Blockparty application and package source is licensed under
-  `AGPL-3.0-or-later`; see [LICENSE](LICENSE).
+  `MIT`; see [LICENSE](LICENSE).
 - Original game content and assets are licensed under `CC BY-SA 4.0`; see
   [CONTENT-LICENSE.md](CONTENT-LICENSE.md).
 - The Blockparty marks are reserved separately; see [TRADEMARKS.md](TRADEMARKS.md).

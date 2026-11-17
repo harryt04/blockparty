@@ -26,7 +26,7 @@ These are United States starting points only. A globally reachable launch also r
 | LEGAL-008 | Public copy contains no affiliation implication, clone/remake/compatibility claim, hidden comparative keyword, or unapproved nominative reference.                                                                                                                                         |
 | LEGAL-009 | Complaints, demands, and uncertain materials trigger preservation and attorney escalation, not superficial renaming, deletion of evidence, or public argument.                                                                                                                             |
 | LEGAL-010 | Material changes to mechanics, name, visual presentation, territory, assets, licensing, or monetization reopen the attorney release gate.                                                                                                                                                  |
-| LEGAL-011 | Source code is distributed under AGPL-3.0-or-later; original game content and assets are distributed under CC BY-SA 4.0; third-party assets remain under their own compatible licenses with attribution and notices. |
+| LEGAL-011 | Source code is distributed under MIT; original game content and assets are distributed under CC BY-SA 4.0; third-party assets remain under their own compatible licenses with attribution and notices. |
 
 ## Project rule: classic baseline, independently made expression
 
@@ -130,7 +130,7 @@ reviewed terms for:
 
 For this transition, the intended split is:
 
-- **Code:** AGPL-3.0-or-later, including application and package source code,
+- **Code:** MIT, including application and package source code,
   build scripts, and configuration that is itself code.
 - **Original content/assets:** CC BY-SA 4.0, including magical-city copy,
   board/content data, original card text, illustrations, and original piece
@@ -138,7 +138,7 @@ For this transition, the intended split is:
 - **Third-party assets:** their own compatible license, with required notices
   and attribution; they are not relicensed merely by being bundled here.
 - **Blockparty mark:** governed separately by the trademark policy and attorney
-  release gate; neither AGPL nor CC BY-SA grants mark rights.
+  release gate; neither MIT nor CC BY-SA grants mark rights.
 
 Do not publish the split as final until counsel and the project owner approve
 the license packet, but all new assets and code must be tracked against this

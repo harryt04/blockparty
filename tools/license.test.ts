@@ -9,14 +9,14 @@ function readRepositoryFile(relativePath: string): string {
 }
 
 describe("distribution license metadata", () => {
-  it("ships the complete AGPL notice and documents the content split", () => {
+  it("ships the MIT notice and documents the content split", () => {
     const license = readRepositoryFile("LICENSE");
     const contentLicense = readRepositoryFile("CONTENT-LICENSE.md");
 
-    expect(license).toContain("GNU AFFERO GENERAL PUBLIC LICENSE");
-    expect(license).toContain("END OF TERMS AND CONDITIONS");
+    expect(license).toContain("Permission is hereby granted, free of charge");
+    expect(license).toContain('THE SOFTWARE IS PROVIDED "AS IS"');
     expect(contentLicense).toContain("CC BY-SA 4.0");
-    expect(contentLicense).toContain("AGPL-3.0-or-later");
+    expect(contentLicense).toContain("MIT");
   });
 
   it("keeps every workspace package on the declared SPDX code license", () => {
@@ -32,7 +32,7 @@ describe("distribution license metadata", () => {
       const manifest = JSON.parse(readRepositoryFile(packagePath)) as {
         license?: string;
       };
-      expect(manifest.license, packagePath).toBe("AGPL-3.0-or-later");
+      expect(manifest.license, packagePath).toBe("MIT");
     }
   });
 

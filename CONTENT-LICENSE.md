@@ -27,10 +27,9 @@ Adapted material must preserve the same license and attribution requirements.
 ## Exclusions and separate layers
 
 - Application code, package source, tests, configuration, build scripts, and
-  operational tooling are covered by the GNU Affero General Public License,
-  version 3 or any later version (`AGPL-3.0-or-later`); see [LICENSE](LICENSE).
+  operational tooling are covered by the MIT license; see [LICENSE](LICENSE).
 - The Blockparty name, logos, and other marks are not granted by CC BY-SA or
-  AGPL; see [TRADEMARKS.md](TRADEMARKS.md).
+  MIT; see [TRADEMARKS.md](TRADEMARKS.md).
 - Third-party dependencies and assets retain their own licenses and notices.
   They are not relicensed by this file; see [NOTICE.md](NOTICE.md).
 - Facts, ideas, methods of play, and material supplied under a separate

@@ -53,7 +53,7 @@ reopen them.
   tap-to-focus/zoom, and retains an ordered accessible board list.
 - Existing `0.0.0-placeholder` games are ended as no-contest with reason
   `CONTENT_RETIRED`. They are not migrated to the classic ruleset.
-- Source code uses AGPL-3.0-or-later. Original content and assets use
+- Source code uses MIT. Original content and assets use
   CC BY-SA 4.0.
 - Server authority, pure deterministic engine behavior, capability separation,
   integer minor-unit money, 30-day retention, private invite admission, one bot
@@ -72,7 +72,7 @@ traceability register. Later tickets cite them directly.
 | PRD-FUN-022 | Classic-table desktop operating surface                        |
 | PRD-FUN-023 | Focused, equivalent mobile operating surface                   |
 | PRD-FUN-024 | Authoritative retirement of placeholder games                  |
-| PRD-NFR-011 | AGPL code and CC BY-SA content distribution                    |
+| PRD-NFR-011 | MIT code and CC BY-SA content distribution                    |
 | RULE-013    | Standard classic turn, property, auction, and victory baseline |
 | RULE-014    | Four-House/Hotel transitions and finite inventory              |
 | CONTENT-012 | Forty-space board composition                                  |
